@@ -308,6 +308,7 @@ def create_or_resume(trip_id: str) -> dict:
 
     voice = resolve_voice(trip_id, country)
     voice_id, voice_settings = audio_core.VOICES[voice]
+    voice_settings = {**voice_settings, "speed": audio_core.speed_for_trip(trip_id)}
     tg_id, tg = get_tripgroup(trip_id)
     categories = (tg or {}).get("tripCategories") or trip.get("tripCategories") or []
     tg_desc = (tg or {}).get("descriptionTarget") or ""
@@ -624,6 +625,7 @@ def regenerate(sid: str, fid: int, mode: str, rng: dict | None) -> dict:
         raise HTTPException(400, detail={"error": "no_audio",
                                          "detail": "field has no audio"})
     voice_id, voice_settings = audio_core.VOICES[srow["voice"]]
+    voice_settings = {**voice_settings, "speed": audio_core.speed_for_trip(srow["trip_id"])}
     dirs = work_dirs(sid)
     cand_path = dirs["candidate"] / f"{fid}.mp3"
 
@@ -727,6 +729,7 @@ def fallback(sid: str, fid: int, extent: str, text: str | None, description: str
     if not frow["has_audio"]:
         raise HTTPException(400, detail={"error": "no_audio", "detail": "text field"})
     voice_id, voice_settings = audio_core.VOICES[srow["voice"]]
+    voice_settings = {**voice_settings, "speed": audio_core.speed_for_trip(srow["trip_id"])}
     clip_text = text if (extent == "custom" and text) else frow["current_text"]
     cleaned, _ = audio_core.validate_and_clean(
         audio_core.strip_url_lines(clip_text or ""), srow["trip_id"], frow["scene_index"])

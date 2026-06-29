@@ -43,6 +43,23 @@ VOICES = {
                {"stability": 0.75, "similarity_boost": 0.75, "style": 0, "speed": 1}),
 }
 
+
+def speed_for_trip(trip_id: str) -> float:
+    """CEFR English narration speed by level — eleven_multilingual_v2 honours `speed`,
+    so a regenerated clip must match the original take's level:
+        A1-A2  (`_A12_EN`) -> 0.7
+        B1     (`_B1_EN`)  -> 0.85
+        B2+ and native `_EN` -> 1.0
+    NB Japanese uses the v3 API where speed is always 1.0; HSK Mandarin is undefined
+    (translator deciding v2-vs-v3 + speed). When those languages get backend support,
+    branch on language/model here (and likely drop v2 for JP)."""
+    t = (trip_id or "").upper()
+    if t.endswith("_A12_EN"):
+        return 0.7
+    if t.endswith("_B1_EN"):
+        return 0.85
+    return 1.0
+
 GEMINI_DELAY = 0.1
 GEMINI_MAX_RETRIES = 3
 GEMINI_RETRY_DELAY = 5

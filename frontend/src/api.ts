@@ -85,6 +85,8 @@ export interface TripListItem {
   folder_name: string;
   has_session: boolean;
   status: SessionStatus | null;
+  lane: string | null;
+  reviewable: boolean;
 }
 
 export interface PlayedResponse {

@@ -54,7 +54,7 @@ const TripListPage = () => {
   return (
     <div className="mx-auto max-w-review px-4 py-8">
       <h1 className="mb-1 text-2xl font-semibold text-white">Trip review</h1>
-      <p className="mb-6 text-sm text-gray-400">English `_EN` trips with local MP3 masters. Open one to review and correct.</p>
+      <p className="mb-6 text-sm text-gray-400">English `_EN` trips parked in Trello lanes 6 &amp; 7 (translator review / KP confirm). Open a reviewable one to correct.</p>
 
       {trips === null && <p className="text-gray-400">Loading trips…</p>}
 
@@ -74,15 +74,20 @@ const TripListPage = () => {
           >
             <div className="min-w-0">
               <p className="truncate font-medium text-white">{trip.title || trip.trip_id}</p>
-              <p className="truncate text-xs text-gray-400">{trip.folder_name}</p>
+              <p className="truncate text-xs text-gray-400">{trip.folder_name || trip.trip_id}</p>
             </div>
             <div className="flex shrink-0 items-center gap-3">
+              {trip.lane && (
+                <span className="rounded bg-gray-700 px-2 py-0.5 text-[11px] text-gray-300">Lane {trip.lane}</span>
+              )}
+              {!trip.reviewable && <span className="text-[11px] text-amber-400/80">no local audio</span>}
               <StatusBadge trip={trip} />
               <button
                 type="button"
-                disabled={opening === trip.trip_id}
+                disabled={opening === trip.trip_id || !trip.reviewable}
                 onClick={() => openTrip(trip.trip_id)}
                 className="rounded bg-custom-green px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                title={!trip.reviewable ? 'No local audio for this trip yet' : undefined}
               >
                 {opening === trip.trip_id ? 'Opening…' : trip.has_session ? 'Resume' : 'Open'}
               </button>
