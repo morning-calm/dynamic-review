@@ -30,7 +30,7 @@ import numpy as np
 from fastapi import HTTPException
 
 from . import config  # noqa: F401  (ensures SCRIPTS_ROOT on sys.path) — keep first
-from . import audio_core, audio_io, audio_splice, db
+from . import audio_core, audio_io, audio_splice, db, thumbs
 from .config import (COUNTRY_VOICE_GUESS, COVERAGE_DONE_FRACTION, WORK_ROOT)
 from .locks import WHISPER_LOCK
 from .staging import (db as fb_db, get_trip, get_tripgroup, merge_categories,
@@ -145,6 +145,40 @@ def _coverage_total(ranges: list[list[float]]) -> float:
 
 
 # --------------------------------------------------------------------------- #
+# Audio-dir resolution: Quicktrips masters first, else the Audio Generation
+# fallback (column-7 English A12/B1 trips have NO Quicktrips masters).
+# --------------------------------------------------------------------------- #
+_SCENE_MP3_RE = re.compile(r"^\d+\.mp3$", re.I)
+
+
+def _has_scene_mp3(d: Path | None) -> bool:
+    """True if the dir holds at least one numbered scene-narration master ({i}.mp3).
+    Ignores *.bak_quiet / *.bak_loud (the regex anchors on a bare ``\\d+.mp3``)."""
+    if not d or not d.is_dir():
+        return False
+    try:
+        for p in d.iterdir():
+            if p.is_file() and _SCENE_MP3_RE.match(p.name):
+                return True
+    except OSError:
+        return False
+    return False
+
+
+def resolve_audio_dir(trip_id: str, trip: dict) -> Path:
+    """Folder holding this trip's MP3 masters. Try the Quicktrips tree
+    (``paths_for``); if that can't be resolved (no Stage-9 COUNTRY_CFG) OR it holds no
+    ``{i}.mp3``, fall back to ``Audio Generation/<trip_id>/``."""
+    try:
+        mp3_dir = paths_for(trip, trip_id)["mp3_dir"]
+        if _has_scene_mp3(mp3_dir):
+            return mp3_dir
+    except SystemExit:
+        pass
+    return config.AUDIO_GENERATION_ROOT / trip_id
+
+
+# --------------------------------------------------------------------------- #
 # Trip listing
 # --------------------------------------------------------------------------- #
 def _trip_meta(trip_id: str) -> dict:
@@ -163,7 +197,58 @@ def _trip_meta(trip_id: str) -> dict:
     return meta
 
 
+def _session_meta(tid: str) -> tuple[bool, str | None]:
+    srow = db.query_one(
+        "SELECT id,status FROM sessions WHERE trip_id=? "
+        "ORDER BY created_at DESC LIMIT 1", (tid,))
+    return srow is not None, (srow["status"] if srow else None)
+
+
 def list_trips() -> list[dict]:
+    """Trello-manifest-driven when ``trips_to_review.json`` exists, else the legacy
+    Quicktrips MP3-dir scan."""
+    if config.MANIFEST_PATH.exists():
+        try:
+            return _list_trips_from_manifest()
+        except Exception as e:  # noqa: BLE001 - never let a bad manifest 500 the list
+            print(f"[trips] manifest unreadable ({e}); falling back to MP3 scan")
+    return _list_trips_from_scan()
+
+
+def _list_trips_from_manifest() -> list[dict]:
+    data = json.loads(config.MANIFEST_PATH.read_text(encoding="utf-8"))
+    out: list[dict] = []
+    for t in data.get("trips") or []:
+        tid = t.get("trip_id")
+        if not tid:
+            continue
+        trip = None
+        try:
+            trip = get_trip(tid)                 # staging; may be absent
+        except SystemExit:
+            trip = None
+        folder_name = (trip.get("folderName") or "") if trip else ""
+        title = (trip.get("contentTitleKey") if trip else None) or t.get("title") or tid
+        reviewable = False
+        if trip is not None:
+            try:
+                reviewable = _has_scene_mp3(resolve_audio_dir(tid, trip))
+            except Exception:  # noqa: BLE001
+                reviewable = False
+        has_session, status = _session_meta(tid)
+        out.append({
+            "trip_id": tid,
+            "title": title,
+            "folder_name": folder_name,
+            "lane": t.get("lane"),
+            "has_session": has_session,
+            "status": status,
+            "reviewable": reviewable,
+        })
+    return out
+
+
+def _list_trips_from_scan() -> list[dict]:
     seen: set[str] = set()
     out: list[dict] = []
     for cfg in COUNTRY_CFG.values():
@@ -181,15 +266,15 @@ def list_trips() -> list[dict]:
                     continue
                 seen.add(tid)
                 meta = _trip_meta(tid)
-                srow = db.query_one(
-                    "SELECT id,status FROM sessions WHERE trip_id=? "
-                    "ORDER BY created_at DESC LIMIT 1", (tid,))
+                has_session, status = _session_meta(tid)
                 out.append({
                     "trip_id": tid,
                     "title": meta["title"],
                     "folder_name": meta["folder_name"],
-                    "has_session": srow is not None,
-                    "status": srow["status"] if srow else None,
+                    "lane": None,
+                    "has_session": has_session,
+                    "status": status,
+                    "reviewable": True,
                 })
     return out
 
@@ -208,13 +293,19 @@ def create_or_resume(trip_id: str) -> dict:
         trip = get_trip(trip_id)                       # staging = source of truth
     except SystemExit as e:
         raise HTTPException(404, detail=str(e))
-    try:
-        paths = paths_for(trip, trip_id)               # raises on bad folder/country
-    except SystemExit as e:
-        raise HTTPException(status_code=422,
-                            detail={"error": "bad_folder", "detail": str(e)})
 
-    country = paths["country"]
+    # Quicktrips masters when present, else the Audio Generation fallback (column-7
+    # English trips). folderName/country are derived directly so a country with no
+    # Stage-9 COUNTRY_CFG (e.g. 'GreatBritain') still seeds.
+    folder_name = (trip.get("folderName") or "").replace("\\", "/").strip("/")
+    country = folder_name.split("/")[0] if folder_name else ""
+    mp3_dir = resolve_audio_dir(trip_id, trip)
+    if not _has_scene_mp3(mp3_dir):
+        raise HTTPException(status_code=422, detail={
+            "error": "bad_folder",
+            "detail": f"{trip_id}: no MP3 masters under the Quicktrips tree or "
+                      f"Audio Generation/{trip_id}"})
+
     voice = resolve_voice(trip_id, country)
     voice_id, voice_settings = audio_core.VOICES[voice]
     tg_id, tg = get_tripgroup(trip_id)
@@ -227,12 +318,11 @@ def create_or_resume(trip_id: str) -> dict:
         "INSERT INTO sessions(id,trip_id,folder_name,voice,voice_settings_json,"
         "orig_loudness_json,cleaned_orig_json,loaded_trip_json,trip_categories_json,"
         "status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
-        (sid, trip_id, paths["folder_name"], voice, json.dumps(voice_settings),
+        (sid, trip_id, folder_name, voice, json.dumps(voice_settings),
          "{}", "{}", json.dumps(trip, default=str), json.dumps(categories),
          "in_review", now, now))
 
     dirs = work_dirs(sid)
-    mp3_dir: Path = paths["mp3_dir"]
 
     def add_field(scene_index, field_path, original_text, has_audio,
                   option_index=None):
@@ -279,6 +369,13 @@ def create_or_resume(trip_id: str) -> dict:
             add_field(i, "questionKey", s.get("questionKey") or "", True)
         for k, opt in enumerate(s.get("questionOptionKeys") or []):
             add_field(i, "questionOption", opt or "", True, option_index=k)
+
+    # Best-effort: resolve + upload scene thumbnails to R2 so the read-model below can
+    # hand back thumb_url. Never fail the seed if the JSON / JPGs / R2 are unavailable.
+    try:
+        thumbs.prewarm(trip.get("quickTrips") or [])
+    except Exception as e:  # noqa: BLE001
+        print(f"[seed] thumbnail prewarm skipped for {trip_id}: {e}")
 
     db.touch_session(sid)
     return get_session(sid)
@@ -412,6 +509,9 @@ def get_session(sid: str) -> dict:
             "is_static_image": bool(s.get("isStaticImage")),
             "has_audio": bool(s.get("hasAudio")),
             "image_url": image_url,
+            # VID scenes get an R2 thumbnail; static/PIC scenes stay null (the
+            # frontend falls back to image_url).
+            "thumb_url": thumbs.thumb_url_for_scene(s),
             "overlays": overlays,
             "fields": by_scene.get(i, []),
         })
@@ -447,11 +547,13 @@ def _cleaned_orig(srow, frow) -> tuple[str, bool]:
 
 def _whisper_orig(srow, frow) -> list[dict]:
     trip = json.loads(srow["loaded_trip_json"])
-    paths = paths_for(trip, srow["trip_id"])
-    master = paths["mp3_dir"] / frow["mp3_name"]
+    master = resolve_audio_dir(srow["trip_id"], trip) / frow["mp3_name"]
     if not master.exists():
         return []
-    meta_dir = paths["metadata_dir"]
+    try:
+        meta_dir = paths_for(trip, srow["trip_id"])["metadata_dir"]
+    except SystemExit:                       # column-7 trip with no COUNTRY_CFG
+        meta_dir = config.WORK_ROOT / "_whisper_meta" / srow["trip_id"]
     meta_dir.mkdir(parents=True, exist_ok=True)
     # S3: the Whisper cache is keyed only on the stem, so a master replaced between
     # reviews (e.g. promoted by a prior submit) would otherwise be cut on the OLD
@@ -849,8 +951,7 @@ def submit(sid: str) -> dict:
         written.append("TripGroup.descriptionTarget")
 
     # ---- promote changed working mp3s to the masters (archive prior master) ----
-    paths = paths_for(trip_live, trip_id)
-    mp3_dir: Path = paths["mp3_dir"]
+    mp3_dir = resolve_audio_dir(trip_id, trip_live)   # Quicktrips, else Audio Generation
     ver_dir = mp3_dir / "versions"
     dirs = work_dirs(sid)
     promoted: list[str] = []

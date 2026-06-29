@@ -1,6 +1,5 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import type { Field, Scene } from '../api';
-import VimeoPlayer from './VimeoPlayer';
 import EditableField from './EditableField';
 import AudioReview from './AudioReview';
 import RegenerateControls from './RegenerateControls';
@@ -24,6 +23,29 @@ const optionIndex = (fieldPath: string): number | null => {
 const FieldShell = ({ children }: { children: React.ReactNode }) => (
   <div className="space-y-2 rounded-md border border-gray-800 bg-gray-900/40 p-3">{children}</div>
 );
+
+/** Scene preview: the VID/PIC thumbnail JPG (served from R2), falling back to a
+ * static-360 still, then a placeholder. Vimeo embeds are not used. */
+const SceneMedia = ({ scene }: { scene: Scene }) => {
+  const src = scene.thumb_url ?? scene.image_url;
+  if (!src) {
+    return (
+      <div className="flex h-40 w-full items-center justify-center rounded-md border border-gray-800 bg-black/40 text-xs text-gray-600">
+        no thumbnail
+      </div>
+    );
+  }
+  return (
+    <div className="flex w-full items-center justify-center rounded-md border border-gray-800 bg-black">
+      <img
+        src={src}
+        alt={`Scene ${scene.index} thumbnail`}
+        loading="lazy"
+        className="max-h-96 w-full object-contain"
+      />
+    </div>
+  );
+};
 
 const SceneCard = ({ scene, fields, sid, onFieldUpdate }: SceneCardProps) => {
   const sceneDesc = fields.find((f) => f.field_path === 'SceneDesc');
@@ -57,12 +79,7 @@ const SceneCard = ({ scene, fields, sid, onFieldUpdate }: SceneCardProps) => {
         {scene.is_static_image && <span className="text-xs text-gray-500">360 still</span>}
       </div>
 
-      <VimeoPlayer
-        videoId={scene.video_id}
-        isStaticImage={scene.is_static_image}
-        imageUrl={scene.image_url}
-        sceneIndex={scene.index}
-      />
+      <SceneMedia scene={scene} />
 
       {scene.overlays.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-2">

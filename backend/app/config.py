@@ -39,9 +39,32 @@ except Exception:
 
 # --- This app's own state ---------------------------------------------------
 BACKEND_ROOT = Path(__file__).resolve().parent.parent      # …\review-app\backend
+REVIEW_APP_ROOT = BACKEND_ROOT.parent                      # …\review-app
 WORK_ROOT = BACKEND_ROOT / "work"                          # per-session audio copies
 DB_PATH = BACKEND_ROOT / "review.db"
 WORK_ROOT.mkdir(parents=True, exist_ok=True)
+
+# Trello-driven review queue (written by Trello/export_review_trips.py). When present
+# it drives GET /api/trips; absent → fall back to the Quicktrips MP3-dir scan.
+MANIFEST_PATH = REVIEW_APP_ROOT / "trips_to_review.json"
+
+# Column-7 English trips (A12/B1) have NO masters under the Quicktrips tree — their
+# reviewed MP3s live here as Audio Generation/<trip_id>/{i}.mp3.
+AUDIO_GENERATION_ROOT = SCRIPTS_ROOT / "Audio Generation"
+
+# --- Scene thumbnails (videoId → local VID/PIC JPG → Cloudflare R2) ----------
+VIDEOIDS_JSON = SCRIPTS_ROOT / "VRD" / "VideoIds-1782220834.json"
+THUMB_ROOTS = [
+    Path(r"D:\Final stitch\Backed Up\England VID-PIC Thumbnails"),
+    Path(r"D:\Final stitch\Backed Up\Japan VID-PIC Thumbnails"),
+    Path(r"D:\Final stitch\Backed Up\Korea VID-PIC Thumbnails"),
+    Path(r"D:\Final stitch\Backed Up\Scotland VID-PIC Thumbnails"),
+    Path(r"D:\Final stitch\Backed Up\Taiwan VID-PIC Thumbnails"),
+]
+THUMB_BUCKET = "dynamic-languages-thumbs"
+THUMB_KEY_PREFIX = "scene-thumbs/"
+THUMB_PUBLIC_BASE = "https://thumbs.dynamiclanguages.org/"
+THUMB_UPLOAD_CACHE = BACKEND_ROOT / "thumb_upload_cache.json"
 
 # --- Security / server ------------------------------------------------------
 REVIEW_TOKEN = os.environ.get("REVIEW_APP_TOKEN", "dev-token")

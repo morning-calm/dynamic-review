@@ -63,6 +63,7 @@ export interface Scene {
   is_static_image: boolean;
   has_audio: boolean;
   image_url: string | null;
+  thumb_url: string | null;
   overlays: Overlay[];
   fields: Field[];
 }
