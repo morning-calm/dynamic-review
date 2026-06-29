@@ -1,0 +1,9 @@
+# review-app backend — install into the global py -3.12 interpreter that already
+# carries faster-whisper 1.2.1, firebase-admin 7.1, numpy, requests, google-genai.
+# (Those heavy/GPU deps are intentionally NOT pinned here — we reuse the existing
+# Scripts environment rather than rebuild it.)
+fastapi==0.138.2
+uvicorn[standard]==0.49.0
+python-multipart==0.0.32
+soundfile==0.13.1
+python-dotenv>=1.0

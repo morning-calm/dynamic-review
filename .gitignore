@@ -1,0 +1,20 @@
+# deps / builds
+node_modules/
+dist/
+.vite/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# local state / secrets / work artifacts
+*.db
+*.db-wal
+*.db-shm
+backend/work/
+.env
+.env.*
+*.log
+
+# audio scratch (review working copies; masters live in the Scripts tree)
+backend/work/**
