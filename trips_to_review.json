@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-30T14:14:57+01:00",
+  "generated_at": "2026-06-30T14:17:12+01:00",
   "source": "trello 6,7",
   "trips": [
     {
@@ -215,8 +215,8 @@
       "lane": "7",
       "level": "A12",
       "family": "A._A. Milne and Rudyard Kipling",
-      "voice": "",
-      "gender": "",
+      "voice": "andrea",
+      "gender": "female",
       "title": "A._A. Milne and Rudyard Kipling_A12_EN",
       "labels": [
         "EN"
@@ -575,8 +575,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Hyde_Park, Holland Park Richmond Park",
-      "voice": "",
-      "gender": "",
+      "voice": "harry",
+      "gender": "male",
       "title": "Hyde_Park, Holland Park Richmond Park_A12_EN",
       "labels": [
         "EN"
@@ -630,8 +630,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Kent_Coastline I",
-      "voice": "",
-      "gender": "",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Kent_Coastline I_A12_EN",
       "labels": [
         "EN"
@@ -643,8 +643,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Kent_Coastline II",
-      "voice": "",
-      "gender": "",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Kent_Coastline II_A12_EN",
       "labels": [
         "EN"
@@ -753,8 +753,8 @@
       "lane": "7",
       "level": "A12",
       "family": "LandsEnd",
-      "voice": "",
-      "gender": "",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Lands End_A12_EN",
       "labels": [
         "EN"
@@ -779,8 +779,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Little_Venice Notting Hill",
-      "voice": "",
-      "gender": "",
+      "voice": "harry",
+      "gender": "male",
       "title": "Little_Venice Notting Hill_A12_EN",
       "labels": [
         "EN"
@@ -831,8 +831,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Llandaff_Cathedral and Castell Coch",
-      "voice": "",
-      "gender": "",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Llandaff_Cathedral and Castell Coch_A12_EN",
       "labels": [
         "EN"
@@ -870,8 +870,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Manchester_II Industrial Revolution",
-      "voice": "",
-      "gender": "",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Manchester_II Industrial Revolution_A12_EN",
       "labels": [
         "EN"
@@ -909,8 +909,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Notting_Hill Carnival",
-      "voice": "",
-      "gender": "",
+      "voice": "harry",
+      "gender": "male",
       "title": "Notting_Hill Carnival_A12_EN",
       "labels": [
         "EN"
@@ -948,8 +948,8 @@
       "lane": "7",
       "level": "A12",
       "family": "PortIsaac",
-      "voice": "",
-      "gender": "",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Port Isaac_A12_EN",
       "labels": [
         "EN"
@@ -961,8 +961,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Queen_Elizabeth II",
-      "voice": "",
-      "gender": "",
+      "voice": "harry",
+      "gender": "male",
       "title": "Queen_Elizabeth II_A12_EN",
       "labels": [
         "EN"
@@ -1045,8 +1045,8 @@
       "lane": "7",
       "level": "A12",
       "family": "StIves",
-      "voice": "",
-      "gender": "",
+      "voice": "andrea",
+      "gender": "female",
       "title": "St Ives_A12_EN",
       "labels": [
         "EN"
@@ -1058,8 +1058,8 @@
       "lane": "7",
       "level": "A12",
       "family": "StMichaelsMount",
-      "voice": "",
-      "gender": "",
+      "voice": "andrea",
+      "gender": "female",
       "title": "St Michaels Mount_A12_EN",
       "labels": [
         "EN"
@@ -1084,8 +1084,8 @@
       "lane": "7",
       "level": "A12",
       "family": "St_Pauls and the City of London",
-      "voice": "",
-      "gender": "",
+      "voice": "harry",
+      "gender": "male",
       "title": "St_Pauls and the City of London_A12_EN",
       "labels": [
         "EN"
@@ -1187,8 +1187,8 @@
       "lane": "7",
       "level": "A12",
       "family": "The_South Bank to Southwark",
-      "voice": "",
-      "gender": "",
+      "voice": "harry",
+      "gender": "male",
       "title": "The_South Bank to Southwark_A12_EN",
       "labels": [
         "EN"
@@ -1200,8 +1200,8 @@
       "lane": "7",
       "level": "A12",
       "family": "The_West End",
-      "voice": "",
-      "gender": "",
+      "voice": "harry",
+      "gender": "male",
       "title": "The_West End_A12_EN",
       "labels": [
         "EN"
@@ -1332,8 +1332,8 @@
       "lane": "7",
       "level": "A12",
       "family": "WestCornwall",
-      "voice": "",
-      "gender": "",
+      "voice": "andrea",
+      "gender": "female",
       "title": "West Cornwall_A12_EN",
       "labels": [
         "EN"
@@ -1358,8 +1358,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Westminster_II Buckingham Palace",
-      "voice": "",
-      "gender": "",
+      "voice": "harry",
+      "gender": "male",
       "title": "Westminster_II Buckingham Palace_A12_EN",
       "labels": [
         "EN"
@@ -1397,8 +1397,8 @@
       "lane": "7",
       "level": "A12",
       "family": "York_II Minster",
-      "voice": "",
-      "gender": "",
+      "voice": "andrea",
+      "gender": "female",
       "title": "York_II Minster_A12_EN",
       "labels": [
         "EN"
