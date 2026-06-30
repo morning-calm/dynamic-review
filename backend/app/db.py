@@ -74,9 +74,23 @@ CREATE TABLE IF NOT EXISTS audio_versions (
     created_at  REAL NOT NULL
 );
 
+-- Manual-edit workspace: free-standing clips per field (TTS-generated or imported),
+-- auditioned/regenerated/deleted, one of which can be promoted to the working take.
+CREATE TABLE IF NOT EXISTS manual_clips (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id  TEXT NOT NULL,
+    field_id    INTEGER NOT NULL,
+    text        TEXT NOT NULL DEFAULT '',
+    kind        TEXT NOT NULL DEFAULT 'generated',   -- generated | imported
+    path        TEXT NOT NULL,
+    created_at  REAL NOT NULL,
+    FOREIGN KEY (session_id) REFERENCES sessions(id)
+);
+
 CREATE INDEX IF NOT EXISTS ix_fields_session ON field_edits(session_id);
 CREATE INDEX IF NOT EXISTS ix_versions_field ON audio_versions(field_id);
 CREATE INDEX IF NOT EXISTS ix_sessions_trip ON sessions(trip_id, status);
+CREATE INDEX IF NOT EXISTS ix_clips_field ON manual_clips(field_id);
 """
 
 
@@ -91,6 +105,29 @@ def init() -> None:
         conn.execute("PRAGMA synchronous=NORMAL;")
         conn.execute("PRAGMA foreign_keys=ON;")
         conn.executescript(SCHEMA)
+        # Lightweight migrations: per-session voice tuning overrides (added after
+        # the initial schema shipped). CREATE TABLE IF NOT EXISTS won't add columns
+        # to an existing sessions table, so add them here if absent.
+        have = {r["name"] for r in conn.execute("PRAGMA table_info(sessions)")}
+        if "speed_override" not in have:
+            conn.execute("ALTER TABLE sessions ADD COLUMN speed_override REAL")
+        if "model_override" not in have:
+            conn.execute("ALTER TABLE sessions ADD COLUMN model_override TEXT")
+        fcols = {r["name"] for r in conn.execute("PRAGMA table_info(field_edits)")}
+        if "original_coverage_json" not in fcols:
+            conn.execute("ALTER TABLE field_edits ADD COLUMN "
+                         "original_coverage_json TEXT NOT NULL DEFAULT '{}'")
+        if "source_text" not in fcols:
+            conn.execute("ALTER TABLE field_edits ADD COLUMN "
+                         "source_text TEXT NOT NULL DEFAULT ''")
+        if "original_source" not in fcols:
+            conn.execute("ALTER TABLE field_edits ADD COLUMN "
+                         "original_source TEXT NOT NULL DEFAULT ''")
+        if "working_text" not in fcols:
+            # the text the CURRENT working audio says — so successive splices accumulate
+            # on the combined take instead of restarting from the pristine master.
+            conn.execute("ALTER TABLE field_edits ADD COLUMN "
+                         "working_text TEXT NOT NULL DEFAULT ''")
         conn.commit()
         _CONN = conn
 

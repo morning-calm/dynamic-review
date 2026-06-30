@@ -4,6 +4,7 @@ import { api, ApiError, flushFieldBeacon, type Field } from '../api';
 import { useDebouncedCallback } from '../hooks';
 import { useSaveCoordinator } from '../saveStatusContext';
 import InlineDiff from './InlineDiff';
+import SourceEditor from './SourceEditor';
 
 interface EditableFieldProps {
   field: Field;
@@ -167,6 +168,7 @@ const EditableField = ({
         className={baseClasses}
       />
       {changed && <InlineDiff original={field.original_text} current={diffValue} />}
+      {field.source_text !== '' && <SourceEditor field={field} sid={sid} onFieldUpdate={onFieldUpdate} />}
     </div>
   );
 };

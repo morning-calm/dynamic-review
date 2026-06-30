@@ -98,9 +98,30 @@ OVERLAY_SEARCH_DIRS = [
     SCRIPTS_ROOT / "Research and Writing" / "data" / "0 Flat images",
 ]
 
-# Country → best-effort voice guess (voice_settings is a guess; the human listen is
-# load-bearing per the plan's residual-risk note).
+# Per-trip drafting choices live in <root>/<trip_id>/staging_choices.json. The
+# leveled pipelines keep their data under language-specific roots (NOT the single
+# Research and Writing/data dir), so resolve_voice must search all of them.
+_RW = SCRIPTS_ROOT / "Research and Writing"
+RW_DATA_ROOTS = [
+    _RW / "data",                       # native EN / Scotland / Taiwan trips
+    _RW / "CEFR English" / "data",      # English A12 / B1 (lane 7)
+    _RW / "N4 Japanese" / "data",       # Japanese N4 / N5 (lane 6)
+    _RW / "HSK Mandarin" / "data",      # Mandarin HSK
+]
+
+# Country → best-effort voice guess. LAST resort only: used when a trip has no
+# staging_choices.json voice/gender. The drafting choice (gender → audio_core
+# .voice_for_gender) is the real source; the human listen is the final backstop.
 COUNTRY_VOICE_GUESS = {
     "Scotland": "isla",
     "England": "harry",
+}
+
+# Last-of-last resort: when neither a drafting choice nor a country guess applies,
+# at least stay in the trip's narration language (an English voice on a Japanese
+# trip is always wrong). Gender is a guess here — the human listen catches it.
+LANGUAGE_FALLBACK_VOICE = {
+    "English": "harry",
+    "Japanese": "daisuke",
+    "Mandarin": "yu",
 }

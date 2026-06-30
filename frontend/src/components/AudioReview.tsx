@@ -63,6 +63,55 @@ const AudioReview = ({ field, sid, onFieldUpdate }: AudioReviewProps) => {
   const [coverage, setCoverage] = useState<Range[]>(coveredRanges.current);
   const [duration, setDuration] = useState<number>(0);
 
+  // The field is in its pristine state → listening to the ORIGINAL fully can mark it
+  // done ("the original is correct"). Once any edit/regeneration happens, the original
+  // is just a reference and Done is gated on the working take instead (server-enforced).
+  const untouched =
+    field.current_text === field.original_text && !field.audio.candidate && field.versions.length === 0;
+
+  // ---- Original-track coverage (only meaningful while untouched) ----
+  const origEl = useRef<HTMLAudioElement | null>(null);
+  const origRanges = useRef<Range[]>(mergeRanges(field.original_played_coverage as Range[]));
+  const origLast = useRef(0);
+  const origSeeking = useRef(false);
+  const [origCoverage, setOrigCoverage] = useState<Range[]>(origRanges.current);
+  const [origDuration, setOrigDuration] = useState<number>(0);
+
+  const { call: postOrigCall } = useDebouncedCallback((ranges: Range[]) => {
+    api
+      .postPlayed(sid, field.fid, ranges, 'original')
+      .then((res) => {
+        origRanges.current = res.played_coverage as Range[];
+        setOrigCoverage(res.played_coverage as Range[]);
+        onFieldUpdate({ ...field, can_mark_done: res.can_mark_done });
+      })
+      .catch((e: unknown) => {
+        if (e instanceof ApiError && e.status !== 0) console.warn('played(original) failed', e.detail);
+      });
+  }, 700);
+
+  const handleOrigTimeUpdate = () => {
+    const el = origEl.current;
+    if (!el) return;
+    const t = el.currentTime;
+    if (origSeeking.current) {
+      origSeeking.current = false;
+      origLast.current = t;
+      return;
+    }
+    if (t > origLast.current && t - origLast.current < MAX_STEP) {
+      origRanges.current = mergeRanges([...origRanges.current, [origLast.current, t]]);
+      setOrigCoverage(origRanges.current);
+      postOrigCall(origRanges.current);
+    }
+    origLast.current = t;
+  };
+
+  const origPct = useMemo(() => {
+    if (!origDuration) return 0;
+    return Math.min(100, Math.round((coveredSeconds(origCoverage) / origDuration) * 100));
+  }, [origCoverage, origDuration]);
+
   // Latest played_coverage, read inside the URL-change effect WITHOUT being a
   // dependency (we must not reset/reload when our own /played POST mutates it).
   const playedCoverageRef = useRef(field.played_coverage);
@@ -122,7 +171,38 @@ const AudioReview = ({ field, sid, onFieldUpdate }: AudioReviewProps) => {
 
   return (
     <div className="space-y-2 rounded border border-gray-700 bg-gray-900/40 p-2">
-      <AudioRow label="Original" src={field.audio.original} />
+      {field.audio.original && (
+        <div className="flex items-center gap-2">
+          <span className="w-20 shrink-0 text-xs text-gray-400">Original</span>
+          <audio
+            ref={origEl}
+            controls
+            preload="none"
+            src={field.audio.original}
+            onTimeUpdate={handleOrigTimeUpdate}
+            onSeeking={() => {
+              origSeeking.current = true;
+            }}
+            onSeeked={() => {
+              if (origEl.current) origLast.current = origEl.current.currentTime;
+            }}
+            onLoadedMetadata={() => setOrigDuration(origEl.current?.duration ?? 0)}
+            className="h-8 w-full"
+          />
+        </div>
+      )}
+
+      {untouched && field.audio.original && (
+        <div className="flex items-center gap-2 pl-[5.5rem] text-[11px] text-gray-400">
+          <div className="h-1.5 flex-1 overflow-hidden rounded bg-gray-700">
+            <div
+              className={`h-full ${field.can_mark_done ? 'bg-custom-green' : 'bg-sky-500'}`}
+              style={{ width: `${origPct}%` }}
+            />
+          </div>
+          <span>{field.can_mark_done ? 'fully heard' : `original ${origPct}% (done at 95%)`}</span>
+        </div>
+      )}
 
       {workingUrl && (
         <div className="flex items-center gap-2">

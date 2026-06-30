@@ -71,7 +71,12 @@ The atom the UI renders/edits. One per editable thing.
   "trip_id": "Edinburgh1_OldTownGreyfriars_EN",
   "folder_name": "Scotland/Edinburgh/Edinburgh1_OldTownGreyfriars_EN",
   "status": "in_review",         // "in_review" | "submitted"
-  "voice": "isla",
+  "voice": "isla",               // narrator voice name (registry key)
+  "voice_display": "Isla",       // human label for the voice
+  "speed": 0.7,                  // effective TTS speed (override or level/auto)
+  "speed_override": null,        // per-session override, null = auto
+  "model": "eleven_multilingual_v2", // effective EL model (override or by-voice)
+  "model_override": null,        // per-session override, null = auto
   "trip_categories": ["UNESCO","Medieval"],   // read-only display
   "trip_fields": [ Field(contentTitleKey), Field(tripgroup_description) ],
   "scenes": [ Scene, … ]
@@ -84,8 +89,10 @@ The atom the UI renders/edits. One per editable thing.
 |---|---|---|
 | `GET /api/health` | — | `{ "ok": true }` |
 | `GET /api/trips` | — | `[ { "trip_id", "title", "folder_name", "has_session", "status" } ]` (trips with local MP3 masters under the configured roots) |
+| `GET /api/voices` | — | `{ "voices": [ {"name","display","gender","language","country","model"} ], "models": ["eleven_multilingual_v2","eleven_v3"] }` — the approved-voice registry for the narration picker. |
 | `POST /api/sessions` | `{ "trip_id": "…" }` | `Session` — **creates or resumes** the trip's open session. `422` if folderName isn't a ≥2-segment Scotland/England path. |
 | `GET /api/sessions/{sid}` | — | `Session` (full state, for resume) |
+| `POST /api/sessions/{sid}/narration` | `{ "voice"?, "speed"?, "model"?, "clear_speed"?, "clear_model"? }` | `Session` — correct the trip's narrator voice/speed/model mid-review. Omit a field to leave it; `clear_*` drops an override back to auto. Any take **regenerated under the old settings** is reset to the master (text edits kept); untouched master audio + coverage are preserved. `422` on unknown voice/model or speed out of `0.5–1.2`. |
 | `PUT /api/sessions/{sid}/fields/{fid}` | `{ "current_text": "…" }` | `Field` — autosave. Resets `played_coverage` + drops `flag` off `done` if text changed. |
 | `POST /api/sessions/{sid}/fields/{fid}/regenerate` | `{ "mode": "segment"|"whole"|"highlight", "range": {"start":int,"end":int}? }` | `Field` with `audio.candidate` set **ASAP**. `segment` diffs current vs original; `highlight` uses `range`; `whole` re-voices the whole field. Non-Latin / numeral-dense / Gemini-fallback → `flag:"edit_required"` and no candidate (whole-regen advised). |
 | `POST /api/sessions/{sid}/fields/{fid}/combine` | — | `Field` — splices candidate into working (SceneDesc) or replaces (whole/Q&A); archives prior take to `versions`; sets `splice_confidence`; may auto-set `flag:"edit_required"`. |

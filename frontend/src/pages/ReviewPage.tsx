@@ -8,6 +8,7 @@ import NavBar from '../components/NavBar';
 import SaveStatus from '../components/SaveStatus';
 import EditableField from '../components/EditableField';
 import SceneCard from '../components/SceneCard';
+import NarrationControls from '../components/NarrationControls';
 
 interface FieldLocation {
   trip: boolean;
@@ -25,19 +26,24 @@ const ReviewBody = () => {
   const [sceneFields, setSceneFields] = useState<Field[][]>([]);
   const locRef = useRef<Map<number, FieldLocation>>(new Map());
 
+  // Apply a whole Session payload (initial load + after a narration change, which can
+  // reset many fields at once): refresh state and rebuild the fid→location index.
+  const applySession = useCallback((s: Session) => {
+    setSession(s);
+    setTripFields(s.trip_fields);
+    setSceneFields(s.scenes.map((sc) => sc.fields));
+    const loc = new Map<number, FieldLocation>();
+    s.trip_fields.forEach((f, i) => loc.set(f.fid, { trip: true, s: -1, i }));
+    s.scenes.forEach((sc, si) => sc.fields.forEach((f, fi) => loc.set(f.fid, { trip: false, s: si, i: fi })));
+    locRef.current = loc;
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     api
       .getSession(sid)
       .then((s) => {
-        if (cancelled) return;
-        setSession(s);
-        setTripFields(s.trip_fields);
-        setSceneFields(s.scenes.map((sc) => sc.fields));
-        const loc = new Map<number, FieldLocation>();
-        s.trip_fields.forEach((f, i) => loc.set(f.fid, { trip: true, s: -1, i }));
-        s.scenes.forEach((sc, si) => sc.fields.forEach((f, fi) => loc.set(f.fid, { trip: false, s: si, i: fi })));
-        locRef.current = loc;
+        if (!cancelled) applySession(s);
       })
       .catch((e: unknown) => {
         if (!cancelled) setError(e instanceof ApiError ? e.detail || e.code : 'Failed to load session');
@@ -45,7 +51,7 @@ const ReviewBody = () => {
     return () => {
       cancelled = true;
     };
-  }, [sid]);
+  }, [sid, applySession]);
 
   // Stable updater. Replaces only the changed field's array entry so unchanged
   // scene arrays keep their reference and memoised SceneCards skip re-rendering.
@@ -81,7 +87,7 @@ const ReviewBody = () => {
     <>
       <NavBar
         title={session.trip_id}
-        subtitle={`${session.folder_name} · voice: ${session.voice}`}
+        subtitle={`${session.folder_name} · voice: ${session.voice_display}`}
         right={
           <>
             <SaveStatus state={saveState} />
@@ -101,6 +107,8 @@ const ReviewBody = () => {
             This session has been submitted — awaiting Stage 9 finalise. Further edits create a new round of corrections.
           </div>
         )}
+
+        <NarrationControls session={session} onUpdate={applySession} />
 
         {/* Trip header */}
         <section className="space-y-4 rounded-lg border border-gray-700 bg-gray-800/60 p-4">

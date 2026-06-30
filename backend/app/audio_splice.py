@@ -74,13 +74,14 @@ class SpliceResult:
 # Phase 1 — plan (runs at /regenerate)
 # --------------------------------------------------------------------------- #
 def plan_whole(cleaned_new: str, used_fallback: bool, voice_id: str,
-               voice_settings: dict) -> RegenPlan:
+               voice_settings: dict,
+               model_id: str = audio_core.EL_MODEL) -> RegenPlan:
     """Whole-field regenerate (SceneDesc 'whole' mode + every Q&A field).
 
     S2: when the Gemini number-cleaner fell back to uncleaned text, the clip is voiced
     from raw numerals/abbreviations — still return the candidate so it can be auditioned,
     but flag edit_required so a human MUST listen before it is accepted."""
-    mp3 = audio_core.generate_audio(cleaned_new, voice_id, voice_settings)
+    mp3 = audio_core.generate_audio(cleaned_new, voice_id, voice_settings, model_id)
     plan = RegenPlan(candidate_mp3=mp3, whole=True,
                      meta={"mode": "whole", "text": cleaned_new})
     if used_fallback:
@@ -141,43 +142,146 @@ def _expand_right_to_boundary(toks, ra, doc_id, overrides, cap):
     return ra, False
 
 
-def _whisper_index_map(orig_toks: list[str], words: list[dict]) -> dict[int, int]:
-    """Align cleaned-orig tokens ↔ Whisper words; map orig_token_idx → word_idx for
-    matching blocks only (so we read RAW word times for verified anchors)."""
+def _whisper_index_map(orig_toks: list[str],
+                       words: list[dict]) -> dict[int, tuple[float, float]]:
+    """Align cleaned-orig tokens ↔ Whisper words → ``orig_token_idx → (start, end)`` seconds.
+
+    Tokens the diff matches take their Whisper word's RAW times (C1). Tokens it leaves
+    UNMAPPED — number reformatting (``1809`` ↔ "eighteen oh nine"), hyphenation, possessives,
+    minor transcription drift — are bracketed by INTERPOLATION between their nearest mapped
+    neighbours (the audio span between the left word's end and the right word's start, split
+    evenly). This is deliberately PARSER-FREE, so it is language-agnostic: it never needs to
+    know that "eighteen" == 18 (which would be English-only and pointless anyway, since the
+    K3 non-Latin guard routes kana/hanzi spans to whole-regenerate). The interpolated time is
+    only a SEED for the silence search in `_silence_cut`; the real cut still snaps to genuine
+    silence, so cut times remain audio-derived, never synthetic."""
     sm = difflib.SequenceMatcher(
         a=[_norm(t) for t in orig_toks],
         b=[_norm(w["word"]) for w in words], autojunk=False)
-    out: dict[int, int] = {}
+    out: dict[int, tuple[float, float]] = {}
     for i, j, n in sm.get_matching_blocks():
         for k in range(n):
-            out[i + k] = j + k
+            out[i + k] = (float(words[j + k]["start"]), float(words[j + k]["end"]))
+    n_orig = len(orig_toks)
+    i = 0
+    while i < n_orig:                       # fill each run of unmapped tokens by interpolation
+        if i in out:
+            i += 1
+            continue
+        j = i
+        while j < n_orig and j not in out:
+            j += 1
+        left_end = out[i - 1][1] if (i - 1) in out else None
+        right_start = out[j][0] if (j < n_orig and j in out) else None
+        if left_end is not None and right_start is not None and right_start > left_end:
+            step = (right_start - left_end) / (j - i)
+            for k in range(i, j):
+                s = left_end + step * (k - i)
+                out[k] = (s, s + step)     # boundary runs (no neighbour one side) stay unmapped
+        i = j
     return out
+
+
+_EXPAND_CAP = 12   # max extra words to re-voice when the boundary is connected speech
+_LOOK = 0.45       # backward reach (~one word) to find the adjacent pause
+_FWD = 0.22        # forward reach: Whisper often absorbs the boundary pause INTO the start
+                   # of the following word (stretching it), so the real pause sits forward
+
+
+def _w_time(wmap, idx, which):
+    t = wmap.get(idx)
+    if t is None:
+        return None
+    return t[0] if which == "start" else t[1]
+
+
+def _keep_pause(run_len: float) -> float:
+    """How much of a found silence run to KEEP at the seam — a short, natural pause that
+    scales with the boundary (a comma keeps less than a sentence period), capped both ways
+    so a long TTS pause isn't fully retained and a tiny one isn't swallowed."""
+    return min(0.28, max(0.10, 0.35 * run_len))
+
+
+def _silence_cut(base, sr, wmap, n_orig, start_idx, side, dur):
+    """Anchor a cut in REAL silence (not at an imprecise Whisper word edge). From the word
+    edge it searches a forward/backward LOOK window — NOT bounded by Whisper's next/prev
+    word time, which is unreliable (a long inter-word pause makes Whisper mis-place the
+    following word *before* the pause). So it reliably finds the adjacent pause and cuts
+    there (C, no over-expansion). Only when there is genuinely no pause within ~one word
+    does it advance to the next word and re-voice it (A, expansion), up to _EXPAND_CAP;
+    none within the cap → (None, None) → caller flags edit_required (B). ``side`` 'R' =
+    silence after start_idx; 'L' = silence before start_idx."""
+    if side == "R":
+        for oj in range(start_idx, min(n_orig - 1, start_idx + _EXPAND_CAP) + 1):
+            we = _w_time(wmap, oj, "end")
+            if we is None:
+                continue
+            # nearest pause to the word END — forward-biased (the boundary pause follows
+            # this word), with a touch of back-reach for Whisper over-estimating word.end.
+            run = audio_io.silence_run_nearest(base, sr, we, 0.05, _LOOK)
+            if run is not None:                   # cut near the END of the pause (keep a
+                s0, s1 = run                      # short pause, drop the excess)
+                return max(s0, s1 - _keep_pause(s1 - s0)), oj
+        return None, None                         # reached cap/clip end with no pause → flag
+    for oj in range(start_idx, max(0, start_idx - _EXPAND_CAP) - 1, -1):
+        ws = _w_time(wmap, oj, "start")
+        if ws is None:
+            continue
+        # nearest pause to the word START — search BOTH sides: Whisper may report the start
+        # before the pause (correct) OR absorb the pause into the word (stretched, _FWD).
+        run = audio_io.silence_run_nearest(base, sr, ws, _LOOK, _FWD)
+        if run is not None:                       # cut near the START of the pause
+            s0, s1 = run
+            return min(s1, s0 + _keep_pause(s1 - s0)), oj
+    return None, None                             # reached cap/clip start with no pause → flag
 
 
 def plan_segment(doc_id: str, cleaned_orig: str, cleaned_new: str,
                  used_fallback: bool, whisper_words: list[dict],
                  voice_id: str, voice_settings: dict,
-                 highlight_orig_span: tuple[int, int] | None = None) -> RegenPlan:
-    """Anchor-context regenerate + splice plan. ``highlight_orig_span`` (token range
-    in cleaned_new) forces the changed span for highlight mode."""
+                 base_samples: np.ndarray, sr: int,
+                 highlight_orig_span: tuple[int, int] | None = None,
+                 model_id: str = audio_core.EL_MODEL,
+                 alt_text: str | None = None) -> RegenPlan:
+    """Span-only regenerate + splice plan (shared by 'generate from edit' and highlight).
+
+    Renders the changed/highlighted words and plans a splice whose cuts land in REAL
+    silence in ``base_samples`` (the current working take). When a boundary is connected
+    speech (no inter-word silence), it expands the re-voiced span through the next word(s)
+    to the nearest pause so the seam is still clean; if none is within the cap it returns
+    edit_required. ``highlight_orig_span`` forces the span; ``alt_text`` voices free text
+    verbatim in place of the changed words."""
     if used_fallback:
         return RegenPlan(edit_required=True,
                          reason="Gemini cleaner fell back to uncleaned text — "
                                 "diff unreliable; whole-regenerate advised.")
 
     orig_toks, new_toks = tokens(cleaned_orig), tokens(cleaned_new)
+    seg_blo, seg_bhi, ops = _span_segment(orig_toks, new_toks)
 
+    # --- changed span in NEW tokens [blo,bhi) and in ORIG tokens [oa,ob) -------------
     if highlight_orig_span is not None:
         blo, bhi = highlight_orig_span
-        _, _, ops = _span_segment(orig_toks, new_toks)
+        blo = max(0, min(blo, len(new_toks)))
+        bhi = max(blo, min(bhi, len(new_toks)))
+        if bhi <= blo:
+            return RegenPlan(edit_required=True, reason="Empty highlight selection.")
+        oaO, obO = _map_new_to_orig(ops, blo), _map_new_to_orig(ops, bhi - 1)
+        if oaO is None or obO is None:
+            return RegenPlan(edit_required=True,
+                             reason="Highlighted words not locatable in the take's audio.")
+        oa, ob = oaO, obO + 1
     else:
-        blo, bhi, ops = _span_segment(orig_toks, new_toks)
-        if blo is None:
+        if seg_blo is None:
             return RegenPlan(edit_required=True,
                              reason="No text change detected for a segment regen.")
-
-    blo = max(0, min(blo, len(new_toks)))
-    bhi = max(blo, min(bhi, len(new_toks)))
+        blo, bhi = seg_blo, seg_bhi
+        oa = ob = None
+        for tag, i1, i2, _j1, _j2 in ops:
+            if tag == "equal":
+                continue
+            oa = i1 if oa is None else min(oa, i1)
+            ob = i2 if ob is None else max(ob, i2)
 
     # K3: hanzi/kana anywhere in the changed span → whole-regen.
     for t in new_toks[blo:bhi]:
@@ -186,83 +290,53 @@ def plan_segment(doc_id: str, cleaned_orig: str, cleaned_new: str,
                              reason="Non-Latin text in the edited span — "
                                     "whole-regenerate advised (no surgical splice).")
 
-    overrides = set(audio_core.override_phrases(doc_id))
-
-    # Left anchor: nearest eligible token before the span (else start-of-clip)…
-    la = blo - 1
-    while la >= 0 and not _eligible_anchor(new_toks[la], doc_id, overrides):
-        la -= 1
-    # …then expand it back to a sentence/clause boundary so the cut sits in a pause.
-    left_pause = False
-    if la >= 0:
-        la, left_pause = _expand_left_to_boundary(
-            new_toks, la, doc_id, overrides, ANCHOR_EXPAND_CAP)
-
-    # Right anchor: nearest eligible token at/after the span end (else end-of-clip)…
-    ra = bhi
-    while ra < len(new_toks) and not _eligible_anchor(new_toks[ra], doc_id, overrides):
-        ra += 1
-    # …then expand it forward to a sentence/clause start.
-    right_pause = False
-    if ra < len(new_toks):
-        ra, right_pause = _expand_right_to_boundary(
-            new_toks, ra, doc_id, overrides, ANCHOR_EXPAND_CAP)
+    if bhi <= blo and (not alt_text or not alt_text.strip()):
+        return RegenPlan(edit_required=True,
+                         reason="Edit removed text only — use whole-regenerate.")
 
     wmap = _whisper_index_map(orig_toks, whisper_words)
-    dur = whisper_words[-1]["end"] if whisper_words else 0.0
+    n_orig = len(orig_toks)
+    dur = audio_io.duration_seconds(base_samples, sr)
 
-    # ---- left cut time from RAW Whisper word.end (verify anchor) ----
-    if la < 0:
-        tL, left_anchor = 0.0, None
+    # ---- anchor each cut in REAL silence, expanding the re-voiced span if connected ----
+    connected = ("Connected speech — use whole-regenerate or highlight more words.")
+    if oa <= 0:
+        tL, l_word = 0.0, 0
     else:
-        oi = _map_new_to_orig(ops, la)
-        if oi is None or oi not in wmap:
-            return RegenPlan(edit_required=True,
-                             reason="Left anchor not locatable in the take's audio.")
-        w = whisper_words[wmap[oi]]
-        if _norm(w["word"]) != _norm(new_toks[la]):
-            return RegenPlan(edit_required=True,
-                             reason="Left anchor mismatch vs spoken audio.")
-        tL, left_anchor = float(w["end"]), _norm(new_toks[la])
-
-    # ---- right cut time from RAW Whisper word.start (verify anchor) ----
-    if ra >= len(new_toks):
-        tR, right_anchor = None, None        # → end of clip (resolved at splice)
+        tL, l_word = _silence_cut(base_samples, sr, wmap, n_orig, oa, "L", dur)
+        if tL is None:
+            return RegenPlan(edit_required=True, reason=connected)
+    if ob >= n_orig:
+        tR, r_word = dur, n_orig - 1
     else:
-        oi = _map_new_to_orig(ops, ra)
-        if oi is None or oi not in wmap:
-            return RegenPlan(edit_required=True,
-                             reason="Right anchor not locatable in the take's audio.")
-        w = whisper_words[wmap[oi]]
-        if _norm(w["word"]) != _norm(new_toks[ra]):
-            return RegenPlan(edit_required=True,
-                             reason="Right anchor mismatch vs spoken audio.")
-        tR, right_anchor = float(w["start"]), _norm(new_toks[ra])
+        tR, r_word = _silence_cut(base_samples, sr, wmap, n_orig, ob - 1, "R", dur)
+        if tR is None:
+            return RegenPlan(edit_required=True, reason=connected)
+    if tR <= tL:
+        return RegenPlan(edit_required=True, reason="Degenerate cut span.")
 
-    if tR is not None and tR <= tL:
-        return RegenPlan(edit_required=True,
-                         reason="Degenerate cut (right anchor not after left).")
-
-    # ---- phrase = [left_anchor … changed … right_anchor] + prosodic context ----
-    plo = la if la >= 0 else 0
-    phi = ra if ra < len(new_toks) else len(new_toks) - 1
-    phrase = " ".join(new_toks[plo:phi + 1]).strip()
-    previous_text = " ".join(new_toks[max(0, plo - 40):plo]).strip() or None
-    next_text = " ".join(new_toks[phi + 1:phi + 41]).strip() or None
+    # extend the rendered span to the silence-anchored words ([l_word..oa) and [ob..r_word]
+    # are unchanged, so they map 1:1 into NEW token space around the change)
+    new_blo = max(0, blo - (oa - l_word))
+    new_bhi = min(len(new_toks), bhi + (r_word - (ob - 1)))
+    if alt_text is not None and alt_text.strip():
+        parts = new_toks[new_blo:blo] + [alt_text.strip()] + new_toks[bhi:new_bhi]
+    else:
+        parts = new_toks[new_blo:new_bhi]
+    phrase = " ".join(parts).strip()
     if not phrase:
-        return RegenPlan(edit_required=True, reason="Empty regeneration phrase.")
+        return RegenPlan(edit_required=True,
+                         reason="Edit removed text only — use whole-regenerate.")
 
+    previous_text = " ".join(new_toks[max(0, new_blo - 40):new_blo]).strip() or None
+    next_text = " ".join(new_toks[new_bhi:new_bhi + 40]).strip() or None
     mp3, cand_words = audio_core.generate_with_timestamps(
-        phrase, voice_id, voice_settings, previous_text, next_text)
+        phrase, voice_id, voice_settings, previous_text, next_text, model_id)
 
     meta = {
-        "mode": "segment",
+        "mode": "segment", "span_only": True,
         "tL": tL, "tR": tR, "orig_duration": dur,
-        "left_anchor": left_anchor, "right_anchor": right_anchor,
-        "left_pause": left_pause, "right_pause": right_pause,
-        "changed_tokens": max(0, bhi - blo),
-        "cand_words": cand_words,
-        "phrase": phrase,
+        "changed_tokens": len(parts), "cand_words": cand_words, "phrase": phrase,
     }
     return RegenPlan(candidate_mp3=mp3, meta=meta)
 
@@ -304,9 +378,57 @@ def _find_cand_anchor(cand_words: list[dict], norm: str, last: bool) -> dict | N
     return matches[-1] if last else matches[0]
 
 
+def _splice_span_only(orig: np.ndarray, cand: np.ndarray, meta: dict,
+                      sr: int, od: float) -> SpliceResult:
+    """Span-only splice: replace orig[tL:tR] with the candidate. tL/tR were anchored in
+    REAL silence at plan time (audio_splice.plan_segment), so the seam is clean; here we
+    just trim the candidate to its own speech, level-match it, and crossfade it in."""
+    cw = meta.get("cand_words") or []
+    if cw:                                   # trim TTS lead/trail silence (+18 ms breath)
+        m = 0.018
+        cs = max(0.0, float(cw[0]["start"]) - m)
+        ce = min(audio_io.duration_seconds(cand, sr), float(cw[-1]["end"]) + m)
+        a, b = int(cs * sr), int(ce * sr)
+        if b - a > 8:
+            cand = cand[a:b]
+
+    tL = float(meta.get("tL") or 0.0)
+    tR = od if meta.get("tR") is None else float(meta["tR"])
+    sL = max(0, min(int(round(tL * sr)), len(orig)))
+    sR = max(sL, min(int(round(tR * sr)), len(orig)))
+    head, tail, mid = orig[:sL], orig[sR:], cand
+
+    retained = np.concatenate([head, tail]) if (len(head) + len(tail)) else orig
+    ref_db = audio_io.gated_rms_db(retained, sr)
+    mid_db = audio_io.gated_rms_db(mid, sr)
+    gain = 0.0
+    if mid_db > -119 and ref_db > -119:
+        gain = float(np.clip(ref_db - mid_db, -12.0, 12.0))
+        mid = audio_io.apply_gain_db(mid, gain)
+    mid = audio_io.limit_peak(mid, TRUE_PEAK_CEILING_DB)
+    spliced = audio_io.crossfade_join([head, mid, tail], sr, 12.0)
+
+    # Cuts are in real silence by construction → score on duration plausibility only.
+    expected = meta.get("changed_tokens", 0) * 0.34
+    mid_dur = audio_io.duration_seconds(mid, sr)
+    if expected <= 0:
+        dur_score = 1.0 if mid_dur < 1.5 else 0.6
+    else:
+        dur_score = 1.0 if 0.4 <= mid_dur / expected <= 2.6 else 0.5
+    confidence = round(0.6 + 0.4 * dur_score, 3)
+    return SpliceResult(
+        samples=spliced, confidence=confidence,
+        edit_required=confidence < SPLICE_CONFIDENCE_FLOOR,
+        detail={"span_only": True, "tL": round(tL, 3), "tR": round(tR, 3),
+                "gain_db": gain, "mid_dur": round(mid_dur, 3)},
+    )
+
+
 def do_splice(orig: np.ndarray, cand: np.ndarray, meta: dict,
               sr: int = audio_io.SR) -> SpliceResult:
     od = audio_io.duration_seconds(orig, sr)
+    if meta.get("span_only"):
+        return _splice_span_only(orig, cand, meta, sr, od)
     cd = audio_io.duration_seconds(cand, sr)
     cand_words = meta.get("cand_words") or []
 

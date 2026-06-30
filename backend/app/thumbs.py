@@ -38,13 +38,27 @@ _MP4_RE = re.compile(r"\.mp4$", re.I)
 _LOCK = threading.RLock()
 _VIDEO_DATA: dict | None = None             # videoId → entry
 _THUMB_INDEX: dict[str, Path] | None = None  # normkey(stem) → jpg path
+_THUMB_SIG_INDEX: dict[str, list[Path]] | None = None  # datetime-signature → jpg paths
 _R2_CLIENT = None                            # boto3 s3 client or None
 _R2_TRIED = False
 _UPLOADED: set[str] | None = None            # R2 keys known to exist
 
+_DIGITS_RE = re.compile(r"\D+")
+
 
 def _norm(s: str) -> str:
     return _NORM_RE.sub("", s or "").lower()
+
+
+def _sig(stem: str) -> str | None:
+    """Date-time digit signature of a clip stem: the first 28 digits = capture date
+    (8) + time (6) + process timestamp (14). Everything after — the ``-N`` index, a
+    stray `` 1-10``, ``.Mov``, ``_(too_shakey…)`` — is noise the VideoIds stem and the
+    rendered thumbnail file disagree on (e.g. stem ``vid_20230311_102456_20230313125412-1``
+    ↔ file ``Vid 20230311 102456 20230313125412-12.jpg``). Returns None for non-clip
+    stems (title cards etc.), which have fewer digits, so they never collide."""
+    digits = _DIGITS_RE.sub("", stem)
+    return digits[:28] if len(digits) >= 28 else None
 
 
 # --------------------------------------------------------------------------- #
@@ -94,30 +108,61 @@ def stem_for_video_id(video_id: str) -> str | None:
 # --------------------------------------------------------------------------- #
 # stem → local JPG (one-time index over the five thumbnail trees)
 # --------------------------------------------------------------------------- #
+def _build_indexes() -> None:
+    """One walk of the five thumbnail trees → the exact normkey index AND the
+    date-time signature index (sig → all matching paths, so we only trust it when it
+    resolves a single file)."""
+    global _THUMB_INDEX, _THUMB_SIG_INDEX
+    idx: dict[str, Path] = {}
+    sig: dict[str, list[Path]] = {}
+    for root in config.THUMB_ROOTS:
+        if not root.is_dir():
+            continue
+        for dirpath, _dirs, names in os.walk(root):
+            for nm in names:
+                if not nm.lower().endswith(".jpg"):
+                    continue
+                stem = Path(nm).stem
+                path = Path(dirpath) / nm
+                idx.setdefault(_norm(stem), path)
+                s = _sig(stem)
+                if s:
+                    sig.setdefault(s, []).append(path)
+    _THUMB_INDEX, _THUMB_SIG_INDEX = idx, sig
+    print(f"[thumbs] indexed {len(idx)} thumbnail JPGs ({len(sig)} datetime sigs) "
+          f"from {len(config.THUMB_ROOTS)} roots")
+
+
 def _thumb_index() -> dict[str, Path]:
-    global _THUMB_INDEX
     if _THUMB_INDEX is None:
         with _LOCK:
             if _THUMB_INDEX is None:
-                idx: dict[str, Path] = {}
-                for root in config.THUMB_ROOTS:
-                    if not root.is_dir():
-                        continue
-                    for dirpath, _dirs, names in os.walk(root):
-                        for nm in names:
-                            if nm.lower().endswith(".jpg"):
-                                idx.setdefault(_norm(Path(nm).stem),
-                                               Path(dirpath) / nm)
-                _THUMB_INDEX = idx
-                print(f"[thumbs] indexed {len(idx)} thumbnail JPGs "
-                      f"from {len(config.THUMB_ROOTS)} roots")
+                _build_indexes()
     return _THUMB_INDEX
+
+
+def _thumb_sig_index() -> dict[str, list[Path]]:
+    if _THUMB_SIG_INDEX is None:
+        with _LOCK:
+            if _THUMB_SIG_INDEX is None:
+                _build_indexes()
+    return _THUMB_SIG_INDEX
 
 
 def jpg_for_stem(stem: str) -> Path | None:
     if not stem:
         return None
-    return _thumb_index().get(_norm(stem))
+    hit = _thumb_index().get(_norm(stem))
+    if hit:
+        return hit
+    # Fallback: the file exists but its -N index / punctuation differs — match on the
+    # date-time signature, but only when it points to exactly one file (no ambiguity).
+    s = _sig(stem)
+    if s:
+        paths = _thumb_sig_index().get(s)
+        if paths and len(paths) == 1:
+            return paths[0]
+    return None
 
 
 # --------------------------------------------------------------------------- #

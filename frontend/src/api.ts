@@ -10,7 +10,7 @@ const TOKEN: string = import.meta.env.VITE_REVIEW_TOKEN ?? 'dev-token';
 // ---------------------------------------------------------------------------
 
 export type FlagValue = 'none' | 'done' | 'edit_required';
-export type RegenerateMode = 'segment' | 'whole' | 'highlight';
+export type RegenerateMode = 'segment' | 'whole' | 'highlight' | 'alt';
 export type FallbackExtent = 'sentence' | 'scene' | 'custom';
 export type SessionStatus = 'in_review' | 'submitted';
 
@@ -36,6 +36,14 @@ export interface AudioVersion {
   url: string;
 }
 
+export interface ManualClip {
+  id: number;
+  text: string;
+  kind: string; // generated | imported
+  url: string;
+  created_at: number;
+}
+
 export interface Field {
   fid: number;
   scene_index: number | null;
@@ -43,13 +51,19 @@ export interface Field {
   has_audio: boolean;
   original_text: string;
   current_text: string;
+  /** Editable English translation for non-_EN trips (empty when N/A / same as target). */
+  source_text: string;
+  /** The English at seed — for the original→new diff on the English editor. */
+  original_source: string;
   flag: FlagValue;
   comment: string;
   splice_confidence: number | null;
   played_coverage: Array<[number, number]>;
+  original_played_coverage: Array<[number, number]>;
   can_mark_done: boolean;
   audio: AudioLinks;
   versions: AudioVersion[];
+  manual_clips: ManualClip[];
 }
 
 export interface Overlay {
@@ -74,9 +88,37 @@ export interface Session {
   folder_name: string;
   status: SessionStatus;
   voice: string;
+  voice_display: string;
+  speed: number;
+  speed_override: number | null;
+  model: string;
+  model_override: string | null;
   trip_categories: string[];
   trip_fields: Field[];
   scenes: Scene[];
+}
+
+export interface VoiceInfo {
+  name: string;
+  display: string;
+  gender: string;
+  language: string;
+  country: string;
+  model: string;
+}
+
+export interface VoicesResponse {
+  voices: VoiceInfo[];
+  models: string[];
+}
+
+export interface NarrationUpdate {
+  voice?: string;
+  speed?: number;
+  model?: string;
+  clear_speed?: boolean;
+  clear_model?: boolean;
+  reset_regenerated?: boolean;
 }
 
 export interface TripListItem {
@@ -86,6 +128,9 @@ export interface TripListItem {
   has_session: boolean;
   status: SessionStatus | null;
   lane: string | null;
+  /** Variant label (EN / A12 / B1 / N4 / HSK1-2 …) and the family (place) base id. */
+  level: string;
+  family: string;
   reviewable: boolean;
 }
 
@@ -190,6 +235,11 @@ export const api = {
 
   listTrips: (): Promise<TripListItem[]> => getJson('/api/trips'),
 
+  listVoices: (): Promise<VoicesResponse> => getJson('/api/voices'),
+
+  setNarration: (sid: string, body: NarrationUpdate): Promise<Session> =>
+    postJson(`/api/sessions/${encodeURIComponent(sid)}/narration`, body),
+
   createOrResumeSession: (tripId: string): Promise<Session> =>
     postJson('/api/sessions', { trip_id: tripId }),
 
@@ -198,15 +248,27 @@ export const api = {
   putField: (sid: string, fid: number, currentText: string): Promise<Field> =>
     putJson(field(sid, fid), { current_text: currentText }),
 
+  putSource: (sid: string, fid: number, text: string): Promise<Field> =>
+    putJson(field(sid, fid, '/source'), { text }),
+
   regenerate: (
     sid: string,
     fid: number,
     mode: RegenerateMode,
     range?: { start: number; end: number },
+    altText?: string,
   ): Promise<Field> =>
-    postJson(field(sid, fid, '/regenerate'), range ? { mode, range } : { mode }),
+    postJson(field(sid, fid, '/regenerate'), {
+      mode,
+      ...(range ? { range } : {}),
+      ...(altText !== undefined ? { alt_text: altText } : {}),
+    }),
 
   combine: (sid: string, fid: number): Promise<Field> => postJson(field(sid, fid, '/combine')),
+
+  // Manual backstop: trim a leftover sliver/noise the reviewer highlighted in the narration.
+  trimNoise: (sid: string, fid: number, start: number, end: number): Promise<Field> =>
+    postJson(field(sid, fid, '/trim'), { start, end }),
 
   fallback: (
     sid: string,
@@ -228,8 +290,12 @@ export const api = {
     });
   },
 
-  postPlayed: (sid: string, fid: number, ranges: Array<[number, number]>): Promise<PlayedResponse> =>
-    postJson(field(sid, fid, '/played'), { ranges }),
+  postPlayed: (
+    sid: string,
+    fid: number,
+    ranges: Array<[number, number]>,
+    track: 'working' | 'original' = 'working',
+  ): Promise<PlayedResponse> => postJson(field(sid, fid, '/played'), { ranges, track }),
 
   postFlag: (sid: string, fid: number, flag: FlagValue): Promise<Field> =>
     postJson(field(sid, fid, '/flag'), { flag }),
@@ -238,6 +304,29 @@ export const api = {
     postJson(field(sid, fid, '/comment'), { text }),
 
   revert: (sid: string, fid: number): Promise<Field> => postJson(field(sid, fid, '/revert')),
+
+  // --- Manual-edit clip workspace ---
+  createClip: (sid: string, fid: number, text: string): Promise<Field> =>
+    postJson(field(sid, fid, '/clips'), { text }),
+
+  importClip: async (sid: string, fid: number, file: File): Promise<Field> => {
+    const form = new FormData();
+    form.append('file', file);
+    return requestJson<Field>(field(sid, fid, '/clips/upload'), {
+      method: 'POST',
+      headers: { 'X-Review-Token': TOKEN },
+      body: form,
+    });
+  },
+
+  regenClip: (sid: string, fid: number, cid: number, text?: string): Promise<Field> =>
+    postJson(field(sid, fid, `/clips/${cid}/regenerate`), { text }),
+
+  useClip: (sid: string, fid: number, cid: number): Promise<Field> =>
+    postJson(field(sid, fid, `/clips/${cid}/use`)),
+
+  deleteClip: (sid: string, fid: number, cid: number): Promise<Field> =>
+    requestJson<Field>(field(sid, fid, `/clips/${cid}`), { method: 'DELETE', headers: jsonHeaders() }),
 
   /**
    * Download the session zip. A plain <a href> can't send the X-Review-Token

@@ -67,6 +67,11 @@ def get_version(sid: str, fid: int, n: int, request: Request):
     return _serve_range(sessions.version_path(sid, fid, n), request, "audio/mpeg")
 
 
+@router.get("/audio/{sid}/{fid}/clip/{cid}")
+def get_clip(sid: str, fid: int, cid: int, request: Request):
+    return _serve_range(sessions.clip_path(sid, fid, cid), request, "audio/mpeg")
+
+
 @router.get("/audio/{sid}/{fid}/{which}")
 def get_audio(sid: str, fid: int, which: str, request: Request):
     if which not in ("original", "working", "candidate", "fallback"):

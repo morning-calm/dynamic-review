@@ -33,15 +33,108 @@ from pronunciation_overrides import load_overrides, apply_overrides, prompt_rule
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
 EL_MODEL = "eleven_multilingual_v2"   # K4: speed honoured only on v2
 
-VOICES = {
-    # name: (voice_id, voice_settings)
-    "isla":   ("h8eW5xfRUGVJrZhAFxqK",
-               {"speed": 1.0, "stability": 0.5, "similarity_boost": 0.75}),
-    "harry":  ("HLXBCncM2sIxwTmiIZg8",
-               {"stability": 0.75, "similarity_boost": 0.75, "style": 0, "speed": 1}),
-    "andrea": ("bhVHbttQpONfnKTIWK9J",
-               {"stability": 0.75, "similarity_boost": 0.75, "style": 0, "speed": 1}),
+# --------------------------------------------------------------------------- #
+# Approved-voice registry — the single source of truth for who narrates a trip.
+# Mirrors the per-voice ElevenLabs scripts in `Audio Generation/` (voice_id +
+# voice_settings + model). `gender`/`language`/`country` drive resolve_voice's
+# (language, country, gender) lookup — the reviewer picks male/female at drafting,
+# stored in the trip's staging_choices.json (see sessions.resolve_voice).
+#
+# NB the English `voice_settings` here are the review-app's existing values (kept
+# verbatim — do not retune blind: the splice/seam DSP was calibrated against them).
+# JP voices use eleven_v3 (speed NOT honoured by the API); EN/ZH use v2.
+VOICE_REGISTRY = {
+    # name: {voice_id, settings, model, gender, language, country}
+    "isla":    {"voice_id": "h8eW5xfRUGVJrZhAFxqK",
+                "settings": {"speed": 1.0, "stability": 0.5, "similarity_boost": 0.75},
+                "model": "eleven_multilingual_v2",
+                "gender": "female", "language": "English", "country": "Scotland"},
+    "harry":   {"voice_id": "HLXBCncM2sIxwTmiIZg8",
+                "settings": {"stability": 0.75, "similarity_boost": 0.75, "style": 0, "speed": 1},
+                "model": "eleven_multilingual_v2",
+                "gender": "male", "language": "English", "country": "England"},
+    "andrea":  {"voice_id": "bhVHbttQpONfnKTIWK9J",
+                "settings": {"stability": 0.75, "similarity_boost": 0.75, "style": 0, "speed": 1},
+                "model": "eleven_multilingual_v2",
+                "gender": "female", "language": "English", "country": "England"},
+    # Mandarin — eleven_multilingual_v2 (speed honoured); HSK speed TBD per trip.
+    "yu":      {"voice_id": "fQj4gJSexpu8RDE2Ii5m",
+                "settings": {"speed": 1.0, "stability": 0.5, "similarity_boost": 0.75},
+                "model": "eleven_multilingual_v2",
+                "gender": "male", "language": "Mandarin", "country": "Taiwan"},
+    "annasu":  {"voice_id": "9lHjugDhwqoxA5MhX0az",
+                "settings": {"speed": 1.0, "stability": 0.5, "similarity_boost": 0.75},
+                "model": "eleven_multilingual_v2",
+                "gender": "female", "language": "Mandarin", "country": "China"},
+    "jason":   {"voice_id": "DowyQ68vDpgFYdWVGjc3",
+                "settings": {"speed": 1.0, "stability": 0.5, "similarity_boost": 0.75},
+                "model": "eleven_multilingual_v2",
+                "gender": "male", "language": "Mandarin", "country": "China"},
+    # Japanese — eleven_v3 (speed ignored by the API; kept at 1.0).
+    "daisuke": {"voice_id": "ss9cJxDAEMXP4wfQ3GPr",
+                "settings": {"speed": 1.0, "stability": 0.5, "similarity_boost": 0.75},
+                "model": "eleven_v3",
+                "gender": "male", "language": "Japanese", "country": "Japan"},
+    "fumi":    {"voice_id": "PmgfHCGeS5b7sH90BOOJ",
+                "settings": {"speed": 1.0, "stability": 0.5, "similarity_boost": 0.75},
+                "model": "eleven_v3",
+                "gender": "female", "language": "Japanese", "country": "Japan"},
 }
+
+# Back-compat view used by the splice/session code: {name: (voice_id, voice_settings)}.
+VOICES = {n: (v["voice_id"], v["settings"]) for n, v in VOICE_REGISTRY.items()}
+
+
+EL_MODELS = ["eleven_multilingual_v2", "eleven_v3"]  # v2 honours speed; v3 ignores it
+
+
+def model_for_voice(name: str) -> str:
+    """ElevenLabs model_id for a registry voice (falls back to the v2 default)."""
+    return (VOICE_REGISTRY.get(name) or {}).get("model", EL_MODEL)
+
+
+def display_name(name: str) -> str:
+    n = (name or "").strip().lower()
+    return {"annasu": "Anna-Su"}.get(n, n.capitalize())
+
+
+def registry_list() -> list[dict]:
+    """The approved voices for the UI picker (name + display + metadata)."""
+    return [
+        {"name": n, "display": display_name(n), "gender": v["gender"],
+         "language": v["language"], "country": v["country"], "model": v["model"]}
+        for n, v in VOICE_REGISTRY.items()
+    ]
+
+
+def language_of(trip_id: str) -> str:
+    """Narration language inferred from the trip-id suffix (`_JP`/`_ZH`/`_EN`)."""
+    t = (trip_id or "").upper()
+    if t.endswith("_JP"):
+        return "Japanese"
+    if t.endswith("_ZH"):
+        return "Mandarin"
+    return "English"
+
+
+def voice_for_gender(language: str, country: str, gender: str) -> str | None:
+    """Map the drafting choice (male/female) + trip language/country to an approved
+    voice name. Returns None if gender is missing/unknown so the caller can fall
+    back to the legacy country guess."""
+    g = (gender or "").strip().lower()
+    if g not in ("male", "female"):
+        return None
+    c = (country or "").strip()
+    if language == "Japanese":
+        return "daisuke" if g == "male" else "fumi"
+    if language == "Mandarin":
+        if g == "female":
+            return "annasu"
+        return "yu" if c == "Taiwan" else "jason"
+    # English (default): Scotland has its own female voice; UK male is Harry.
+    if g == "female":
+        return "isla" if c == "Scotland" else "andrea"
+    return "harry"
 
 
 def speed_for_trip(trip_id: str) -> float:
@@ -173,10 +266,11 @@ def _headers() -> dict:
     return {"xi-api-key": ELEVENLABS_API_KEY, "Content-Type": "application/json"}
 
 
-def generate_audio(text: str, voice_id: str, voice_settings: dict) -> bytes:
+def generate_audio(text: str, voice_id: str, voice_settings: dict,
+                   model_id: str = EL_MODEL) -> bytes:
     """Plain TTS → mp3 bytes (whole-block + fallback clips). Raises on non-200."""
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
-    body = {"text": text, "model_id": EL_MODEL, "voice_settings": voice_settings}
+    body = {"text": text, "model_id": model_id, "voice_settings": voice_settings}
     r = requests.post(url, json=body, headers=_headers(), timeout=180)
     if r.status_code != 200:
         raise RuntimeError(f"ElevenLabs {r.status_code}: {r.text[:300]}")
@@ -185,13 +279,14 @@ def generate_audio(text: str, voice_id: str, voice_settings: dict) -> bytes:
 
 def generate_with_timestamps(text: str, voice_id: str, voice_settings: dict,
                              previous_text: str | None = None,
-                             next_text: str | None = None) -> tuple[bytes, list[dict]]:
+                             next_text: str | None = None,
+                             model_id: str = EL_MODEL) -> tuple[bytes, list[dict]]:
     """TTS with character alignment → (mp3 bytes, word list).
 
     Words are aggregated from the per-character alignment by splitting on spaces;
     word.start = first char start, word.end = last char end."""
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/with-timestamps"
-    body = {"text": text, "model_id": EL_MODEL, "voice_settings": voice_settings}
+    body = {"text": text, "model_id": model_id, "voice_settings": voice_settings}
     if previous_text:
         body["previous_text"] = previous_text
     if next_text:

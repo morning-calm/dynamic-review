@@ -97,7 +97,7 @@ const SceneCard = ({ scene, fields, sid, onFieldUpdate }: SceneCardProps) => {
       <div className="mt-4 space-y-4">
         {titleKey && (
           <FieldShell>
-            <AudioFieldBlock field={titleKey} sid={sid} onFieldUpdate={onFieldUpdate} label="Title" singleLine />
+            <AudioFieldBlock field={titleKey} sid={sid} onFieldUpdate={onFieldUpdate} label="Title" rows={2} />
           </FieldShell>
         )}
 
@@ -148,7 +148,7 @@ const SceneCard = ({ scene, fields, sid, onFieldUpdate }: SceneCardProps) => {
                     field={opt}
                     sid={sid}
                     onFieldUpdate={onFieldUpdate}
-                    singleLine
+                    rows={3}
                     header={
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-400">Option {k}</span>

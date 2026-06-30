@@ -162,6 +162,140 @@ def find_energy_min(samples: np.ndarray, sr: int, t_center: float,
     return refined, depth
 
 
+def silence_run(samples: np.ndarray, sr: int, t0: float, t1: float,
+                thresh_db: float = -38.0, min_ms: float = 25.0) -> tuple[float, float] | None:
+    """(start, end) of the FIRST genuine-silence run (frame RMS below ``thresh_db`` re.
+    peak, lasting ≥ ``min_ms``) whose START falls in [t0, t1]; ``end`` is the run's TRUE
+    end (it may extend past t1). None if no silence starts in [t0, t1]. Used to anchor a
+    splice cut in real silence instead of at an imprecise (often very wrong) Whisper word
+    boundary, and to detect connected speech (no run = no safe seam)."""
+    n = len(samples)
+    a, b = max(0, int(t0 * sr)), min(n, int((t1 + 0.7) * sr))   # extend to capture run end
+    if b - a < int(min_ms / 1000 * sr):
+        return None
+    times, rms = _frame_rms(samples[a:b], sr, frame_ms=10.0, hop_ms=5.0)
+    if len(rms) == 0:
+        return None
+    thr = (float(np.max(np.abs(samples))) or 1e-9) * (10.0 ** (thresh_db / 20.0))
+    silent = rms < thr
+    t1_rel = t1 - t0
+    i, m = 0, len(silent)
+    while i < m:
+        if silent[i]:
+            j = i
+            while j < m and silent[j]:
+                j += 1
+            s0, s1 = float(times[i]), float(times[j - 1])
+            if (s1 - s0) >= min_ms / 1000.0 and s0 <= t1_rel:
+                return (t0 + s0, t0 + s1)
+            i = j
+        else:
+            i += 1
+    return None
+
+
+def silence_run_nearest(samples: np.ndarray, sr: int, t_anchor: float,
+                        back: float, fwd: float, thresh_db: float = -38.0,
+                        min_ms: float = 60.0) -> tuple[float, float] | None:
+    """(start, end) of the genuine-silence run (RMS below ``thresh_db`` re. peak, ≥
+    ``min_ms``) whose nearest edge is CLOSEST to ``t_anchor``, among runs starting in
+    [t_anchor−back, t_anchor+fwd]. Unlike :func:`silence_run` (first run in a window) this
+    picks the pause ADJACENT to a word boundary regardless of which side it falls — Whisper
+    routinely absorbs an inter-word pause into the *start* of the following word (stretching
+    it), so the real pause can sit forward of the reported word start. Returns None if no
+    qualifying run. ``min_ms`` is higher than silence_run's so sub-phoneme dips are ignored."""
+    t0 = max(0.0, t_anchor - back)
+    t1 = t_anchor + fwd
+    n = len(samples)
+    a, b = max(0, int(t0 * sr)), min(n, int((t1 + 0.7) * sr))
+    if b - a < int(min_ms / 1000 * sr):
+        return None
+    times, rms = _frame_rms(samples[a:b], sr, frame_ms=10.0, hop_ms=5.0)
+    if len(rms) == 0:
+        return None
+    thr = (float(np.max(np.abs(samples))) or 1e-9) * (10.0 ** (thresh_db / 20.0))
+    silent = rms < thr
+    t1_rel = t1 - t0
+    best, best_d = None, 1e9
+    i, m = 0, len(silent)
+    while i < m:
+        if silent[i]:
+            j = i
+            while j < m and silent[j]:
+                j += 1
+            s0, s1 = float(times[i]), float(times[j - 1])
+            if (s1 - s0) >= min_ms / 1000.0 and s0 <= t1_rel:
+                a0, a1 = t0 + s0, t0 + s1
+                d = 0.0 if a0 <= t_anchor <= a1 else min(abs(a0 - t_anchor), abs(a1 - t_anchor))
+                if d < best_d:
+                    best_d, best = d, (a0, a1)
+            i = j
+        else:
+            i += 1
+    return best
+
+
+def trim_slivers(samples: np.ndarray, sr: int, t0: float, t1: float,
+                 thresh_db: float = -38.0, sliver_max: float = 0.13,
+                 sil_min: float = 0.04) -> np.ndarray:
+    """Within [t0, t1], drop SHORT isolated voiced blips (leftover word-fragment slivers)
+    that are bordered by silence — keeping real words (longer voiced runs) and the pauses
+    untouched. Returns new full-length samples. Manual backstop for residual splice noise;
+    conservative so it rarely touches genuine short words."""
+    n = len(samples)
+    a, b = max(0, int(t0 * sr)), min(n, int(t1 * sr))
+    if b - a < int(0.03 * sr):
+        return samples
+    win = samples[a:b]
+    hop_ms = 5.0
+    _, rms = _frame_rms(win, sr, frame_ms=10.0, hop_ms=hop_ms)
+    if len(rms) == 0:
+        return samples
+    thr = (float(np.max(np.abs(samples))) or 1e-9) * (10.0 ** (thresh_db / 20.0))
+    silent = rms < thr
+    runs = []                                    # (is_silent, frame_start, frame_end)
+    i, m = 0, len(silent)
+    while i < m:
+        j = i
+        while j < m and silent[j] == silent[i]:
+            j += 1
+        runs.append((bool(silent[i]), i, j))
+        i = j
+    hop = hop_ms / 1000.0
+    drop = set()
+    for k, (sil, fi, fj) in enumerate(runs):
+        if sil or (fj - fi) * hop > sliver_max:
+            continue                             # silence or a real (long) word — keep
+        left_sil = k > 0 and runs[k - 1][0] and (runs[k - 1][2] - runs[k - 1][1]) * hop >= sil_min
+        right_sil = k + 1 < len(runs) and runs[k + 1][0] and (runs[k + 1][2] - runs[k + 1][1]) * hop >= sil_min
+        if left_sil or right_sil:
+            drop.add(k)                          # short voiced blip in a gap → sliver
+    if not drop:
+        return samples
+    pieces = [win[int(fi * hop * sr):int(fj * hop * sr)]
+              for k, (_s, fi, fj) in enumerate(runs) if k not in drop]
+    cleaned = crossfade_join(pieces, sr, 8.0) if pieces else win[:0]
+    return np.concatenate([samples[:a], cleaned, samples[b:]]).astype(np.float32)
+
+
+def trailing_silence_seconds(samples: np.ndarray, sr: int = SR,
+                             thresh_db: float = -50.0) -> float:
+    """Seconds of (near-)silence at the END of the clip — how much trailing pause to
+    conserve when a regenerated take replaces a master (e.g. the ~3s beginner SceneDesc
+    tail). Returns the full length if it's entirely below threshold."""
+    n = len(samples)
+    if n == 0:
+        return 0.0
+    times, rms = _frame_rms(samples, sr, frame_ms=20.0, hop_ms=10.0)
+    if len(rms) == 0:
+        return 0.0
+    above = np.nonzero(rms >= 10.0 ** (thresh_db / 20.0))[0]
+    total = n / sr
+    if len(above) == 0:
+        return total
+    return max(0.0, total - (float(times[int(above[-1])]) + 0.02))
+
+
 # --------------------------------------------------------------------------- #
 # Splice assembly: butt-join with equal-power edge fades (length-preserving).
 # acrossfade is deliberately avoided because it shortens total length.
@@ -193,3 +327,25 @@ def butt_join(pieces: list[np.ndarray], sr: int, fade_ms: float) -> np.ndarray:
         faded.append(_edge_fade(p, sr, fade_ms,
                                 fade_in=(i != 0), fade_out=(i != last)))
     return np.concatenate(faded).astype(np.float32)
+
+
+def crossfade_join(pieces: list[np.ndarray], sr: int, fade_ms: float) -> np.ndarray:
+    """Join pieces with an OVERLAPPING equal-power (cos/sin) crossfade at each seam.
+
+    Unlike butt_join (which fades both sides to zero → a tiny amplitude notch when the
+    cut isn't dead silence), the crossfade keeps constant power across the boundary, so
+    a seam that sits in low-but-not-silent audio blends instead of clicking. Shortens
+    total length by ~fade_ms per seam — fine for a surgical word splice."""
+    pieces = [p.astype(np.float32) for p in pieces if len(p) > 0]
+    if not pieces:
+        return np.zeros(0, dtype=np.float32)
+    out = pieces[0].copy()
+    for p in pieces[1:]:
+        n = min(int(sr * fade_ms / 1000), len(out), len(p))
+        if n <= 0:
+            out = np.concatenate([out, p])
+            continue
+        t = np.linspace(0.0, np.pi / 2, n, dtype=np.float32)
+        seam = out[-n:] * np.cos(t) + p[:n] * np.sin(t)   # equal power
+        out = np.concatenate([out[:-n], seam, p[n:]])
+    return out.astype(np.float32)
