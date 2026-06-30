@@ -30,7 +30,7 @@ import numpy as np
 from fastapi import HTTPException
 
 from . import config  # noqa: F401  (ensures SCRIPTS_ROOT on sys.path) — keep first
-from . import audio_core, audio_io, audio_splice, db, thumbs
+from . import audio_core, audio_io, audio_splice, db, review_audio, thumbs
 from .config import (COUNTRY_VOICE_GUESS, COVERAGE_DONE_FRACTION, WORK_ROOT)
 from .locks import WHISPER_LOCK
 from .staging import (db as fb_db, get_trip, get_tripgroup, merge_categories,
@@ -116,6 +116,30 @@ def _next_version_suffix(ver_dir: Path, stem: str) -> int:
         if m:
             mx = max(mx, int(m.group(1)))
     return mx + 1
+
+
+def _r2_upload_working(trip_id: str, dirs: dict, frow) -> None:
+    """Best-effort: push the canonical working clip and the latest version snapshot to
+    review-audio/<trip_id>/. Called immediately after _set_working(); never raises."""
+    try:
+        name = frow["mp3_name"]
+        if not name:
+            return
+        # Canonical promoted clip (e.g. 3.mp3, 3_q.mp3, 3_a.mp3)
+        working = dirs["working"] / name
+        if working.exists():
+            review_audio.upload(trip_id, working, name)
+        # Latest version snapshot just inserted by _set_working() (e.g. 3v2.mp3)
+        ver = db.query_one(
+            "SELECT path, label FROM audio_versions "
+            "WHERE field_id=? ORDER BY n DESC LIMIT 1",
+            (frow["id"],))
+        if ver and ver["path"]:
+            vpath = Path(ver["path"])
+            if vpath.exists():
+                review_audio.upload(trip_id, vpath, f"{ver['label']}.mp3")
+    except Exception as e:  # noqa: BLE001
+        print(f"[sessions] R2 upload skipped ({frow['mp3_name']}): {e}")
 
 
 def _vimeo_id(v) -> str | None:
@@ -693,6 +717,7 @@ def combine(sid: str, fid: int) -> dict:
         # whole-block / Q&A: replace working with the candidate take.
         whash = _set_working(sid, frow, src_mp3=Path(frow["candidate_mp3_path"]),
                              kind="splice")
+        _r2_upload_working(srow["trip_id"], dirs, frow)
         patch = {"working_audio_hash": whash, "splice_confidence": None,
                  "candidate_mp3_path": None}
         patch.update(_clear_coverage_and_done(frow))
@@ -707,6 +732,7 @@ def combine(sid: str, fid: int) -> dict:
     result = audio_splice.do_splice(orig, cand, meta)
 
     whash = _set_working(sid, frow, samples=result.samples, kind="splice")
+    _r2_upload_working(srow["trip_id"], dirs, frow)
     patch = {"working_audio_hash": whash,
              "splice_confidence": result.confidence,
              "candidate_mp3_path": None,
@@ -737,6 +763,13 @@ def fallback(sid: str, fid: int, extent: str, text: str | None, description: str
     dirs = work_dirs(sid)
     fpath = dirs["fallback"] / f"{fid}.mp3"
     fpath.write_bytes(mp3)
+    try:
+        _fb_mp3n = frow["mp3_name"]
+        if _fb_mp3n:
+            review_audio.upload(srow["trip_id"], fpath,
+                                f"{_fb_mp3n[:-4]}_fallback.mp3")
+    except Exception:  # noqa: BLE001
+        pass
     db.update_fields(fid, fallback_mp3_path=str(fpath), fallback_desc=description or "",
                      flag="edit_required",
                      comment=_append_note(frow["comment"],
@@ -757,6 +790,7 @@ def import_mp3(sid: str, fid: int, data: bytes) -> dict:
     # hand-edited import (any rate/channel count) lands as a clean, consistent master.
     samples = audio_io.mp3_to_samples(tmp)
     whash = _set_working(sid, frow, samples=samples, kind="admin_import")
+    _r2_upload_working(srow["trip_id"], dirs, frow)
     tmp.unlink(missing_ok=True)
     patch = {"working_audio_hash": whash, "splice_confidence": None,
              "candidate_mp3_path": None}
