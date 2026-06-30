@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-30T00:45:11+01:00",
+  "generated_at": "2026-06-30T01:38:51+01:00",
   "source": "trello 6,7",
   "trips": [
     {
@@ -604,18 +604,6 @@
         "EN"
       ],
       "card_url": "https://trello.com/c/aQEbyv1x"
-    },
-    {
-      "trip_id": "LionDance_EN",
-      "lane": "7",
-      "title": "Lion Dances, Taipei 2026",
-      "labels": [
-        "EN",
-        "Trip",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/QBhTh4vh"
     },
     {
       "trip_id": "Little_Venice Notting Hill_A12_EN",
