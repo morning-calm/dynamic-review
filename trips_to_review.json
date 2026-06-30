@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-30T13:52:14+01:00",
+  "generated_at": "2026-06-30T14:14:57+01:00",
   "source": "trello 6,7",
   "trips": [
     {
@@ -7,6 +7,8 @@
       "lane": "6",
       "level": "N4",
       "family": "AmagoiWaterfalls",
+      "voice": "daisuke",
+      "gender": "male",
       "title": "AmagoiWaterfalls_Beg_N4_JP",
       "labels": [
         "EN",
@@ -21,6 +23,8 @@
       "lane": "6",
       "level": "N4",
       "family": "IyaValley1",
+      "voice": "daisuke",
+      "gender": "male",
       "title": "IyaValley1_Beg_N4_JP",
       "labels": [
         "EN",
@@ -35,6 +39,8 @@
       "lane": "6",
       "level": "N4",
       "family": "IyaValley2",
+      "voice": "daisuke",
+      "gender": "male",
       "title": "IyaValley2_Beg_N4_JP",
       "labels": [
         "EN",
@@ -49,6 +55,8 @@
       "lane": "6",
       "level": "N4",
       "family": "KochiCity",
+      "voice": "daisuke",
+      "gender": "male",
       "title": "KochiCity_Beg_N4_JP",
       "labels": [
         "EN",
@@ -63,6 +71,8 @@
       "lane": "6",
       "level": "N4",
       "family": "KochiOutskirts",
+      "voice": "daisuke",
+      "gender": "male",
       "title": "KochiOutskirts_Beg_N4_JP",
       "labels": [
         "EN",
@@ -77,6 +87,8 @@
       "lane": "6",
       "level": "N4",
       "family": "Oboke",
+      "voice": "daisuke",
+      "gender": "male",
       "title": "Oboke_Beg_N4_JP",
       "labels": [
         "EN",
@@ -91,6 +103,8 @@
       "lane": "6",
       "level": "N4",
       "family": "Shikoku_Karst",
+      "voice": "daisuke",
+      "gender": "male",
       "title": "Shikoku_Karst_Beg_N4_JP",
       "labels": [
         "EN",
@@ -105,6 +119,8 @@
       "lane": "6",
       "level": "N4",
       "family": "Takao",
+      "voice": "fumi",
+      "gender": "female",
       "title": "Takao_Beg_N4_JP",
       "labels": [
         "Trip",
@@ -119,6 +135,8 @@
       "lane": "6",
       "level": "N4",
       "family": "Takao_Fire",
+      "voice": "fumi",
+      "gender": "female",
       "title": "Takao_Fire_Beg_N4_JP",
       "labels": [
         "Trip",
@@ -133,6 +151,8 @@
       "lane": "6",
       "level": "N4",
       "family": "Tokyo_03",
+      "voice": "fumi",
+      "gender": "female",
       "title": "Tokyo_03_Beg_N4_JP",
       "labels": [
         "Trip",
@@ -147,6 +167,8 @@
       "lane": "6",
       "level": "N4",
       "family": "Tokyo_04",
+      "voice": "fumi",
+      "gender": "female",
       "title": "Tokyo_04_Beg_N4_JP",
       "labels": [
         "Trip",
@@ -161,6 +183,8 @@
       "lane": "6",
       "level": "N4",
       "family": "Tokyo_05",
+      "voice": "fumi",
+      "gender": "female",
       "title": "Tokyo_05_Beg_N4_JP",
       "labels": [
         "Trip",
@@ -175,6 +199,8 @@
       "lane": "6",
       "level": "N4",
       "family": "Yusuhara",
+      "voice": "daisuke",
+      "gender": "male",
       "title": "Yusuhara_Beg_N4_JP",
       "labels": [
         "EN",
@@ -189,6 +215,8 @@
       "lane": "7",
       "level": "A12",
       "family": "A._A. Milne and Rudyard Kipling",
+      "voice": "",
+      "gender": "",
       "title": "A._A. Milne and Rudyard Kipling_A12_EN",
       "labels": [
         "EN"
@@ -200,6 +228,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Abergavenny",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Abergavenny_A12_EN",
       "labels": [
         "EN"
@@ -211,6 +241,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Alexandra_Palace",
+      "voice": "harry",
+      "gender": "male",
       "title": "Alexandra_Palace_A12_EN",
       "labels": [
         "EN"
@@ -222,6 +254,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Bath1",
+      "voice": "harry",
+      "gender": "male",
       "title": "Bath1_A12_EN",
       "labels": [
         "EN"
@@ -233,6 +267,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Bath2",
+      "voice": "harry",
+      "gender": "male",
       "title": "Bath2_A12_EN",
       "labels": [
         "EN"
@@ -244,6 +280,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Battle",
+      "voice": "harry",
+      "gender": "male",
       "title": "Battle_A12_EN",
       "labels": [
         "EN"
@@ -255,6 +293,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Blaenavon",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Blaenavon_A12_EN",
       "labels": [
         "EN"
@@ -266,6 +306,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Bude",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Bude_A12_EN",
       "labels": [
         "EN"
@@ -277,6 +319,8 @@
       "lane": "7",
       "level": "B1",
       "family": "Caerphilly_Castle_B1",
+      "voice": "",
+      "gender": "",
       "title": "Caerphilly_Castle_B1_EN",
       "labels": [
         "EN"
@@ -288,6 +332,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Camden",
+      "voice": "harry",
+      "gender": "male",
       "title": "Camden_A12_EN",
       "labels": [
         "EN"
@@ -299,6 +345,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Canary_Wharf",
+      "voice": "harry",
+      "gender": "male",
       "title": "Canary_Wharf_A12_EN",
       "labels": [
         "EN"
@@ -310,6 +358,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Canterbury",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Canterbury_A12_EN",
       "labels": [
         "EN"
@@ -321,6 +371,8 @@
       "lane": "7",
       "level": "B1",
       "family": "Canterbury",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Canterbury_B1_EN",
       "labels": [
         "EN"
@@ -332,6 +384,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Cardiff_I",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Cardiff_I_A12_EN",
       "labels": [
         "EN"
@@ -343,6 +397,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Cardiff_II",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Cardiff_II_A12_EN",
       "labels": [
         "EN"
@@ -354,6 +410,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Dartmoor_National_Park",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Dartmoor_A12_EN",
       "labels": [
         "EN"
@@ -365,6 +423,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Dartmouth",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Dartmouth_A12_EN",
       "labels": [
         "EN"
@@ -376,6 +436,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Dover",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Dover_A12_EN",
       "labels": [
         "EN"
@@ -387,6 +449,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Ely",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Ely_A12_EN",
       "labels": [
         "EN"
@@ -398,6 +462,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Falmouth",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Falmouth_A12_EN",
       "labels": [
         "EN"
@@ -409,6 +475,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Fowey",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Fowey_A12_EN",
       "labels": [
         "EN"
@@ -420,6 +488,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Greenwich",
+      "voice": "harry",
+      "gender": "male",
       "title": "Greenwich_A12_EN",
       "labels": [
         "EN"
@@ -431,6 +501,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Hampstead",
+      "voice": "harry",
+      "gender": "male",
       "title": "Hampstead_A12_EN",
       "labels": [
         "EN"
@@ -442,6 +514,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Hay-on-Wye",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Hay-on-Wye_A12_EN",
       "labels": [
         "EN"
@@ -453,6 +527,8 @@
       "lane": "7",
       "level": "EN",
       "family": "Hida",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Hida_EN",
       "labels": [
         "EN",
@@ -467,6 +543,8 @@
       "lane": "7",
       "level": "EN",
       "family": "HidaNoSato",
+      "voice": "andrea",
+      "gender": "female",
       "title": "HidaNoSato_EN",
       "labels": [
         "EN",
@@ -481,6 +559,8 @@
       "lane": "7",
       "level": "EN",
       "family": "Hida_Festival",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Hida_Festival_EN",
       "labels": [
         "EN",
@@ -495,6 +575,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Hyde_Park, Holland Park Richmond Park",
+      "voice": "",
+      "gender": "",
       "title": "Hyde_Park, Holland Park Richmond Park_A12_EN",
       "labels": [
         "EN"
@@ -506,6 +588,8 @@
       "lane": "7",
       "level": "A12",
       "family": "IronBridge",
+      "voice": "andrea",
+      "gender": "female",
       "title": "IronBridge_A12_EN",
       "labels": [
         "EN"
@@ -517,6 +601,8 @@
       "lane": "7",
       "level": "EN",
       "family": "KaohsiungLotusPond",
+      "voice": "andrea",
+      "gender": "female",
       "title": "KaohsiungLotusPond_EN",
       "labels": [
         "Trip",
@@ -531,6 +617,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Kensington",
+      "voice": "harry",
+      "gender": "male",
       "title": "Kensington_A12_EN",
       "labels": [
         "EN"
@@ -542,6 +630,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Kent_Coastline I",
+      "voice": "",
+      "gender": "",
       "title": "Kent_Coastline I_A12_EN",
       "labels": [
         "EN"
@@ -553,6 +643,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Kent_Coastline II",
+      "voice": "",
+      "gender": "",
       "title": "Kent_Coastline II_A12_EN",
       "labels": [
         "EN"
@@ -564,6 +656,8 @@
       "lane": "7",
       "level": "EN",
       "family": "KochiCity",
+      "voice": "harry",
+      "gender": "male",
       "title": "KochiCity_EN",
       "labels": [
         "EN",
@@ -578,6 +672,8 @@
       "lane": "7",
       "level": "EN",
       "family": "KochiOutskirts",
+      "voice": "harry",
+      "gender": "male",
       "title": "KochiOutskirts_EN",
       "labels": [
         "EN",
@@ -592,6 +688,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Lake_District1",
+      "voice": "harry",
+      "gender": "male",
       "title": "Lake_District1_A12_EN",
       "labels": [
         "EN"
@@ -603,6 +701,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Lake_District2",
+      "voice": "harry",
+      "gender": "male",
       "title": "Lake_District2_A12_EN",
       "labels": [
         "EN"
@@ -614,6 +714,8 @@
       "lane": "7",
       "level": "B1",
       "family": "Lake_District2_B1",
+      "voice": "",
+      "gender": "",
       "title": "Lake_District2_B1_EN",
       "labels": [
         "EN"
@@ -625,6 +727,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Lake_District3",
+      "voice": "harry",
+      "gender": "male",
       "title": "Lake_District3_A12_EN",
       "labels": [
         "EN"
@@ -636,6 +740,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Lake_District4",
+      "voice": "harry",
+      "gender": "male",
       "title": "Lake_District4_A12_EN",
       "labels": [
         "EN"
@@ -647,6 +753,8 @@
       "lane": "7",
       "level": "A12",
       "family": "LandsEnd",
+      "voice": "",
+      "gender": "",
       "title": "Lands End_A12_EN",
       "labels": [
         "EN"
@@ -658,6 +766,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Lincoln",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Lincoln_A12_EN",
       "labels": [
         "EN"
@@ -669,6 +779,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Little_Venice Notting Hill",
+      "voice": "",
+      "gender": "",
       "title": "Little_Venice Notting Hill_A12_EN",
       "labels": [
         "EN"
@@ -680,6 +792,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Liverpool_I",
+      "voice": "harry",
+      "gender": "male",
       "title": "Liverpool_I_A12_EN",
       "labels": [
         "EN"
@@ -691,6 +805,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Liverpool_II",
+      "voice": "harry",
+      "gender": "male",
       "title": "Liverpool_II_A12_EN",
       "labels": [
         "EN"
@@ -702,6 +818,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Liverpool_III",
+      "voice": "harry",
+      "gender": "male",
       "title": "Liverpool_III_A12_EN",
       "labels": [
         "EN"
@@ -713,6 +831,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Llandaff_Cathedral and Castell Coch",
+      "voice": "",
+      "gender": "",
       "title": "Llandaff_Cathedral and Castell Coch_A12_EN",
       "labels": [
         "EN"
@@ -724,6 +844,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Looe",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Looe_A12_EN",
       "labels": [
         "EN"
@@ -735,6 +857,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Manchester_I",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Manchester_I_A12_EN",
       "labels": [
         "EN"
@@ -746,6 +870,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Manchester_II Industrial Revolution",
+      "voice": "",
+      "gender": "",
       "title": "Manchester_II Industrial Revolution_A12_EN",
       "labels": [
         "EN"
@@ -757,6 +883,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Manchester_III",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Manchester_III_A12_EN",
       "labels": [
         "EN"
@@ -768,6 +896,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Newquay",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Newquay_A12_EN",
       "labels": [
         "EN"
@@ -779,6 +909,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Notting_Hill Carnival",
+      "voice": "",
+      "gender": "",
       "title": "Notting_Hill Carnival_A12_EN",
       "labels": [
         "EN"
@@ -790,6 +922,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Plymouth",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Plymouth_A12_EN",
       "labels": [
         "EN"
@@ -801,6 +935,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Polperro",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Polperro_A12_EN",
       "labels": [
         "EN"
@@ -812,6 +948,8 @@
       "lane": "7",
       "level": "A12",
       "family": "PortIsaac",
+      "voice": "",
+      "gender": "",
       "title": "Port Isaac_A12_EN",
       "labels": [
         "EN"
@@ -823,6 +961,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Queen_Elizabeth II",
+      "voice": "",
+      "gender": "",
       "title": "Queen_Elizabeth II_A12_EN",
       "labels": [
         "EN"
@@ -834,6 +974,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Regent’s_Park",
+      "voice": "harry",
+      "gender": "male",
       "title": "Regent’s_Park_A12_EN",
       "labels": [
         "EN"
@@ -845,6 +987,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Rye",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Rye_A12_EN",
       "labels": [
         "EN"
@@ -856,6 +1000,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Salcombe",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Salcombe_A12_EN",
       "labels": [
         "EN"
@@ -867,6 +1013,8 @@
       "lane": "7",
       "level": "EN",
       "family": "Shikoku_Karst",
+      "voice": "harry",
+      "gender": "male",
       "title": "Shikoku_Karst_EN",
       "labels": [
         "EN",
@@ -881,6 +1029,8 @@
       "lane": "7",
       "level": "EN",
       "family": "Shirakawago",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Shirakawago_EN",
       "labels": [
         "EN",
@@ -895,6 +1045,8 @@
       "lane": "7",
       "level": "A12",
       "family": "StIves",
+      "voice": "",
+      "gender": "",
       "title": "St Ives_A12_EN",
       "labels": [
         "EN"
@@ -906,6 +1058,8 @@
       "lane": "7",
       "level": "A12",
       "family": "StMichaelsMount",
+      "voice": "",
+      "gender": "",
       "title": "St Michaels Mount_A12_EN",
       "labels": [
         "EN"
@@ -917,6 +1071,8 @@
       "lane": "7",
       "level": "A12",
       "family": "St_Albans",
+      "voice": "harry",
+      "gender": "male",
       "title": "St_Albans_A12_EN",
       "labels": [
         "EN"
@@ -928,6 +1084,8 @@
       "lane": "7",
       "level": "A12",
       "family": "St_Pauls and the City of London",
+      "voice": "",
+      "gender": "",
       "title": "St_Pauls and the City of London_A12_EN",
       "labels": [
         "EN"
@@ -939,6 +1097,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Stonehenge",
+      "voice": "harry",
+      "gender": "male",
       "title": "Stonehenge_A12_EN",
       "labels": [
         "EN"
@@ -950,6 +1110,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Stratford",
+      "voice": "harry",
+      "gender": "male",
       "title": "Stratford_A12_EN",
       "labels": [
         "EN"
@@ -961,6 +1123,8 @@
       "lane": "7",
       "level": "EN",
       "family": "Taichung",
+      "voice": "harry",
+      "gender": "male",
       "title": "Taichung_EN",
       "labels": [
         "Trip",
@@ -975,6 +1139,8 @@
       "lane": "7",
       "level": "EN",
       "family": "Taipei101",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Taipei101_EN",
       "labels": [
         "EN",
@@ -989,6 +1155,8 @@
       "lane": "7",
       "level": "EN",
       "family": "Takayama",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Takayama_EN",
       "labels": [
         "EN",
@@ -1003,6 +1171,8 @@
       "lane": "7",
       "level": "EN",
       "family": "Takayama_Jinya",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Takayama_Jinya_EN",
       "labels": [
         "EN",
@@ -1017,6 +1187,8 @@
       "lane": "7",
       "level": "A12",
       "family": "The_South Bank to Southwark",
+      "voice": "",
+      "gender": "",
       "title": "The_South Bank to Southwark_A12_EN",
       "labels": [
         "EN"
@@ -1028,6 +1200,8 @@
       "lane": "7",
       "level": "A12",
       "family": "The_West End",
+      "voice": "",
+      "gender": "",
       "title": "The_West End_A12_EN",
       "labels": [
         "EN"
@@ -1039,6 +1213,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Tintagel_Castle",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Tintagel_Castle_A12_EN",
       "labels": [
         "EN"
@@ -1050,6 +1226,8 @@
       "lane": "7",
       "level": "EN",
       "family": "Tokyo_06_HieShrine",
+      "voice": "harry",
+      "gender": "male",
       "title": "Tokyo_06_HieShrine_EN",
       "labels": [
         "EN",
@@ -1064,6 +1242,8 @@
       "lane": "7",
       "level": "EN",
       "family": "Tokyo_07_Olympic",
+      "voice": "harry",
+      "gender": "male",
       "title": "Tokyo_07_Olympic_EN",
       "labels": [
         "EN",
@@ -1078,6 +1258,8 @@
       "lane": "7",
       "level": "EN",
       "family": "Tokyo_08_ImperialPalace",
+      "voice": "harry",
+      "gender": "male",
       "title": "Tokyo_08_ImperialPalace_EN",
       "labels": [
         "EN",
@@ -1092,6 +1274,8 @@
       "lane": "7",
       "level": "EN",
       "family": "Tokyo_09_Yasukuni",
+      "voice": "harry",
+      "gender": "male",
       "title": "Tokyo_09_Yasukuni_EN",
       "labels": [
         "EN",
@@ -1106,6 +1290,8 @@
       "lane": "7",
       "level": "EN",
       "family": "Tokyo_10_Zojoji",
+      "voice": "harry",
+      "gender": "male",
       "title": "Tokyo_10_Zojoji_EN",
       "labels": [
         "EN",
@@ -1120,6 +1306,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Torquay",
+      "voice": "andrea",
+      "gender": "female",
       "title": "Torquay_A12_EN",
       "labels": [
         "EN"
@@ -1131,6 +1319,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Tower_Bridge",
+      "voice": "harry",
+      "gender": "male",
       "title": "Tower_Bridge_A12_EN",
       "labels": [
         "EN"
@@ -1142,6 +1332,8 @@
       "lane": "7",
       "level": "A12",
       "family": "WestCornwall",
+      "voice": "",
+      "gender": "",
       "title": "West Cornwall_A12_EN",
       "labels": [
         "EN"
@@ -1153,6 +1345,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Westminster",
+      "voice": "harry",
+      "gender": "male",
       "title": "Westminster_A12_EN",
       "labels": [
         "EN"
@@ -1164,6 +1358,8 @@
       "lane": "7",
       "level": "A12",
       "family": "Westminster_II Buckingham Palace",
+      "voice": "",
+      "gender": "",
       "title": "Westminster_II Buckingham Palace_A12_EN",
       "labels": [
         "EN"
@@ -1175,6 +1371,8 @@
       "lane": "7",
       "level": "A12",
       "family": "York_I",
+      "voice": "andrea",
+      "gender": "female",
       "title": "York_I_A12_EN",
       "labels": [
         "EN"
@@ -1186,6 +1384,8 @@
       "lane": "7",
       "level": "B2",
       "family": "York_I",
+      "voice": "andrea",
+      "gender": "female",
       "title": "York_I_B2_EN",
       "labels": [
         "EN"
@@ -1197,6 +1397,8 @@
       "lane": "7",
       "level": "A12",
       "family": "York_II Minster",
+      "voice": "",
+      "gender": "",
       "title": "York_II Minster_A12_EN",
       "labels": [
         "EN"
@@ -1208,6 +1410,8 @@
       "lane": "7",
       "level": "A12",
       "family": "York_III",
+      "voice": "andrea",
+      "gender": "female",
       "title": "York_III_A12_EN",
       "labels": [
         "EN"
@@ -1219,6 +1423,8 @@
       "lane": "7",
       "level": "EN",
       "family": "Yusuhara",
+      "voice": "harry",
+      "gender": "male",
       "title": "Yusuhara_EN",
       "labels": [
         "EN",
