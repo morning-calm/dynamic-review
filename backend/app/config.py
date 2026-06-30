@@ -66,6 +66,13 @@ THUMB_KEY_PREFIX = "scene-thumbs/"
 THUMB_PUBLIC_BASE = "https://thumbs.dynamiclanguages.org/"
 THUMB_UPLOAD_CACHE = BACKEND_ROOT / "thumb_upload_cache.json"
 
+# --- Review audio (mp3) -> Cloudflare R2 'review-audio', one folder per contentID ---
+# The bulk stage-6/7 uploader (upload_review_audio_r2.py), stage 5c (run_levels.py),
+# and the review app's combine/import/fallback all push here; served publicly at
+# REVIEW_AUDIO_PUBLIC_BASE/<contentID>/<file>.mp3.
+REVIEW_AUDIO_BUCKET = "review-audio"
+REVIEW_AUDIO_PUBLIC_BASE = "https://reviewaudio.dynamiclanguages.org/"
+
 # --- Security / server ------------------------------------------------------
 REVIEW_TOKEN = os.environ.get("REVIEW_APP_TOKEN", "dev-token")
 CORS_ORIGINS = [

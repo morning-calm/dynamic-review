@@ -199,7 +199,17 @@ def resolve_audio_dir(trip_id: str, trip: dict) -> Path:
             return mp3_dir
     except SystemExit:
         pass
-    return config.AUDIO_GENERATION_ROOT / trip_id
+    ag = config.AUDIO_GENERATION_ROOT
+    # flat Audio Generation/<trip>, then the 'Sent to KP/MP3' staging area (the Japan
+    # _EN masters live there), then a shallow nested search.
+    for cand in (ag / trip_id, ag / "Sent to KP" / "MP3" / trip_id):
+        if _has_scene_mp3(cand):
+            return cand
+    for pat in (f"*/{trip_id}", f"*/*/{trip_id}"):
+        for cand in ag.glob(pat):
+            if _has_scene_mp3(cand):
+                return cand
+    return ag / trip_id
 
 
 # --------------------------------------------------------------------------- #
