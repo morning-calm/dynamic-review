@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-30T01:38:51+01:00",
+  "generated_at": "2026-06-30T12:05:20+01:00",
   "source": "trello 6,7",
   "trips": [
     {
@@ -75,6 +75,18 @@
       "card_url": "https://trello.com/c/IaO8pd2Z"
     },
     {
+      "trip_id": "KaohsiungLotusPond_EN",
+      "lane": "6",
+      "title": "17b Kaohsiung Lotus Pond WORKING - Research Draft",
+      "labels": [
+        "Trip",
+        "EN",
+        "ZH-HSK3",
+        "ZH-HSK1-2"
+      ],
+      "card_url": "https://trello.com/c/oMq4bChv"
+    },
+    {
       "trip_id": "KochiCity_Beg_N4_JP",
       "lane": "6",
       "title": "KochiCity_Beg_N4_JP — N4 review",
@@ -133,6 +145,30 @@
         "JP-N4"
       ],
       "card_url": "https://trello.com/c/lde6zVso"
+    },
+    {
+      "trip_id": "Taichung_EN",
+      "lane": "6",
+      "title": "25 Taichung city - Research Draft",
+      "labels": [
+        "Trip",
+        "EN",
+        "ZH-HSK3",
+        "ZH-HSK1-2"
+      ],
+      "card_url": "https://trello.com/c/Iu0gKxqs"
+    },
+    {
+      "trip_id": "Taipei101_EN",
+      "lane": "6",
+      "title": "4b Taipei 101",
+      "labels": [
+        "EN",
+        "Trip",
+        "ZH-HSK3",
+        "ZH-HSK1-2"
+      ],
+      "card_url": "https://trello.com/c/5fy4E76e"
     },
     {
       "trip_id": "Takao_Beg_N4_JP",
@@ -345,13 +381,13 @@
       "card_url": "https://trello.com/c/oEkkGJg4"
     },
     {
-      "trip_id": "Blaenavon_B1_EN",
+      "trip_id": "Blaenavon_A12_EN",
       "lane": "7",
-      "title": "Blaenavon_B1_EN",
+      "title": "Blaenavon_A12_EN",
       "labels": [
         "EN"
       ],
-      "card_url": "https://trello.com/c/X2yxqsi0"
+      "card_url": "https://trello.com/c/TGVNXlxS"
     },
     {
       "trip_id": "Bude_A12_EN",
