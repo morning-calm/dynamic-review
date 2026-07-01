@@ -10,6 +10,11 @@ today only work for English: **Regenerate highlighted**, **…with alt text**, *
 noise**, and **Insert 1s pause at cursor**. Before writing code, read `CLAUDE.md`, `API_CONTRACT.md`,
 and the memories `cjk-audio-editing-plan` and `bug-reports-feature`.
 
+**Starting point:** the CJK surgical splice this builds on is **already human seam-listen-validated for
+both `_JP` and `_ZH`** (passed, no notes). So `cjk_align.py` (aligner), `cjk_splice.py` (char-diff → cut
+points → splice), and the `do_splice` `span_only` assembly are **proven components you're extending —
+not re-validating**. Reuse them; keep the same isolation and human-listen discipline.
+
 **Why they're currently hidden for CJK (the crux):** all four map a textarea char-range → an audio
 time using the **English** pipeline — `audio_splice.highlight_span_in_cleaned` +
 `audio_splice._whisper_index_map` + faster-whisper **English** word timings. That mapping is useless
