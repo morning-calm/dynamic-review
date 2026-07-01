@@ -126,6 +126,29 @@ below is absent/`false`/`null` for non-`_ZH` trips, which are unchanged.
   `Hans⏎pinyin`, `titleKey` = `Hans⏎en`). **No mp3 masters are promoted** (audio is
   finalised later in the HSK pipeline from the chosen version).
 
+### Bug report
+A reviewer/admin flags a problem on a specific field, in any language, from the field's control
+row. Creating one snapshots the field's text + working/candidate audio so we see exactly what the
+reporter saw. Each report has a reply thread (reviewer ↔ admin).
+```jsonc
+{
+  "id": 7,
+  "session_id": "sess_abc", "field_id": 12,
+  "trip_id": "KaohsiungLotusPond_HSK3_ZH", "scene_index": 3, "field_path": "SceneDesc",
+  "reporter": "ted", "reporter_role": "reviewer",
+  "body": "简体字这里有错误…",                     // the description (any language)
+  "status": "open",                              // open | investigating | resolved
+  "created_at": 0.0, "updated_at": 0.0,
+  "message_count": 1, "last_message_at": 0.0,
+  "audio": { "working": "/api/bug-reports/7/audio/working", "candidate": null }, // snapshots (absent for text fields)
+  // detail fetch (GET /api/bug-reports/{id}) only:
+  "text_snapshot": { "current_text": "…", "localization": { /* _ZH block */ } },
+  "messages": [ { "author": "dave", "author_role": "admin", "body": "…", "created_at": 0.0 } ]
+}
+```
+Access: an **admin** sees/handles every report; a **reviewer** sees only their own. Status changes
+are admin-only. The audio-snapshot GET authenticates via the httpOnly cookie (browser `<audio>`).
+
 ## Endpoints
 
 | Method · Path | Body | Returns |
@@ -163,6 +186,13 @@ below is absent/`false`/`null` for non-`_ZH` trips, which are unchanged.
 | `DELETE /api/trips/{trip_id}/complete` | — | `{ "ok": true }` — **admin only.** Un-complete: removes the trip from the completed queue so it returns to `GET /api/trips` and is openable again. Idempotent. |
 | `POST /api/trips/{trip_id}/pin` | — | `{ "ok": true }` — **admin only.** Pin a trip to the top of the reviewer list (above the Trello base order). Idempotent; re-pinning moves it back to the top. |
 | `DELETE /api/trips/{trip_id}/pin` | — | `{ "ok": true }` — **admin only.** Un-pin — the trip returns to the Trello base order. |
+| `POST /api/sessions/{sid}/fields/{fid}/bug-report` | `{ "body": "…" }` | `BugReport` — file a problem report on this field (any language); snapshots the field text + working/candidate audio. Language-scoped like other session routes. |
+| `GET /api/bug-reports` | — | `BugReport[]` — **admin:** all reports (open first); **reviewer:** only their own. |
+| `GET /api/bug-reports/count` | — | `{ "role", "open"? , "unread"? }` — badge counts (admin=open reports; reviewer=their reports with an unseen admin reply). |
+| `GET /api/bug-reports/{rid}` | — | `BugReport` incl. `messages` + `text_snapshot`. **Admin or the report's owner** (else `403`); viewing marks it seen for the reporter. |
+| `POST /api/bug-reports/{rid}/messages` | `{ "body": "…" }` | `BugReport` — add a reply to the thread (admin or owner). |
+| `POST /api/bug-reports/{rid}/status` | `{ "status": "open\|investigating\|resolved" }` | `BugReport` — **admin only.** |
+| `GET /api/bug-reports/{rid}/audio/{which}` | — (`which` ∈ `working｜candidate`) | `audio/mpeg` snapshot captured at report time; cookie-auth. `404` if absent. |
 
 ## Notes for implementers
 - `fid` is the `field_edits.id`. The frontend never constructs audio paths — it uses the URLs in `Field.audio` / `Field.versions`.

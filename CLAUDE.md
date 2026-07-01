@@ -118,7 +118,16 @@ constants) · `db.py` (SQLite/WAL) · `staging.py` (Firebase read + targeted sub
 R2-upload hooks) · `audio_core.py` (EL TTS + Gemini clean + `speed_for_trip` + VOICES) ·
 `audio_splice.py` (English splice engine) · `cjk_splice.py` (`_ZH`/`_JP` surgical splice) ·
 `cjk_align.py` (client for the isolated MMS forced-aligner subprocess) · `audio_io.py`
-(ffmpeg/numpy DSP) · `thumbs.py` · `review_audio.py` · `routes_sessions.py` / `routes_audio.py`.
+(ffmpeg/numpy DSP) · `thumbs.py` · `review_audio.py` · `bug_reports.py` (in-app problem reports +
+audio/text snapshot + reply thread) · `routes_sessions.py` / `routes_audio.py` / `routes_bugs.py`.
+
+## Bug reports
+Reviewers/admins flag a problem on any audio field from its control row, in any language (the
+"Report a problem" button). The report snapshots the field's text + working/candidate audio into
+`work/bug_reports/{id}/` and carries a reply thread (`bug_reports` + `bug_report_messages` tables).
+Admin triages all at `/bugs` (open/investigating/resolved); a reviewer sees only their own + replies.
+`scripts/check_bug_reports.py` surfaces open reports (run at session start / schedulable). External
+push (email/Asana) is deferred — the in-app nav badge works now. Design notes: `docs/bug-reports-proposal.md`.
 
 ## Remote review / deployment
 For letting a reviewer work **off-machine**. The audio *bytes* are public at
@@ -165,3 +174,7 @@ machine stays on with uvicorn up.
   py3.12 venv at `research/cjk-aligner/venv` (torch/torchaudio/uroman); without it CJK SceneDesc
   edits silently fall back to whole-regen. Live ZH demo audio is limited to `sess_5bc56203b40a`
   (masters gone from disk — a fresh `_ZH` seed needs sources restored).
+- **Mandarin voices:** `annasu` is **female**; `yu` and `jason` are **male** — a splice/regen must use
+  a voice matching the master, or the seam is a *voice* mismatch, not a splice defect. The demo session
+  `sess_5bc56203b40a` was mis-stored as `yu` and has since been corrected to `annasu`; real trips resolve
+  voice by gender via the registry.
