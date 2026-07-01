@@ -45,24 +45,49 @@ What to do:
    - **"Regenerate whole block"** re-records the entire line, or
    - **"Create new"** lets you attach a fresh take **with a note** for David.
 
-## 6. Mark each part "Done"
+Notes:
+- If you only changed the Traditional / Zhuyin / English lines, the audio has nothing new to
+  say — the app will remind you that **the voice follows the Simplified (简体) line**.
+- Occasionally the app can't re-record just your edit cleanly; it then re-records the whole
+  narration and tells you so — simply **re-listen to the full clip**.
+
+## 6. Fix a spot by highlighting it (no text change needed)
+Sometimes the words are right but the **sound** is wrong — a mispronounced word, a noise, a
+pause that's too short or too long. **Highlight the spot in the Simplified (简体) box**, then
+use the buttons under the audio player:
+
+- **Regenerate highlighted** — makes a fresh recording of just the highlighted phrase.
+- **…with alt text** — speaks *different* text at the highlighted spot (e.g. spell a name a
+  clearer way). The text on screen doesn't change — only the sound.
+- **Trim highlighted noise** — highlight where an unwanted noise or leftover sound is, and
+  the app cleans it out.
+- **Insert 1s pause at cursor** — click just after a full stop, and the pause there gets 1
+  second longer.
+- **Remove 1s pause at cursor** — the opposite: click at a pause that is too long and it is
+  shortened (a natural pause is always kept — it never cuts into words).
+
+Then **listen**, and **Combine** if it used a new recording. If the app can't do it safely at
+that exact spot it will say so — nothing is changed silently.
+
+## 7. Mark each part "Done"
 - **Play the audio all the way to the end** (the progress bar must fill). Only then does the
   **Done** button unlock. Click it.
 - Text-only parts (with no audio) can be marked Done straight away.
 
-## 7. Submit the trip
+## 8. Submit the trip
 - When **every** part is marked Done, click **Submit**. David reviews and approves it.
 - After you submit, the trip becomes read-only until David approves or sends it back.
 
-## 8. Report a problem *(new button — being added)*
-- Next to each part there will be a **"Report a problem"** button. Use it to describe anything
-  wrong — **you can write in Chinese**.
+## 9. Report a problem
+- Every audio part has a **"Report a problem"** button. Use it to describe anything wrong —
+  **you can write in Chinese**.
 - It automatically saves the exact text and audio you were looking at, so we can see precisely
-  what you saw and fix it. You'll get a reply in the app when it's fixed.
-- Until that button is live, use the **comment box** on the part and set the flag to
-  **"Edit required"** to hand it to David.
+  what you saw and fix it.
+- Follow your reports (and read replies) under **"Bug reports"** in the top bar — a red badge
+  appears when there's a reply for you.
 
 ## Handy to know
+- The **? button in the top bar** opens this guide and a one-page quick reference at any time.
 - **Everything saves automatically** as you type.
 - **Undo / Redo** step backwards and forwards through audio versions if you change your mind.
 - You can leave a **comment** on any part for David.

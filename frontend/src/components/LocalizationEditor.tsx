@@ -26,6 +26,9 @@ interface ScriptRowProps {
   /** Register an awaitable flush (pending save → resolved PUT) with the parent, so a
    * regenerate can persist the latest hanzi before the server reads it. */
   registerFlush?: (script: ZhScript, fn: (() => Promise<void>) | null) => void;
+  /** Exposes this row's textarea (the Hans row only) so the audio selection tools can
+   * read the reviewer's highlight/caret from the voiced script. */
+  textareaRef?: RefObject<HTMLTextAreaElement | null>;
 }
 
 /**
@@ -35,7 +38,7 @@ interface ScriptRowProps {
  * single `{script, text}` PUT against the localization endpoint, so the 4
  * scripts on a field save independently of one another.
  */
-const ScriptRow = ({ sid, fid, script, cur, orig, rows, onFieldUpdate, registerFlush }: ScriptRowProps) => {
+const ScriptRow = ({ sid, fid, script, cur, orig, rows, onFieldUpdate, registerFlush, textareaRef }: ScriptRowProps) => {
   const [value, setValue] = useState(cur);
   const savedRef = useRef(cur);
   const valueRef = useRef(value); // read latest value without re-binding the hide/unload listener
@@ -132,6 +135,7 @@ const ScriptRow = ({ sid, fid, script, cur, orig, rows, onFieldUpdate, registerF
         {SCRIPT_LABEL[script]}
       </label>
       <textarea
+        ref={textareaRef}
         value={value}
         onChange={(e) => {
           setValue(e.target.value);
@@ -157,6 +161,9 @@ interface LocalizationEditorProps {
   rows?: number;
   /** Parent-owned handle: flush + await every script's pending save (before regenerate). */
   flushRef?: RefObject<(() => Promise<void>) | null>;
+  /** Parent-owned ref to the Simplified (Hans) textarea — the VOICED script — so the
+   * audio selection tools (highlight/alt/trim/pause) can read the reviewer's selection. */
+  hansTextareaRef?: RefObject<HTMLTextAreaElement | null>;
 }
 
 /**
@@ -169,7 +176,7 @@ interface LocalizationEditorProps {
  * approve. Renders nothing if the field has no localization data (the caller
  * should fall back to the plain editor in that case).
  */
-const LocalizationEditor = ({ field, sid, onFieldUpdate, label, rows = 3, flushRef }: LocalizationEditorProps) => {
+const LocalizationEditor = ({ field, sid, onFieldUpdate, label, rows = 3, flushRef, hansTextareaRef }: LocalizationEditorProps) => {
   const loc = field.localization;
   const flushers = useRef<Map<ZhScript, () => Promise<void>>>(new Map());
   const registerFlush = useCallback((script: ZhScript, fn: (() => Promise<void>) | null) => {
@@ -201,6 +208,7 @@ const LocalizationEditor = ({ field, sid, onFieldUpdate, label, rows = 3, flushR
             rows={rows}
             onFieldUpdate={onFieldUpdate}
             registerFlush={registerFlush}
+            textareaRef={s === 'Hans' ? hansTextareaRef : undefined}
           />
         ))}
       </div>

@@ -14,10 +14,14 @@ interface RegenerateControlsProps {
   getSelectionRange?: () => { start: number; end: number } | null;
   /** Q&A fields are short → whole-regenerate only. */
   wholeOnly?: boolean;
-  /** False for `_ZH` SceneDesc: the hanzi is edited in the 4-script block, not a single
-   * narration textarea, so the selection-based ops (highlight / alt-in-place / trim-noise /
-   * insert-pause) don't apply — but "Generate from edit" (whole-text diff) still does. */
+  /** True when a highlightable narration surface exists for the selection-based ops
+   * (highlight / alt-in-place / trim-noise / pause tools). All languages now qualify:
+   * English + JP highlight in the narration textarea (JP: the kana line), `_ZH` in the
+   * Simplified (Hans) field of the 4-script block via `getSelectionRange`. */
   hasSelection?: boolean;
+  /** The text `getSelectionRange` offsets index into, for the alt-modal prefill. Defaults
+   * to `field.current_text`; `_ZH` passes the Hans script (the voiced text). */
+  selectionSourceText?: string;
   /** Flushes a pending text save before regenerating so the server diffs the saved text (S3). */
   onBeforeRegenerate?: () => Promise<void> | void;
 }
@@ -45,6 +49,7 @@ const RegenerateControls = ({
   getSelectionRange,
   wholeOnly = false,
   hasSelection = true,
+  selectionSourceText,
   onBeforeRegenerate,
 }: RegenerateControlsProps) => {
   const [busy, setBusy] = useState(false);
@@ -147,8 +152,9 @@ const RegenerateControls = ({
     setAltWhole(false);
     setAltRange(range);
     // Prefill with the highlighted words so the reviewer tweaks the spelling/phonetics
-    // rather than retyping the whole phrase from scratch.
-    setAltText(field.current_text.slice(range.start, range.end).trim());
+    // rather than retyping the whole phrase from scratch. The offsets index into the
+    // surface the reviewer highlighted in (ZH: the Hans field, not current_text).
+    setAltText((selectionSourceText ?? field.current_text).slice(range.start, range.end).trim());
     setAltOpen(true);
   };
 
@@ -187,6 +193,29 @@ const RegenerateControls = ({
     } catch (e: unknown) {
       if (e instanceof ApiError && e.status === 409) toast.warn(e.detail); // no pause to extend
       else toast.error(`Insert failed: ${e instanceof ApiError ? e.detail : 'network error'}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // The inverse of insert: shorten an overlong pause at the caret by up to 1s. The
+  // backend removes from the middle of the genuine silence run and always keeps a
+  // minimum natural pause — it refuses (409) rather than touch voiced audio.
+  const onRemoveSilence = async () => {
+    const range = getSelectionRange?.() ?? null;
+    if (!range) {
+      toast.warn('Click in the narration where the too-long pause is (usually after a full stop), then click.');
+      return;
+    }
+    setBusy(true);
+    try {
+      await onBeforeRegenerate?.(); // align the caret offset with the saved text
+      const updated = await api.removeSilence(sid, field.fid, range.start, 1);
+      onFieldUpdate(updated);
+      toast.success('Shortened the pause at the cursor — re-listen to confirm.');
+    } catch (e: unknown) {
+      if (e instanceof ApiError && e.status === 409) toast.warn(e.detail); // no pause / nothing to spare
+      else toast.error(`Remove failed: ${e instanceof ApiError ? e.detail : 'network error'}`);
     } finally {
       setBusy(false);
     }
@@ -321,8 +350,9 @@ const RegenerateControls = ({
           >
             Generate from edit
           </button>
-          {/* Selection-based ops need a single narration textarea → hidden for _ZH (hanzi is
-              edited in the 4-script block); "Generate from edit" above still works there. */}
+          {/* Selection-based ops read getSelectionRange from the language's narration
+              surface: EN/JP the SceneDesc textarea (JP: the kana line), _ZH the Simplified
+              (Hans) field of the 4-script block. */}
           {hasSelection && (
             <>
               <button
@@ -360,6 +390,15 @@ const RegenerateControls = ({
                 className={`${btn} border-gray-600 text-gray-200`}
               >
                 Insert 1s pause at cursor
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onRemoveSilence}
+                title="Click in the narration where a pause is too long, then click to remove up to 1s of it (a natural pause is always kept — it never cuts speech)"
+                className={`${btn} border-gray-600 text-gray-200`}
+              >
+                Remove 1s pause at cursor
               </button>
             </>
           )}

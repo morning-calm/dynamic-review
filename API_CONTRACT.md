@@ -31,6 +31,10 @@ The atom the UI renders/edits. One per editable thing.
   "has_audio": true,                  // SceneDesc / questionKey / questionOption[k]
   "original_text": "…",               // immutable (the take's text at seed)
   "current_text": "…",                // edited value (autosaved)
+  "working_text": null,               // what the WORKING take says (set at each combine;
+                                      // null before the first). JP gates "Generate from
+                                      // edit" on the kana line vs THIS, not the seed
+                                      // (the _ZH sibling is localization.working_hans).
   "flag": "none",                     // "none" | "done" | "edit_required"
   "comment": "",
   "splice_confidence": null,          // 0..1 after a combine, else null
@@ -118,8 +122,10 @@ below is absent/`false`/`null` for non-`_ZH` trips, which are unchanged.
   is server-`true` once the field exists — the human A/B listen is the backstop). **After the
   pick** the chosen take is promoted to `working`, `v2`/`v3` drop, and the field regenerates/
   combines like any other language — SceneDesc gets the **surgical CJK splice** (see
-  `regenerate`), Q&A stays whole-regen. Hanzi is edited in the 4-script block, so the
-  narration-selection ops (highlight / alt-text / trim-noise / insert-pause) are hidden.
+  `regenerate`), Q&A stays whole-regen. Hanzi is edited in the 4-script block; the
+  narration-selection ops (highlight / alt-text / trim-noise / pause tools) read the
+  reviewer's selection in the **Simplified (Hans)** textarea — their `range`/`pos` char
+  offsets index into `localization.cur.Hans`, not `current_text`.
 - On **approve**, an `_ZH` trip's reviewed text writes back to `TripLocalizations/{id}`
   (`target.{Hans,Hant,zhuyin}` + `home.en`, regenerated `target.pinyin`, `status:"reviewed"`)
   and the derived Trip doc `quickTrips[i]` (`SceneDesc`/`questionKey`/`questionOption` =
@@ -165,8 +171,14 @@ are admin-only. The audio-snapshot GET authenticates via the httpOnly cookie (br
 | `PUT /api/sessions/{sid}/fields/{fid}` | `{ "current_text": "…" }` | `Field` — autosave. Resets `played_coverage` + drops `flag` off `done` if text changed. |
 | `PUT /api/sessions/{sid}/fields/{fid}/localization` | `{ "script": "Hans\|Hant\|zhuyin\|en", "text": "…" }` | `Field` — **`_ZH` only.** Autosave one script of the 4-script block. `422` if the script isn't editable on that field (e.g. `zhuyin` on the description). Drops `flag` off `done` when the value changes. No audio side-effects (Chinese audio is A/B). |
 | `POST /api/sessions/{sid}/version` | `{ "version": "v2"\|"v3" }` | `Session` — **`_ZH` only.** Set the trip's preferred ElevenLabs A/B version. `422` on an unknown version. |
-| `POST /api/sessions/{sid}/fields/{fid}/regenerate` | `{ "mode": "segment"|"whole"|"highlight", "range": {"start":int,"end":int}? }` | `Field` with `audio.candidate` set **ASAP**. `segment` diffs current vs original; `highlight` uses `range`; `whole` re-voices the whole field. Non-Latin (English engine) / numeral-dense / Gemini-fallback → `flag:"edit_required"` and no candidate (whole-regen advised). **CJK (`_ZH` hanzi / `_JP` kana) SceneDesc:** `segment` attempts a surgical char-level splice via the isolated forced aligner; when it can't cut cleanly it whole-regenerates the narration and returns `"cjk_fallback": true` on the Field (transient — a UI hint that the whole clip changed, not persisted). `_ZH`/`_JP` ignore `range` (no selection-based ops). |
+| `POST /api/sessions/{sid}/fields/{fid}/regenerate` | `{ "mode": "segment"\|"whole"\|"highlight"\|"alt", "range": {"start":int,"end":int}?, "alt_text": "…"? }` | `Field` with `audio.candidate` set **ASAP**. `segment` diffs current vs the working take's text; `highlight` re-voices the `range` selection; `alt` voices `alt_text` in place of the selection (`mode:"whole"` + `alt_text` voices it as the whole field); `whole` re-voices the whole field. **Selection reference text:** EN + `_JP` = `current_text` (the narration textarea; `_JP` selections must touch the KANA line → `409 kana_line_only` otherwise); `_ZH` = `localization.cur.Hans`. English engine: non-Latin / numeral-dense / Gemini-fallback → `flag:"edit_required"`, no candidate. **CJK (`_ZH` hanzi / `_JP` kana) SceneDesc:** `segment`/`highlight` attempt a surgical char-level splice via the isolated forced aligner (highlight works with UNCHANGED text — the usual re-pronounce case); on any uncertainty `segment`/`highlight` whole-regenerate and return transient `"cjk_fallback": true` (UI hint: the whole clip changed), while `alt` sets `flag:"edit_required"` with no candidate (the alt is never voiced as the whole field or dropped). `segment` with the VOICED line unchanged (JP kanji-only / ZH non-Hans edit) → `409 spoken_line_unchanged`. |
 | `POST /api/sessions/{sid}/fields/{fid}/combine` | — | `Field` — splices candidate into working (SceneDesc) or replaces (whole/Q&A); archives prior take to `versions`; sets `splice_confidence`; may auto-set `flag:"edit_required"`. |
+| `POST /api/sessions/{sid}/fields/{fid}/trim` | `{ "start": int, "end": int }` | `Field` — **trim highlighted noise** (direct working-take edit, no candidate/combine): char range in the selection reference text (see `regenerate`). Selection overlapping words → strip non-speech blips inside that window; selection on a gap/punctuation → blank the pause to clean silence. Archives a version; drops any pending candidate. CJK locates the range via the forced aligner — `409 aligner_unavailable` / `409 text_audio_mismatch` when it can't (direct edits never fall back silently). |
+| `POST /api/sessions/{sid}/fields/{fid}/insert-silence` | `{ "pos": int, "seconds": 1.0 }` | `Field` — extend the pause at the TEXT caret `pos` (selection reference text as above). Only ever lengthens a REAL pause — `409 no_pause` in connected speech. Archives a version; drops any pending candidate. |
+| `POST /api/sessions/{sid}/fields/{fid}/remove-silence` | `{ "pos": int, "seconds": 1.0 }` | `Field` — the inverse: shorten the pause at the caret by up to `seconds`, taken from the middle of the silence run (word release/onset untouched, ≥0.25s natural pause always kept). `409 no_pause` / `409 no_excess_pause`. Archives a version; drops any pending candidate. |
+| `POST /api/sessions/{sid}/fields/{fid}/trim-silence` | — | `Field` — normalize the TRAILING pause to the trip's level requirement (beginner ≈3s kept, others trimmed). No-op when already correct. |
+| `POST /api/sessions/{sid}/fields/{fid}/trim-candidate` | `{ "delta_ms": float }` | `Field` — nudge how much is trimmed off the END of the pending candidate before combining (+ trims more, − restores; re-derived from the pristine candidate). |
+| `POST /api/sessions/{sid}/fields/{fid}/undo` · `/redo` | — | `Field` — step the working take back/forward through the archived versions (v0 = pristine master). `409` at either end. Restoring clears any pending candidate. |
 | `POST /api/sessions/{sid}/fields/{fid}/fallback` | `{ "extent": "sentence"|"scene"|"custom", "text": "…"?, "description": "…" }` | `Field` — generates a **standalone ElevenLabs** clip (`audio.fallback`), sets `flag:"edit_required"`, stores the description for the admin. |
 | `POST /api/sessions/{sid}/fields/{fid}/import-mp3` | multipart `file=<mp3>` | `Field` — **admin** replaces working `{i}.mp3` with a hand-edited file; archives prior take. |
 | `POST /api/sessions/{sid}/fields/{fid}/played` | `{ "ranges": [[s,e],…] }` | `{ "played_coverage": [[s,e],…], "can_mark_done": bool }` — merges coverage of the **current** working audio. |

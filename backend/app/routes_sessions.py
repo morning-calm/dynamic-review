@@ -14,7 +14,7 @@ from .auth import scope_sid, scope_sid_editable
 from .models import (CreateSession, TextUpdate, SourceUpdate, Regenerate, Fallback,
                      PlayedRanges, FlagSet, CommentSet, NarrationSet,
                      ClipCreate, ClipRegen, ClipComment, TrimNoise, TrimCandidate,
-                     InsertSilence, RequestChanges, CompleteTrip,
+                     InsertSilence, RemoveSilence, RequestChanges, CompleteTrip,
                      LocalizationUpdate, VersionSet)
 
 router = APIRouter(prefix="/api")
@@ -110,6 +110,12 @@ async def post_trim_silence(sid: str, fid: int):
 async def post_insert_silence(sid: str, fid: int, body: InsertSilence):
     # Whisper alignment + ffmpeg are blocking — keep them off the event loop.
     return await run_in_threadpool(sessions.insert_silence, sid, fid, body.pos, body.seconds)
+
+
+@router.post("/sessions/{sid}/fields/{fid}/remove-silence", dependencies=_EDIT)
+async def post_remove_silence(sid: str, fid: int, body: RemoveSilence):
+    # Whisper/aligner + ffmpeg are blocking — keep them off the event loop.
+    return await run_in_threadpool(sessions.remove_silence, sid, fid, body.pos, body.seconds)
 
 
 @router.post("/sessions/{sid}/fields/{fid}/fallback", dependencies=_EDIT)

@@ -82,11 +82,20 @@ to refresh (commits+pushes this repo's manifest).
   ISOLATED from the English engine (which can't align spaceless CJK). Char-diffs OLD→NEW, expands
   to the enclosing clause, reads cut times from an **MMS forced aligner** in a torch subprocess
   (`cjk_align.py` client → `research/cjk-aligner/align_service.py`, its own py3.12 venv), gates on
-  real silence + anchor confidence + global mean char-score, then REUSES `audio_splice.do_splice`
-  (span_only) to assemble. Any uncertainty → whole-regen (returns `cjk_fallback`). OLD text =
-  `localization.working_hans` (re-baselined at each combine) for ZH / the last (kana) line for JP.
-  In-place working-take editors (trim-noise/silence, insert-pause) clear a pending candidate so a
-  later combine can't splice at stale cut times.
+  real silence + anchor confidence (ZH 0.90 / JP 0.50) + global mean char-score, then REUSES
+  `audio_splice.do_splice` (span_only) to assemble. Any uncertainty → whole-regen (returns
+  `cjk_fallback`). OLD text = `localization.working_hans` (re-baselined at each combine) for ZH /
+  the last (kana) line for JP. In-place working-take editors (trim-noise/silence, insert/remove-
+  pause) clear a pending candidate so a later combine can't splice at stale cut times.
+- **Selection tools work for CJK too** (same isolation): highlight / alt-text / trim-noise /
+  insert- & remove-pause map the reviewer's selection (JP: the kana line of the narration
+  textarea, 409-hinted otherwise; ZH: the **Hans** field of the 4-script block) → aligner char
+  times via `cjk_splice.plan_span_cuts`/`plan_cjk_span`/`char_times`. Highlight re-voices the
+  ENCLOSING CLAUSE (works with unchanged text); alt substitutes exactly the selected chars inside
+  it and NEVER falls back to whole-voicing the alt (bail → `edit_required`). Direct edits
+  (trim/pause) never fall back silently — they 409. `segment` with the voiced line unchanged
+  (JP kanji-only / ZH non-Hans edit) → `409 spoken_line_unchanged`. **Remove 1s pause at cursor**
+  exists for ALL languages (mid-run removal, ≥0.25 s natural pause kept).
 - **Versioning:** canonical `<i>.mp3`; superseded takes archived `versions/<i>v<n>.mp3`.
 - **Submit** writes changed **text** to staging Trip + TripGroup (desc + re-derived
   `tripCategories`) and leaves the corrected `<i>.mp3` masters in place — **Stage 9**
@@ -170,10 +179,13 @@ machine stays on with uvicorn up.
   notice yet); submit re-fetches live so it won't clobber. (Approve now HARD-BLOCKS if a live
   scene the review edits has since disappeared, instead of silently dropping the write.)
 - **CJK editing caveats:** JP narration is voiced from the **last (kana) line** of SceneDesc —
-  editing only the kanji line is a no-op (the UI hints this). The forced aligner needs its
-  py3.12 venv at `research/cjk-aligner/venv` (torch/torchaudio/uroman); without it CJK SceneDesc
-  edits silently fall back to whole-regen. Live ZH demo audio is limited to `sess_5bc56203b40a`
-  (masters gone from disk — a fresh `_ZH` seed needs sources restored).
+  editing only the kanji line is a no-op (UI hint + a `409 spoken_line_unchanged` guard; ZH has
+  the same for non-Hans edits). The forced aligner needs its py3.12 venv at
+  `research/cjk-aligner/venv` (torch/torchaudio/uroman); without it CJK text edits fall back to
+  whole-regen and the selection/pause tools 409 (`aligner_unavailable`). Live ZH demo audio is
+  limited to `sess_5bc56203b40a` (masters gone from disk — a fresh `_ZH` seed needs sources
+  restored); its **V2 pick has been made** (2026-07-02, e2e) so it renders the collapsed
+  single-take UI, with dave's 你好 hanzi edit still pending on scene 1.
 - **Mandarin voices:** `annasu` is **female**; `yu` and `jason` are **male** — a splice/regen must use
   a voice matching the master, or the seam is a *voice* mismatch, not a splice defect. The demo session
   `sess_5bc56203b40a` was mis-stored as `yu` and has since been corrected to `annasu`; real trips resolve

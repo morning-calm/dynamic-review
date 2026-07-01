@@ -30,7 +30,8 @@ import numpy as np
 from fastapi import HTTPException
 
 from . import config  # noqa: F401  (ensures SCRIPTS_ROOT on sys.path) — keep first
-from . import audio_core, audio_io, audio_splice, cjk_splice, db, review_audio, thumbs
+from . import (audio_core, audio_io, audio_splice, cjk_align, cjk_splice, db,
+               review_audio, thumbs)
 from .config import (COUNTRY_VOICE_GUESS, COVERAGE_DONE_FRACTION,
                      LANGUAGE_FALLBACK_VOICE, WORK_ROOT)
 from .locks import WHISPER_LOCK
@@ -915,6 +916,10 @@ def serialize_field(sid: str, frow) -> dict:
         "has_audio": has_audio,
         "original_text": frow["original_text"],
         "current_text": frow["current_text"],
+        # What the WORKING take says (set at combine; null before the first combine) — the
+        # FE compares the JP kana line against THIS, not the seed, to gate "Generate from
+        # edit" (the localization block's working_hans is the _ZH sibling).
+        "working_text": frow["working_text"],
         "source_text": frow["source_text"] or "",
         "original_source": frow["original_source"] or "",
         "flag": frow["flag"],
@@ -1299,6 +1304,105 @@ def _cjk_spoken(srow, frow) -> tuple[str, str, str] | None:
     return None
 
 
+def _cjk_sel_range(frow, lang: str, new_text: str, start: int, end: int) -> tuple[int, int]:
+    """Normalize a FE selection/caret (char offsets into the textarea the reviewer
+    highlighted in) to offsets into the SPOKEN text ``new_text`` (see ``_cjk_spoken``).
+
+      zh → the Hans textarea (localization cur.Hans): same string minus the leading
+           whitespace ``_zh_hans_for_tts`` strips.
+      jp → the whole kanji⏎kana textarea (current_text): the selection must fall in the
+           KANA line (what's voiced) — clamped when it merely bleeds past an edge, 409
+           with a hint when it doesn't touch the kana line at all (e.g. kanji selected).
+    """
+    start, end = int(start), int(end)
+    if lang == "jp":
+        raw = frow["current_text"] or ""
+        k0 = raw.rfind(new_text)          # the kana line's span within the raw textarea
+        if k0 < 0:                        # can't happen: new_text IS a line of raw
+            raise HTTPException(409, detail={
+                "error": "kana_line_only",
+                "detail": "Couldn't locate the kana line in the narration text."})
+        k1 = k0 + len(new_text)
+        err = HTTPException(409, detail={
+            "error": "kana_line_only",
+            "detail": "Highlight (or place the cursor) in the LAST line — the kana. "
+                      "That is the text that is voiced; the kanji line has no audio."})
+        if start == end:                  # caret (pause tools): clamp trailing-ws → k1
+            if start < k0:
+                raise err
+            p = min(start, k1) - k0
+            return p, p
+        s, e = max(start, k0), min(end, k1)
+        if s >= e:                        # selection doesn't touch the kana line
+            raise err
+        return s - k0, e - k0
+    # zh: offsets are into the Hans textarea; the spoken text is its .strip().
+    loc_raw = _srow_get(frow, "localization_json")
+    raw = ((json.loads(loc_raw).get("cur") or {}).get("Hans") or "") if loc_raw else ""
+    lead = len(raw) - len(raw.lstrip())
+    s = max(0, min(start - lead, len(new_text)))
+    e = max(s, min(end - lead, len(new_text)))
+    return s, e
+
+
+def _cjk_char_times(srow, frow, lang: str, old_text: str):
+    """Gated per-char times of the WORKING take for the direct char→time tools. The
+    direct tools NEVER silently fall back (they edit the take in place) — a missing
+    aligner or a text↔audio mismatch is a 409 the reviewer sees."""
+    audio = work_dirs(srow["id"])["working"] / frow["mp3_name"]
+    try:
+        ct = cjk_splice.char_times(str(audio), old_text, lang)
+    except cjk_align.AlignerError as e:
+        raise HTTPException(409, detail={
+            "error": "aligner_unavailable",
+            "detail": f"Can't map the text to the audio — CJK aligner unavailable ({e})."})
+    if ct is None:
+        raise HTTPException(409, detail={
+            "error": "text_audio_mismatch",
+            "detail": "The audio doesn't match this text closely enough to locate the "
+                      "highlighted spot — regenerate the narration instead."})
+    return ct
+
+
+def _cjk_caret_seed(srow, frow, cjk, caret: int) -> float:
+    """Audio seed time for the pause tools at TEXT caret ``caret``: the end of the last
+    placed spoken char before it. Walking back across punctuation is correct — a caret
+    right after 。 seeds from the clause ENDER, whose end abuts the very pause being
+    edited (enders are the confidently-placed anchors; see cjk_splice.gap_cut). The seed
+    must clear the anchor floor: a mis-placed seed could silently edit the WRONG pause."""
+    lang, old, new = cjk
+    s, _e = _cjk_sel_range(frow, lang, new, caret, caret)
+    oa, _ob = cjk_splice.map_new_span_to_old(old, new, s, s)
+    pos, _mean = _cjk_char_times(srow, frow, lang, old)
+    seed = max((p for p in pos if p < oa), default=None)
+    if seed is None:
+        return 0.0                        # caret before any speech → the clip's lead-in
+    _st, en, score = pos[seed]
+    if score < cjk_splice._ANCHOR_FLOOR.get(lang, 0.50):
+        raise HTTPException(409, detail={
+            "error": "no_pause",
+            "detail": "Couldn't locate the audio at the cursor confidently — try placing "
+                      "the cursor right after the clause punctuation (。/、)."})
+    return en
+
+
+def _commit_working_edit(sid: str, srow, frow, samples: np.ndarray, kind: str) -> dict:
+    """Archive + persist an in-place working-take edit (the trim/pause tools): new
+    version, R2 upload, and DROP any pending regenerate candidate — its tL/tR were read
+    from the pre-edit audio, so combining it now would splice at stale offsets (mirrors
+    undo/redo/revert). Call only when the take actually changed (no-op early returns stay
+    in the callers)."""
+    dirs = work_dirs(sid)
+    whash = _set_working(sid, frow, samples=samples, kind=kind)
+    _r2_upload_working(srow["trip_id"], dirs, frow)
+    patch = {"working_audio_hash": whash, "splice_confidence": None,
+             "candidate_mp3_path": None}
+    patch.update(_clear_coverage_and_done(frow))
+    db.update_fields(frow["id"], **patch)
+    db.touch_session(sid)
+    return serialize_field(sid, _field_row(sid, frow["id"]))
+
+
 def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
                alt_text: str | None = None) -> dict:
     srow = _session_row(sid)
@@ -1328,16 +1432,56 @@ def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
         cjk_lang, cjk_old, cjk_new = cjk
         plan = None
         cjk_wanted_surgical = False
-        if alt_text and alt_text.strip():
+        working_mp3 = (dirs["working"] / frow["mp3_name"]) if frow["mp3_name"] else None
+        can_surgical = (field_path == "SceneDesc" and cjk_old and cjk_new
+                        and working_mp3 is not None and working_mp3.exists())
+        if mode in ("highlight", "alt") and rng is not None and can_surgical:
+            # Selection ops: re-voice the clause enclosing the highlighted chars (alt text
+            # replaces exactly those chars inside it). Offsets arrive in the coordinates
+            # of the textarea the reviewer highlighted in (JP: current_text, must touch
+            # the kana line — 409 hint otherwise; ZH: the Hans field) and are normalized
+            # to the spoken text here. old==new is fine (re-voice words already spelled
+            # right — the usual reason to highlight).
+            sel = _cjk_sel_range(frow, cjk_lang, cjk_new,
+                                 int(rng["start"]), int(rng["end"]))
+            plan = cjk_splice.plan_cjk_span(
+                str(working_mp3), cjk_old, cjk_new, sel,
+                alt_text if mode == "alt" else None,
+                voice_id, voice_settings, model_id, cjk_lang)
+            if plan is None and mode == "alt":
+                # NEVER voice the alt as the whole field (the old bug) and never silently
+                # drop it — mirror the English engine: flag for manual handling instead.
+                plan = audio_splice.RegenPlan(
+                    edit_required=True,
+                    reason="Couldn't splice the alt text cleanly at the highlighted spot "
+                           "— try a highlight within one clause, or use Create new.")
+            elif plan is None:
+                cjk_wanted_surgical = True   # highlight → the Path-A whole-regen floor
+        elif mode == "alt" and rng is not None:
+            # Alt with a selection but nothing to splice into (no working take) — refuse
+            # rather than mis-voice the alt as the whole field or drop it.
+            plan = audio_splice.RegenPlan(
+                edit_required=True,
+                reason="No working audio to splice the alt text into — use "
+                       "whole-regenerate or Create new.")
+        elif alt_text and alt_text.strip():
             plan = audio_splice.plan_whole(alt_text.strip(), False, voice_id,
                                            voice_settings, model_id)
-        elif (field_path == "SceneDesc" and mode != "whole"
-              and cjk_old and cjk_new and cjk_old != cjk_new and frow["mp3_name"]):
-            working_mp3 = dirs["working"] / frow["mp3_name"]
-            if working_mp3.exists():
-                cjk_wanted_surgical = True
-                plan = cjk_splice.plan_cjk(str(working_mp3), cjk_old, cjk_new,
-                                           voice_id, voice_settings, model_id, cjk_lang)
+        elif mode != "whole" and can_surgical:
+            if cjk_old == cjk_new:
+                # "Generate from edit" with the VOICED line unchanged (only the kanji
+                # line / a non-Hans script was edited): regenerating would silently voice
+                # the same text — tell the reviewer which line drives the audio instead.
+                raise HTTPException(409, detail={
+                    "error": "spoken_line_unchanged",
+                    "detail": ("The kana (last) line — the voiced text — is unchanged. "
+                               "Edit the kana line to change the audio."
+                               if cjk_lang == "jp" else
+                               "The Simplified (Hans) script — the voiced text — is "
+                               "unchanged. Edit the Hans line to change the audio.")})
+            cjk_wanted_surgical = True
+            plan = cjk_splice.plan_cjk(str(working_mp3), cjk_old, cjk_new,
+                                       voice_id, voice_settings, model_id, cjk_lang)
         if plan is None:      # Q&A / whole / no clean splice → whole-regenerate the narration
             cjk_fell_back = cjk_wanted_surgical
             plan = audio_splice.plan_whole(cjk_new, False, voice_id, voice_settings, model_id)
@@ -1709,6 +1853,60 @@ def clip_path(sid: str, fid: int, cid: int) -> Path:
     return Path(_clip_row(sid, fid, cid)["path"])
 
 
+def _trim_noise_cjk(sid: str, srow, frow, cjk, start: int, end: int) -> dict:
+    """CJK counterpart of the ``trim_noise`` body — same two cases (WORDS/GAP), same DSP,
+    with the highlight located via the MMS aligner's per-char times instead of English
+    Whisper. The selection is in the DISPLAYED text (Hans field / kana line) and is mapped
+    to the OLD text the audio actually says before reading times."""
+    lang, old, new = cjk
+    s, e = _cjk_sel_range(frow, lang, new, start, end)
+    oa, ob = cjk_splice.map_new_span_to_old(old, new, s, e)
+    pos, _mean = _cjk_char_times(srow, frow, lang, old)
+    dirs = work_dirs(sid)
+    base = audio_io.mp3_to_samples(dirs["working"] / frow["mp3_name"])
+    sr = audio_io.SR
+    dur = audio_io.duration_seconds(base, sr)
+
+    sel_placed = [p for p in range(oa, ob) if p in pos]   # spoken chars in the selection
+    if sel_placed:
+        # WORDS: strip non-speech blips inside the selected chars' window only, clamped to
+        # the neighbouring placed chars so no adjacent speech is touched.
+        tA = max(0.0, min(pos[p][0] for p in sel_placed) - 0.05)
+        tB = min(dur, max(pos[p][1] for p in sel_placed) + 0.05)
+        prev_p = max((p for p in pos if p < sel_placed[0]), default=None)
+        next_p = min((p for p in pos if p > sel_placed[-1]), default=None)
+        if prev_p is not None:
+            tA = max(tA, pos[prev_p][1] + 0.02)
+        if next_p is not None:
+            tB = min(tB, pos[next_p][0] - 0.02)
+        if tB <= tA:
+            return serialize_field(sid, frow)
+        new_samples = audio_io.trim_slivers(base, sr, tA, tB, sliver_max=0.35, sil_min=0.03)
+        if len(new_samples) >= len(base) - int(0.01 * sr):   # nothing removed
+            return serialize_field(sid, frow)
+    else:
+        # GAP: the selection covers only punctuation/unplaced chars — the artefact lives in
+        # the pause. Blank it to clean silence between the neighbouring chars' release and
+        # true onset (energy-detected, exactly as the English GAP case).
+        prev_p = max((p for p in pos if p < oa), default=None)
+        next_p = min((p for p in pos if p >= ob), default=None)
+        pt = pos[prev_p] if prev_p is not None else None
+        nt = pos[next_p] if next_p is not None else None
+        g0 = pt[1] if pt else 0.0
+        search_to = nt[1] if nt else dur
+        q0 = audio_io.first_silence_after(base, sr, g0, search_to)
+        g0 = q0 if q0 is not None else g0
+        onset = audio_io.first_voice_onset(base, sr, g0, search_to)
+        g1 = onset if onset is not None else (nt[0] if nt else dur)
+        s0 = max(0, min(int(round(g0 * sr)), len(base)))
+        s1 = max(s0, min(int(round(g1 * sr)), len(base)))
+        gap_len = (s1 - s0) / sr
+        sil = np.zeros(int(round(max(0.2, gap_len) * sr)), dtype=np.float32)
+        new_samples = np.concatenate([base[:s0], sil, base[s1:]]).astype(np.float32)
+
+    return _commit_working_edit(sid, srow, frow, new_samples, "noise_trim")
+
+
 def trim_noise(sid: str, fid: int, start: int, end: int) -> dict:
     """Manual backstop: the reviewer highlights where an unwanted noise/artefact sits and
     we clean it off the working take. Two cases (both honour 'trust my highlight'):
@@ -1725,6 +1923,11 @@ def trim_noise(sid: str, fid: int, start: int, end: int) -> dict:
     frow = _field_row(sid, fid)
     if not (frow["has_audio"] and frow["mp3_name"]):
         raise HTTPException(400, detail={"error": "no_audio", "detail": "text field"})
+    # CJK (_ZH hanzi / _JP kana): char→time comes from the MMS aligner, not English
+    # Whisper. Isolated branch, mirroring `regenerate`; the English body below is untouched.
+    cjk = _cjk_spoken(srow, frow)
+    if cjk is not None:
+        return _trim_noise_cjk(sid, srow, frow, cjk, start, end)
     dirs = work_dirs(sid)
     base = audio_io.mp3_to_samples(dirs["working"] / frow["mp3_name"])
     sr = audio_io.SR
@@ -1843,6 +2046,26 @@ def insert_silence(sid: str, fid: int, pos: int, seconds: float = 1.0) -> dict:
     n = len(base)
     dur = audio_io.duration_seconds(base, sr)
 
+    # CJK (_ZH hanzi / _JP kana): the caret maps to an audio time via the MMS aligner
+    # (JP carets must sit in the kana line — 409 hint otherwise). Identical pause-only
+    # insertion; the English mapping below is untouched.
+    cjk = _cjk_spoken(srow, frow)
+    if cjk is not None:
+        t_at = _cjk_caret_seed(srow, frow, cjk, int(pos))
+        run = audio_io.silence_run_nearest(base, sr, t_at, 0.4, 0.4)
+        if run is None:
+            raise HTTPException(409, detail={
+                "error": "no_pause",
+                "detail": "No pause at the cursor to extend — put the caret right after "
+                          "the clause punctuation (。/、). This lengthens a pause, it "
+                          "won't split a word."})
+        mid = (run[0] + run[1]) / 2.0
+        cut = max(0, min(int(round(mid * sr)), n))
+        gap = np.zeros(int(round(seconds * sr)), dtype=np.float32)
+        return _commit_working_edit(
+            sid, srow, frow, np.concatenate([base[:cut], gap, base[cut:]]),
+            "insert_silence")
+
     # Map the caret to the end-time of the last spoken word before it (same char→audio
     # alignment the highlight/trim tools use). pos<=0 → the clip's lead-in.
     t_ins = 0.0
@@ -1880,6 +2103,74 @@ def insert_silence(sid: str, fid: int, pos: int, seconds: float = 1.0) -> dict:
     db.update_fields(fid, **patch)
     db.touch_session(sid)
     return serialize_field(sid, _field_row(sid, fid))
+
+
+# The longest natural pause remove_silence always leaves in place: an inter-sentence gap
+# below ~0.25s starts to sound clipped, and cutting further would risk butting two voiced
+# regions together.
+_REMOVE_PAUSE_KEEP = 0.25
+
+
+def remove_silence(sid: str, fid: int, pos: int, seconds: float = 1.0) -> dict:
+    """SHORTEN an existing pause by up to ``seconds`` at the TEXT caret ``pos`` — the
+    inverse of ``insert_silence``, for ALL languages (English word timing / CJK aligner).
+    The removal is taken from the MIDDLE of the genuine-silence run at the caret, so the
+    preceding word's release and the next word's onset are untouched, and at least
+    ``_REMOVE_PAUSE_KEEP`` of natural pause always remains. Refuses (409) when there is no
+    pause at the cursor or none to spare. Archives a version + resets the done gate;
+    revertable."""
+    srow = _session_row(sid)
+    frow = _field_row(sid, fid)
+    if not (frow["has_audio"] and frow["mp3_name"]):
+        raise HTTPException(400, detail={"error": "no_audio", "detail": "text field"})
+    seconds = max(0.05, min(float(seconds), 10.0))
+    dirs = work_dirs(sid)
+    base = audio_io.mp3_to_samples(dirs["working"] / frow["mp3_name"])
+    sr = audio_io.SR
+    dur = audio_io.duration_seconds(base, sr)
+
+    cjk = _cjk_spoken(srow, frow)
+    if cjk is not None:
+        t_at = _cjk_caret_seed(srow, frow, cjk, int(pos))
+    else:
+        # Caret → end-time of the last spoken word before it — the same mapping
+        # insert_silence uses (duplicated so that validated body stays untouched).
+        t_at = 0.0
+        if int(pos) > 0:
+            cleaned_working, _ = _cleaned_orig(srow, frow)
+            cur = audio_core.strip_url_lines(frow["current_text"] or "")
+            blo, bhi = audio_splice.highlight_span_in_cleaned(
+                cur, cleaned_working, 0, int(pos))
+            words = _whisper_orig(srow, frow)
+            if not words:
+                raise HTTPException(400, detail={"error": "no_audio",
+                                                 "detail": "no word timing"})
+            wmap = audio_splice._whisper_index_map(
+                audio_splice.tokens(cleaned_working), words)
+            t_at = dur                       # default to the end if nothing maps
+            for t in range(bhi - 1, blo - 1, -1):
+                if t in wmap:
+                    t_at = wmap[t][1]
+                    break
+
+    run = audio_io.silence_run_nearest(base, sr, t_at, 0.4, 0.4)
+    if run is None:
+        raise HTTPException(409, detail={
+            "error": "no_pause",
+            "detail": "No pause at the cursor to shorten — put the caret right after a "
+                      "full stop (or other gap)."})
+    run_len = run[1] - run[0]
+    remove = min(seconds, run_len - _REMOVE_PAUSE_KEEP)
+    if remove < 0.05:
+        raise HTTPException(409, detail={
+            "error": "no_excess_pause",
+            "detail": f"That pause is only {run_len:.2f}s — already at a natural length, "
+                      "nothing to remove."})
+    c0 = run[0] + (run_len - remove) / 2.0   # centered cut: both edges stay in silence
+    a = max(0, min(int(round(c0 * sr)), len(base)))
+    b = max(a, min(int(round((c0 + remove) * sr)), len(base)))
+    return _commit_working_edit(
+        sid, srow, frow, np.concatenate([base[:a], base[b:]]), "remove_silence")
 
 
 def played(sid: str, fid: int, ranges: list[list[float]],

@@ -25,6 +25,12 @@ Nothing in ``audio_splice.py`` is modified.
 When ANY guard is uncertain → return ``None`` → the caller WHOLE-REGENERATES (the safe
 floor, Path A). The feared failure is a *silent* mis-cut (plausible audio, wrong words);
 every guard biases to whole-regen and the human listen is the load-bearing backstop.
+
+Two entry points share the machinery: ``plan_cuts``/``plan_cjk`` start from a TEXT DIFF
+("Generate from edit"); ``plan_span_cuts``/``plan_cjk_span`` start from a reviewer
+SELECTION (highlight / alt-text — old==new allowed) — same clause expansion, gates and
+assembly. ``char_times`` exposes the gated per-char timings for the direct working-take
+tools (trim-noise / insert- & remove-pause), which never fall back silently (they 409).
 """
 
 from __future__ import annotations
@@ -120,6 +126,16 @@ def plan_cjk(audio_path: str, old_text: str, new_text: str,
         return None
 
 
+def _old2new(ops) -> dict[int, int]:
+    """OLD→NEW position map over the diff's equal runs (chars present in both texts)."""
+    m: dict[int, int] = {}
+    for tag, i1, i2, j1, _j2 in ops:
+        if tag == "equal":
+            for d in range(i2 - i1):
+                m[i1 + d] = j1 + d
+    return m
+
+
 def plan_cuts(audio_path: str, old_text: str, new_text: str,
               lang: str) -> dict | None:
     """Pure cut-planning (NO ElevenLabs, NO network): char-diff → expand-to-clause → aligner
@@ -142,12 +158,14 @@ def plan_cuts(audio_path: str, old_text: str, new_text: str,
         return None
     oa = min(i1 for i1, _ in changed)
     ob = max(i2 for _, i2 in changed)
-    old2new: dict[int, int] = {}
-    for tag, i1, i2, j1, _j2 in ops:
-        if tag == "equal":
-            for d in range(i2 - i1):
-                old2new[i1 + d] = j1 + d
+    return _cuts_for_old_span(audio_path, old_text, new_text, lang, oa, ob, _old2new(ops))
 
+
+def _cuts_for_old_span(audio_path: str, old_text: str, new_text: str, lang: str,
+                       oa: int, ob: int, old2new: dict[int, int]) -> dict | None:
+    """Steps 2–6 of the cut plan, for a target span ``[oa, ob)`` in OLD coordinates —
+    shared by the diff entry (``plan_cuts``) and the highlight entry (``plan_span_cuts``).
+    ``old_text`` must be what the audio SAYS; ``old2new`` maps the diff's equal runs."""
     # 2) expand to the nearest clause/sentence PUNCTUATION on each side (= the pauses).
     pL = next((p for p in range(oa - 1, -1, -1) if old_text[p] in PUNCT), -1)
     pR = next((p for p in range(ob, len(old_text)) if old_text[p] in PUNCT), len(old_text))
@@ -257,10 +275,11 @@ def plan_cuts(audio_path: str, old_text: str, new_text: str,
         return None
 
     # 6) safe splice — hand back the geometry + the expanded NEW clause and its surrounding
-    #    NEW text (prosody context for EL previous_text/next_text).
+    #    NEW text (prosody context for EL previous_text/next_text). jL/jR (the clause's NEW
+    #    char range) let the highlight entry locate a selection inside revoiced_new.
     return {
         "tL": tL, "tR": tR, "dur": dur,
-        "revoiced_new": revoiced_new,
+        "revoiced_new": revoiced_new, "jL": jL, "jR": jR,
         "prev_text": new_text[:jL].strip() or None,
         "next_text": new_text[jR:].strip() or None,
         "detail": {
@@ -271,3 +290,133 @@ def plan_cuts(audio_path: str, old_text: str, new_text: str,
             "sil_thr": round(thr, 5), "left_pause": left_pause, "right_pause": right_pause,
         },
     }
+
+
+# --------------------------------------------------------------------------- #
+# Selection tools (highlight / alt-text / trim-noise / insert- & remove-pause)
+# --------------------------------------------------------------------------- #
+def _new_pos_to_old(ops, p: int) -> int:
+    """Monotone NEW→OLD position map: exact inside an equal run, an edit region's OLD
+    start inside a replace/insert. ``p == len(new)`` maps to ``len(old)``."""
+    out = 0
+    for tag, i1, i2, j1, j2 in ops:
+        if j1 <= p < j2:
+            return i1 + (p - j1) if tag == "equal" else i1
+        out = i2
+    return out
+
+
+def map_new_span_to_old(old_text: str, new_text: str, s: int, e: int) -> tuple[int, int]:
+    """Map a char span ``[s, e)`` in the NEW (displayed) text to the OLD span whose audio
+    it occupies, via the diff opcodes: every opcode whose NEW side overlaps the span
+    contributes its OLD range (a pure insertion contributes its zero-width OLD insertion
+    point; a deletion sitting inside the span is bridged by the equal runs around it).
+    Identity when the texts are equal. Always defined — a boundary-only/zero-width result
+    falls back to the point map, and clause expansion widens it afterwards anyway."""
+    if old_text == new_text:
+        return s, e
+    ops = difflib.SequenceMatcher(None, old_text, new_text, autojunk=False).get_opcodes()
+    lo = hi = None
+    for tag, i1, i2, j1, j2 in ops:
+        if j2 <= s or j1 >= e:        # no overlap with [s,e) (deletes: j1 == j2 → skipped)
+            continue
+        if tag == "equal":
+            a, b = i1 + (max(s, j1) - j1), i1 + (min(e, j2) - j1)
+        else:
+            a, b = i1, i2
+        lo = a if lo is None else min(lo, a)
+        hi = b if hi is None else max(hi, b)
+    if lo is None:
+        p = _new_pos_to_old(ops, s)
+        return p, p
+    return lo, hi
+
+
+def plan_span_cuts(audio_path: str, old_text: str, new_text: str, lang: str,
+                   new_span: tuple[int, int]) -> dict | None:
+    """Highlight counterpart of ``plan_cuts``: the target is a char range in the NEW
+    (displayed) spoken text instead of a diff — and unlike ``plan_cuts``, ``old == new``
+    is FINE (the common case: re-voice words whose text is already right). Returns the
+    ``plan_cuts`` dict plus ``hl_rel`` — the selection clamped to offsets within
+    ``revoiced_new`` (for alt-text substitution) — or ``None`` (→ caller falls back).
+    May raise ``AlignerError`` (callers treat as ``None``)."""
+    old_text = (old_text or "").strip()
+    new_text = (new_text or "").strip()
+    s, e = new_span
+    s = max(0, min(int(s), len(new_text)))
+    e = max(s, min(int(e), len(new_text)))
+    if not old_text or not new_text or e <= s:
+        return None
+    if not cjk_align.available():
+        return None
+    ops = difflib.SequenceMatcher(None, old_text, new_text, autojunk=False).get_opcodes()
+    oa, ob = map_new_span_to_old(old_text, new_text, s, e)
+    cuts = _cuts_for_old_span(audio_path, old_text, new_text, lang, oa, ob, _old2new(ops))
+    if cuts is None:
+        return None
+    # The selection, relative to revoiced_new (= new_text[jL:jR].strip() — account for the
+    # lstrip skew), clamped inside it. Alt text replaces exactly these chars in the clause.
+    lead = len(new_text[cuts["jL"]:cuts["jR"]]) \
+        - len(new_text[cuts["jL"]:cuts["jR"]].lstrip())
+    hs = max(0, min(s - cuts["jL"] - lead, len(cuts["revoiced_new"])))
+    he = max(hs, min(e - cuts["jL"] - lead, len(cuts["revoiced_new"])))
+    cuts["hl_rel"] = (hs, he)
+    return cuts
+
+
+def plan_cjk_span(audio_path: str, old_text: str, new_text: str,
+                  new_span: tuple[int, int], alt_text: str | None,
+                  voice_id: str, voice_settings: dict, model_id: str,
+                  lang: str) -> RegenPlan | None:
+    """Highlight / alt-text sibling of ``plan_cjk``: re-voice the clause enclosing the
+    reviewer's selection (with ``alt_text`` substituted for exactly the selected chars,
+    when given) and splice it between silence-anchored cuts. The re-voiced unit is always
+    the ENCLOSING CLAUSE — clause expansion is intrinsic to the CJK engine (cuts must land
+    in inter-clause silence), so unlike the English engine alt text does not require the
+    selection itself to sit at pauses. Returns ``None`` on ANY uncertainty (caller decides
+    the fallback: whole-regen for highlight, edit_required for alt). NEVER raises."""
+    try:
+        cuts = plan_span_cuts(audio_path, old_text, new_text, lang, new_span)
+        if cuts is None:
+            return None
+        phrase = cuts["revoiced_new"]
+        alt = (alt_text or "").strip()
+        if alt:
+            hs, he = cuts["hl_rel"]
+            phrase = (phrase[:hs] + alt + phrase[he:]).strip()
+        if not phrase:
+            return None
+        # eleven_v3 (Japanese) rejects previous_text/next_text on /with-timestamps → omit.
+        ctx = model_id != "eleven_v3"
+        mp3, cand_words = audio_core.generate_with_timestamps(
+            phrase, voice_id, voice_settings,
+            cuts["prev_text"] if ctx else None, cuts["next_text"] if ctx else None, model_id)
+        meta = {
+            "mode": "segment", "span_only": True, "cjk": True, "cjk_lang": lang,
+            "tL": cuts["tL"], "tR": cuts["tR"], "orig_duration": cuts["dur"],
+            "changed_tokens": max(1, len(_spoken(phrase))),
+            "cand_words": cand_words, "phrase": phrase,
+            "cjk_detail": {**cuts["detail"], "revoiced_new": phrase,
+                           "selection": [new_span[0], new_span[1]], "alt": bool(alt)},
+        }
+        return RegenPlan(candidate_mp3=mp3, meta=meta)
+    except cjk_align.AlignerError:
+        return None
+    except Exception:  # noqa: BLE001 — any failure must fall back, never 500
+        return None
+
+
+def char_times(audio_path: str, old_text: str, lang: str
+               ) -> tuple[dict[int, tuple[float, float, float]], float] | None:
+    """Per-char times of ``old_text`` (what the audio SAYS) on a working take, for the
+    direct char→time tools (trim-noise / insert- & remove-pause):
+    ``({old_pos: (start, end, score)}, mean_score)`` over placed chars — or ``None`` when
+    the mean is below the language floor (the audio does not say ``old_text``, so any
+    mapped time would be a lie). Raises ``AlignerError`` when the aligner is missing or
+    broken (callers surface a 409 — the direct tools never silently fall back)."""
+    if not cjk_align.available():
+        raise cjk_align.AlignerError("CJK aligner not installed")
+    pos, mean = _char_pos(cjk_align.align(audio_path, old_text))
+    if mean < _MEAN_FLOOR.get(lang, 0.40):
+        return None
+    return pos, mean

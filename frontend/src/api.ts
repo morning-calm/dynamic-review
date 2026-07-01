@@ -202,6 +202,10 @@ export interface Field {
   has_audio: boolean;
   original_text: string;
   current_text: string;
+  /** What the WORKING take says (set at each combine; null before the first). The JP
+   * "Generate from edit" gate compares the kana line against THIS, not the seed —
+   * the `_ZH` sibling is `localization.working_hans`. */
+  working_text: string | null;
   /** Editable English translation for non-_EN trips (empty when N/A / same as target). */
   source_text: string;
   /** The English at seed — for the original→new diff on the English editor. */
@@ -496,6 +500,11 @@ export const api = {
   // Insert `seconds` of silence into the working take at the TEXT caret `pos` (char offset).
   insertSilence: (sid: string, fid: number, pos: number, seconds = 1): Promise<Field> =>
     postJson(field(sid, fid, '/insert-silence'), { pos, seconds }),
+
+  // Shorten the pause at the TEXT caret by up to `seconds` (inverse of insertSilence; a
+  // minimum natural pause always remains — 409 when there's no excess to remove).
+  removeSilence: (sid: string, fid: number, pos: number, seconds = 1): Promise<Field> =>
+    postJson(field(sid, fid, '/remove-silence'), { pos, seconds }),
 
   fallback: (
     sid: string,

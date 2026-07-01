@@ -72,6 +72,14 @@ class InsertSilence(BaseModel):
     seconds: float = 1.0     # length of silence to insert
 
 
+class RemoveSilence(BaseModel):
+    """Shorten the pause at the TEXT caret by up to ``seconds`` (the inverse of
+    InsertSilence; a minimum natural pause is always kept). Same caret semantics:
+    char offset into current_text (JP: must sit in the kana line) / the Hans field (ZH)."""
+    pos: int                 # caret char offset (per-language reference text above)
+    seconds: float = 1.0     # pause to remove (capped by what the pause can spare)
+
+
 class Fallback(BaseModel):
     extent: Literal["sentence", "scene", "custom"]
     text: Optional[str] = None

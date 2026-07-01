@@ -152,7 +152,8 @@ const SceneCard = ({ scene, fields, sid, onFieldUpdate, readOnly = false, isZh =
                 {isJp && (
                   <p className="text-xs text-gray-500">
                     Audio is voiced from the <span className="text-gray-300">last line (kana)</span>. Edit
-                    that line to change the narration — editing only the kanji won’t alter the audio.
+                    that line to change the narration — editing only the kanji won’t alter the audio. The
+                    highlight/cursor tools below also work on the kana line.
                   </p>
                 )}
                 {sceneDesc.has_audio && (
@@ -164,17 +165,18 @@ const SceneCard = ({ scene, fields, sid, onFieldUpdate, readOnly = false, isZh =
                         sid={sid}
                         onFieldUpdate={onFieldUpdate}
                         // JP: only a change to the voiced (kana) line should enable "Generate
-                        // from edit"; English keys off the whole field as before.
+                        // from edit" — compared against what the WORKING take says (set at
+                        // combine), not the seed, or the button re-lights after a combine when
+                        // only the kanji was touched. English keys off the whole field.
                         hasTextChange={
                           isJp
-                            ? spokenLine(descLive) !== spokenLine(sceneDesc.original_text)
+                            ? spokenLine(descLive) !==
+                              spokenLine(sceneDesc.working_text ?? sceneDesc.original_text)
                             : descLive !== sceneDesc.original_text
                         }
                         getSelectionRange={getSelectionRange}
-                        // JP SceneDesc goes through the CJK backend branch, which ignores the
-                        // selection range (highlight/alt/trim-noise/insert-pause all rely on
-                        // English Whisper token→char mapping). Hide them so they can't mislead.
-                        hasSelection={!isJp}
+                        // The selection ops work for JP too now (the CJK backend maps the kana
+                        // selection via the MMS aligner; a kanji-line selection gets a 409 hint).
                         onBeforeRegenerate={async () => {
                           await descFlushRef.current?.();
                         }}

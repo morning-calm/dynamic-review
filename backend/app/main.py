@@ -24,7 +24,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from . import auth, db, routes_audio, routes_bugs, routes_sessions
+from . import auth, db, routes_audio, routes_bugs, routes_help, routes_sessions
 from .config import CORS_ORIGINS, FRONTEND_DIST, HOST, PORT, SERVE_FRONTEND
 
 app = FastAPI(title="review-app backend", version="1.0",
@@ -49,10 +49,11 @@ async def require_auth(request: Request, call_next):
     if (request.method, request.url.path) in _AUTH_EXEMPT:
         return await call_next(request)
     # Single-origin deploy: the built SPA (login page + JS/CSS) must load BEFORE the
-    # user has a token, so any non-API GET is public. /api, /audio, /overlays still
-    # require auth (audio/overlays authenticate via the review_session cookie).
+    # user has a token, so any non-API GET is public. /api, /audio, /overlays, /help
+    # still require auth (they authenticate via the review_session cookie on GET).
     if (SERVE_FRONTEND and request.method in ("GET", "HEAD")
-            and not request.url.path.startswith(("/api/", "/audio/", "/overlays/"))):
+            and not request.url.path.startswith(("/api/", "/audio/", "/overlays/",
+                                                 "/help/"))):
         return await call_next(request)
     # Header for writes; cookie also accepted for GET/HEAD (see auth.extract_token).
     user = auth.resolve_user(auth.extract_token(request))
@@ -94,6 +95,7 @@ app.include_router(auth.router)
 app.include_router(routes_sessions.router)
 app.include_router(routes_audio.router)
 app.include_router(routes_bugs.router)
+app.include_router(routes_help.router)
 
 
 # --- Single-origin deploy: serve the built frontend (frontend/dist) so one hostname
@@ -103,8 +105,8 @@ if SERVE_FRONTEND and FRONTEND_DIST.is_dir():
 
     @app.get("/{full_path:path}", include_in_schema=False)
     def spa(full_path: str):
-        # Never hijack API/media paths; everything else falls back to the SPA index.
-        if full_path.startswith(("api/", "audio/", "overlays/")):
+        # Never hijack API/media/help paths; everything else falls back to the SPA index.
+        if full_path.startswith(("api/", "audio/", "overlays/", "help/")):
             return Response(status_code=404)
         f = FRONTEND_DIST / full_path
         if full_path and f.is_file():

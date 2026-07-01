@@ -4,10 +4,12 @@ import { useAuth } from '../authContext';
 import { api } from '../api';
 
 /** Current user + logout, the "Completed" link (both roles), the "Bug reports" link
- * (both roles, with an unread/open badge), and the admin-only "Review queue" link. */
+ * (both roles, with an unread/open badge), the admin-only "Review queue" link, and the
+ * ? help menu (guides open in a new tab, served by the backend from docs/user-guides). */
 const UserMenu = () => {
   const { user, logout } = useAuth();
   const [bugBadge, setBugBadge] = useState(0);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -30,8 +32,48 @@ const UserMenu = () => {
 
   if (!user) return null;
 
+  // Reviewers get their guide in their own language too (served per-user by the backend).
+  const nativeLabel = user.role !== 'admin' && user.languages.includes('Japanese')
+    ? 'ガイド（日本語）'
+    : user.role !== 'admin' && user.languages.includes('Mandarin')
+      ? '指南（中文）'
+      : null;
+  const helpItem =
+    'block whitespace-nowrap rounded px-3 py-1.5 text-left text-gray-200 hover:bg-gray-700';
+
   return (
     <div className="flex shrink-0 items-center gap-3 text-xs">
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setHelpOpen((o) => !o)}
+          title="Help — open the user guides in a new tab"
+          aria-haspopup="menu"
+          aria-expanded={helpOpen}
+          className="rounded-full border border-gray-600 px-2 py-1 font-semibold text-gray-200 hover:bg-gray-700"
+        >
+          ?
+        </button>
+        {helpOpen && (
+          <>
+            {/* click-away backdrop */}
+            <div className="fixed inset-0 z-30" onClick={() => setHelpOpen(false)} />
+            <div className="absolute right-0 z-40 mt-1 rounded border border-gray-700 bg-gray-900 py-1 shadow-lg">
+              <a href="/help/quick" target="_blank" rel="noreferrer" className={helpItem} onClick={() => setHelpOpen(false)}>
+                Quick reference (1 page)
+              </a>
+              <a href="/help/guide" target="_blank" rel="noreferrer" className={helpItem} onClick={() => setHelpOpen(false)}>
+                User guide (English)
+              </a>
+              {nativeLabel && (
+                <a href="/help/guide-native" target="_blank" rel="noreferrer" className={helpItem} onClick={() => setHelpOpen(false)}>
+                  {nativeLabel}
+                </a>
+              )}
+            </div>
+          </>
+        )}
+      </div>
       <Link
         to="/bugs"
         className="relative rounded border border-gray-600 px-2 py-1 text-gray-200 hover:bg-gray-700"

@@ -33,6 +33,15 @@ interface ZhFieldBlockProps {
  */
 const ZhFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine, rows, readOnly = false }: ZhFieldBlockProps) => {
   const flushRef = useRef<(() => Promise<void>) | null>(null);
+  // The Simplified (Hans) textarea — the VOICED script. The audio selection tools
+  // (highlight / alt / trim-noise / pause) read the reviewer's highlight/caret from it;
+  // a textarea keeps its selection after blur, so clicking a button below still sees it.
+  const hansTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const getSelectionRange = () => {
+    const el = hansTextareaRef.current;
+    if (!el) return null;
+    return { start: el.selectionStart, end: el.selectionEnd };
+  };
   // Before a version pick the backend serves the V2/V3 audition (audio.v2/v3) and no
   // working take; after the pick it collapses to a single working take (audio.working, no
   // v2/v3) that regenerates/combines like any other language. Presence drives which UI.
@@ -40,8 +49,8 @@ const ZhFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine, ro
   // SceneDesc supports the surgical CJK splice ("Generate from edit", mode=segment): the
   // backend re-voices just the edited hanzi clause and falls back to whole-regen when
   // uncertain. Enabled once the Simplified hanzi differs from the seed. Q&A fields stay
-  // whole-only. Selection-based ops are hidden (hanzi is edited in the 4-script block, not a
-  // single narration textarea).
+  // whole-only. The selection ops read the Hans highlight (offsets are sent as-is; the
+  // backend maps them onto the spoken hanzi via the CJK aligner).
   const isSceneDesc = field.field_path === 'SceneDesc';
   // Enable "Generate from edit" only when the hanzi differs from what the WORKING take
   // currently says (working_hans, re-baselined at each combine) — not the seed. Otherwise
@@ -55,11 +64,26 @@ const ZhFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine, ro
       {header}
       <div inert={readOnly}>
         {field.localization ? (
-          <LocalizationEditor field={field} sid={sid} onFieldUpdate={onFieldUpdate} label={label} rows={rows} flushRef={flushRef} />
+          <LocalizationEditor
+            field={field}
+            sid={sid}
+            onFieldUpdate={onFieldUpdate}
+            label={label}
+            rows={rows}
+            flushRef={flushRef}
+            hansTextareaRef={hansTextareaRef}
+          />
         ) : (
           <EditableField field={field} sid={sid} onFieldUpdate={onFieldUpdate} label={label} singleLine={singleLine} rows={rows} flushRef={flushRef} />
         )}
       </div>
+      {field.has_audio && field.localization && isSceneDesc && (
+        <p className="text-xs text-gray-500">
+          Audio is voiced from the <span className="text-gray-300">Simplified (Hans)</span> script —
+          edit Hans to change the narration. The highlight/cursor tools below read your selection in
+          the Hans field.
+        </p>
+      )}
       {field.has_audio &&
         (auditioning ? (
           <ZhAudioAB v2={field.audio.v2} v3={field.audio.v3} />
@@ -73,7 +97,9 @@ const ZhFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine, ro
                 onFieldUpdate={onFieldUpdate}
                 hasTextChange={isSceneDesc && hanziChanged}
                 wholeOnly={!isSceneDesc}
-                hasSelection={false}
+                hasSelection={isSceneDesc && Boolean(field.localization)}
+                getSelectionRange={getSelectionRange}
+                selectionSourceText={field.localization?.cur.Hans ?? undefined}
                 onBeforeRegenerate={async () => {
                   await flushRef.current?.();
                 }}
