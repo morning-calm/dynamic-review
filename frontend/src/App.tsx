@@ -9,6 +9,7 @@ import ReviewPage from './pages/ReviewPage';
 import ChangesSummaryPage from './pages/ChangesSummaryPage';
 import ReviewQueuePage from './pages/ReviewQueuePage';
 import CompletedPage from './pages/CompletedPage';
+import BugReportsPage from './pages/BugReportsPage';
 
 const App = () => (
   <BrowserRouter>
@@ -22,6 +23,7 @@ const App = () => (
             <Route path="/review/:sid" element={<ReviewPage />} />
             <Route path="/admin/:sid" element={<ChangesSummaryPage />} />
             <Route path="/completed" element={<CompletedPage />} />
+            <Route path="/bugs" element={<BugReportsPage />} />
             <Route element={<RequireAdmin />}>
               <Route path="/queue" element={<ReviewQueuePage />} />
             </Route>

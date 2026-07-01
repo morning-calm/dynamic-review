@@ -49,6 +49,8 @@ const RegenerateControls = ({
 }: RegenerateControlsProps) => {
   const [busy, setBusy] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
+  const [bugOpen, setBugOpen] = useState(false);
+  const [bugText, setBugText] = useState('');
   const [altOpen, setAltOpen] = useState(false);
   const [altRange, setAltRange] = useState<{ start: number; end: number } | null>(null);
   const [altText, setAltText] = useState('');
@@ -216,6 +218,27 @@ const RegenerateControls = ({
       .then((updated) => onFieldUpdate(updated))
       .catch((e: unknown) => toast.error(`Trim failed: ${e instanceof ApiError ? e.detail : 'network error'}`))
       .finally(() => setBusy(false));
+  };
+
+  // Report a problem on this field — free text in any language; the backend snapshots the
+  // current text + working/candidate audio so we see exactly what the reviewer saw.
+  const submitBug = async () => {
+    if (!bugText.trim()) {
+      toast.warn('Describe the problem first.');
+      return;
+    }
+    setBusy(true);
+    try {
+      await onBeforeRegenerate?.(); // flush the latest text so it's in the snapshot
+      await api.createBugReport(sid, field.fid, bugText.trim());
+      setBugOpen(false);
+      setBugText('');
+      toast.success('Problem reported — thanks. Track it under “Bug reports”.');
+    } catch (e: unknown) {
+      toast.error(`Report failed: ${e instanceof ApiError ? e.detail : 'network error'}`);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const doCombine = () => {
@@ -395,6 +418,16 @@ const RegenerateControls = ({
         Create new{savedClips > 0 ? ` (${savedClips})` : ''}
       </button>
 
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => setBugOpen(true)}
+        title="Report a problem with this part (write in any language). The current text + audio are saved so we can see exactly what you saw."
+        className={`${btn} border-rose-500/70 text-rose-300`}
+      >
+        Report a problem
+      </button>
+
       {busy && <span className="text-xs text-gray-500">working…</span>}
 
       <ManualEditModal
@@ -433,6 +466,36 @@ const RegenerateControls = ({
           </button>
           <button type="button" disabled={busy} onClick={submitAlt} className={`${btn} border-custom-green text-custom-green`}>
             {altWhole ? 'Generate' : 'Generate & splice'}
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={bugOpen}
+        onRequestClose={() => !busy && setBugOpen(false)}
+        style={MODAL_STYLE}
+        contentLabel="Report a problem"
+      >
+        <h2 className="mb-2 text-sm font-semibold">Report a problem</h2>
+        <p className="mb-3 text-xs text-gray-400">
+          Describe what’s wrong with this part — you can write in your own language. The current
+          text and audio are attached automatically so we can see exactly what you saw. You’ll get
+          a reply under “Bug reports”.
+        </p>
+        <textarea
+          value={bugText}
+          onChange={(e) => setBugText(e.target.value)}
+          placeholder="What’s wrong? (any language)"
+          rows={4}
+          autoFocus
+          className="mb-3 w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm"
+        />
+        <div className="flex justify-end gap-2">
+          <button type="button" disabled={busy} onClick={() => setBugOpen(false)} className={`${btn} border-gray-600 text-gray-300`}>
+            Cancel
+          </button>
+          <button type="button" disabled={busy} onClick={submitBug} className={`${btn} border-rose-400 text-rose-300`}>
+            Send report
           </button>
         </div>
       </Modal>

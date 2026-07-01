@@ -139,6 +139,40 @@ CREATE TABLE IF NOT EXISTS trip_priority (
     pinned_at REAL NOT NULL
 );
 
+-- Bug reports: a reviewer/admin flags a problem on a specific field, in any language.
+-- A snapshot of the field's text + working/candidate audio is captured at report time so
+-- we see exactly what they saw. bug_report_messages is the reply thread (reviewer <-> admin).
+CREATE TABLE IF NOT EXISTS bug_reports (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id     TEXT,
+    field_id       INTEGER,
+    trip_id        TEXT NOT NULL DEFAULT '',
+    scene_index    INTEGER,
+    field_path     TEXT NOT NULL DEFAULT '',
+    reporter       TEXT NOT NULL,
+    reporter_role  TEXT NOT NULL DEFAULT 'reviewer',
+    body           TEXT NOT NULL DEFAULT '',
+    status         TEXT NOT NULL DEFAULT 'open',      -- open | investigating | resolved
+    text_snapshot  TEXT NOT NULL DEFAULT '{}',        -- JSON: current_text/localization/etc at report time
+    audio_dir      TEXT,                              -- work/bug_reports/{id}/ (working.mp3 / candidate.mp3)
+    reporter_seen_at REAL NOT NULL DEFAULT 0,         -- last time the reporter viewed the thread (unread calc)
+    created_at     REAL NOT NULL,
+    updated_at     REAL NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS bug_report_messages (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    report_id   INTEGER NOT NULL,
+    author      TEXT NOT NULL,
+    author_role TEXT NOT NULL DEFAULT 'reviewer',
+    body        TEXT NOT NULL DEFAULT '',
+    created_at  REAL NOT NULL,
+    FOREIGN KEY (report_id) REFERENCES bug_reports(id)
+);
+
+CREATE INDEX IF NOT EXISTS ix_bugreports_status ON bug_reports(status, created_at);
+CREATE INDEX IF NOT EXISTS ix_bugreports_reporter ON bug_reports(reporter, created_at);
+CREATE INDEX IF NOT EXISTS ix_bugmsgs_report ON bug_report_messages(report_id);
 CREATE INDEX IF NOT EXISTS ix_fields_session ON field_edits(session_id);
 CREATE INDEX IF NOT EXISTS ix_versions_field ON audio_versions(field_id);
 CREATE INDEX IF NOT EXISTS ix_sessions_trip ON sessions(trip_id, status);

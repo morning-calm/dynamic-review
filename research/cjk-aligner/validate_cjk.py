@@ -17,12 +17,14 @@ JP = r"D:\Projects\WebApp\review-app\backend\work\sess_928f51fd60fd"
 ZH_OLD = "这是高雄的莲池潭。它是一个很大的湖，水很干净。夏天的时候，湖里开很多花，非常漂亮。"
 JP_OLD = ("ここはとうきょうすかいつりーで、にっぽんでいちばんたかいびるです。せかいでも3ばんめにたかくて、"
           "たかさは634めーとるもあります。この634というすうじは、むかしのこのまちのなまえ「むさし」とよむこともできます。")
-YU = ("fQj4gJSexpu8RDE2Ii5m", {"speed": 0.85, "stability": 0.5, "similarity_boost": 0.75}, "eleven_multilingual_v2")
+# annasu = the FEMALE Mandarin voice — MUST match the sess_5bc56203b40a masters (female).
+# (yu/jason are male; splicing them into the female original gives a voice mismatch.)
+ANNASU = ("9lHjugDhwqoxA5MhX0az", {"speed": 0.85, "stability": 0.5, "similarity_boost": 0.75}, "eleven_multilingual_v2")
 FUMI = ("PmgfHCGeS5b7sH90BOOJ", {"speed": 1.0, "stability": 0.5, "similarity_boost": 0.75}, "eleven_v3")
 
 CASES = [
-    ("zh_mid",   rf"{ZH}\v2\1.mp3",      ZH_OLD, ZH_OLD.replace("干净", "清澈"),         YU,   "zh"),
-    ("zh_first", rf"{ZH}\v2\1.mp3",      ZH_OLD, ZH_OLD.replace("高雄的莲池潭", "台北的莲池潭"), YU, "zh"),
+    ("zh_mid",   rf"{ZH}\v2\1.mp3",      ZH_OLD, ZH_OLD.replace("干净", "清澈"),         ANNASU,   "zh"),
+    ("zh_first", rf"{ZH}\v2\1.mp3",      ZH_OLD, ZH_OLD.replace("高雄的莲池潭", "台北的莲池潭"), ANNASU, "zh"),
     ("jp_mid",   rf"{JP}\working\1.mp3", JP_OLD, JP_OLD.replace("いちばんたかいびる", "いちばんおおきいびる"), FUMI, "jp"),
 ]
 

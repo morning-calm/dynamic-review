@@ -91,6 +91,51 @@ export interface CompletedItem {
   session_id: string | null;
 }
 
+export type BugStatusValue = 'open' | 'investigating' | 'resolved';
+
+export interface BugMessage {
+  author: string;
+  author_role: Role;
+  body: string;
+  created_at: number;
+}
+
+export interface BugReport {
+  id: number;
+  session_id: string | null;
+  field_id: number | null;
+  trip_id: string;
+  scene_index: number | null;
+  field_path: string;
+  reporter: string;
+  reporter_role: Role;
+  body: string;
+  status: BugStatusValue;
+  created_at: number;
+  updated_at: number;
+  message_count: number;
+  last_message_at: number | null;
+  /** Snapshot audio URLs captured at report time (absent for text-only fields). */
+  audio: { working?: string; candidate?: string };
+  /** Present only on the detail fetch. */
+  messages?: BugMessage[];
+  text_snapshot?: {
+    field_path?: string;
+    scene_index?: number | null;
+    current_text?: string;
+    original_text?: string;
+    working_text?: string;
+    localization?: LocalizationBlock | null;
+  };
+}
+
+/** Badge counts: admins get `open`, reviewers get `unread` (their reports with a new reply). */
+export interface BugCounts {
+  role: Role;
+  open?: number;
+  unread?: number;
+}
+
 /** field_path values from the contract's field_path table. */
 export type FieldPath =
   | 'contentTitleKey'
@@ -590,6 +635,17 @@ export const api = {
   logout: (): Promise<void> => requestJson<void>('/api/logout', { method: 'POST', headers: authHeaders() }),
 
   me: (): Promise<AuthUser> => getJson('/api/me'),
+
+  // --- Bug reports ---
+  createBugReport: (sid: string, fid: number, body: string): Promise<BugReport> =>
+    postJson(field(sid, fid, '/bug-report'), { body }),
+  listBugReports: (): Promise<BugReport[]> => getJson('/api/bug-reports'),
+  getBugReport: (rid: number): Promise<BugReport> => getJson(`/api/bug-reports/${rid}`),
+  replyBugReport: (rid: number, body: string): Promise<BugReport> =>
+    postJson(`/api/bug-reports/${rid}/messages`, { body }),
+  setBugStatus: (rid: number, status: BugStatusValue): Promise<BugReport> =>
+    postJson(`/api/bug-reports/${rid}/status`, { status }),
+  bugCounts: (): Promise<BugCounts> => getJson('/api/bug-reports/count'),
 };
 
 /**

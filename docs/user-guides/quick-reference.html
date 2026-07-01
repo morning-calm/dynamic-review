@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review App — Visual Quick Reference</title>
+<style>
+  :root { --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb; --green:#059669; --amber:#b45309; --blue:#2563eb; --bg:#f8fafc; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, "Segoe UI", Roboto, "Noto Sans CJK", sans-serif;
+         color:var(--ink); background:var(--bg); line-height:1.5; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 28px 20px 60px; }
+  h1 { font-size: 22px; margin: 0 0 2px; }
+  .sub { color:var(--muted); margin: 0 0 24px; font-size: 14px; }
+  h2 { font-size: 15px; text-transform: uppercase; letter-spacing:.04em; color:var(--muted); margin: 30px 0 10px; }
+  ol.flow { list-style:none; counter-reset: s; padding:0; margin:0; display:grid; gap:10px; }
+  ol.flow li { counter-increment:s; position:relative; background:#fff; border:1px solid var(--line);
+               border-radius:10px; padding:12px 14px 12px 48px; }
+  ol.flow li::before { content: counter(s); position:absolute; left:12px; top:12px; width:24px; height:24px;
+               background:var(--blue); color:#fff; border-radius:50%; display:grid; place-items:center;
+               font-size:13px; font-weight:700; }
+  .k { font-weight:600; }
+  .mock { background:#111827; border-radius:12px; padding:16px; margin:6px 0 4px; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; }
+  .btn { font-size:12px; border:1px solid #4b5563; color:#e5e7eb; background:transparent;
+         border-radius:6px; padding:6px 10px; white-space:nowrap; }
+  .btn.green { border-color:var(--green); color:#6ee7b7; }
+  .btn.star { border-color:var(--blue); color:#93c5fd; }
+  .cap { color:#9ca3af; font-size:12px; margin-top:8px; }
+  .call { display:grid; grid-template-columns: 22px 1fr; gap:10px; margin:8px 0; align-items:start; }
+  .call .n { background:var(--amber); color:#fff; border-radius:50%; width:22px; height:22px;
+             display:grid; place-items:center; font-size:12px; font-weight:700; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:640px){ .two{ grid-template-columns:1fr; } }
+  .card { background:#fff; border:1px solid var(--line); border-radius:10px; padding:14px; }
+  .tag { display:inline-block; font-size:11px; padding:1px 7px; border-radius:99px; background:#eef2ff; color:#3730a3; }
+  .note { background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:10px 12px; font-size:13px; }
+  code { background:#f1f5f9; padding:1px 5px; border-radius:4px; font-size:12px; }
+  footer { color:var(--muted); font-size:12px; margin-top:36px; border-top:1px solid var(--line); padding-top:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Review App — Visual Quick Reference</h1>
+  <p class="sub">One page. The core loop for correcting a trip's text &amp; audio, then submitting.</p>
+
+  <h2>The loop, step by step</h2>
+  <ol class="flow">
+    <li><span class="k">Log in</span> with your username &amp; password (link from David).</li>
+    <li><span class="k">Open a trip</span> from your list. Pinned trips at the top are urgent.</li>
+    <li><span class="k">Mandarin only:</span> listen to <span class="k">V2</span> and <span class="k">V3</span> and pick the better voice (once per trip).</li>
+    <li><span class="k">Fix the text</span> of each part — trip title, description, and each scene's title / narration / question / options.</li>
+    <li><span class="k">Regenerate the audio</span> for what you changed → <span class="k">listen</span> → <span class="k">Combine</span>.</li>
+    <li><span class="k">Play the whole clip</span> (the bar must fill) → the <span class="k">Done</span> button unlocks → click it.</li>
+    <li>When every part is Done → <span class="k">Submit</span>. David approves.</li>
+    <li>Something wrong you can't fix? <span class="k">Report a problem</span> (write in your language) or comment + flag "Edit required".</li>
+  </ol>
+
+  <h2>The buttons under each audio part</h2>
+  <div class="mock">
+    <div class="row">
+      <span class="btn">↶ Undo</span>
+      <span class="btn">↷ Redo</span>
+      <span class="btn">Regenerate whole block</span>
+      <span class="btn star">Generate from edit ①</span>
+      <span class="btn">Trim end silence</span>
+      <span class="btn green">Combine ②</span>
+      <span class="btn">Create new ③</span>
+      <span class="btn" style="border-color:#9a3412;color:#fdba74">Report a problem ④</span>
+    </div>
+    <div class="cap">Mandarin &amp; Japanese hide the English-only tools (highlight / alt-text / trim-noise / insert-pause).</div>
+  </div>
+  <div class="call"><span class="n">1</span><div><span class="k">Generate from edit</span> — re-records only the words you changed; the rest of the original recording is kept. Enabled once you've edited the spoken text.</div></div>
+  <div class="call"><span class="n">2</span><div><span class="k">Combine</span> — keeps the new take you just auditioned. Do this after you're happy with the sound.</div></div>
+  <div class="call"><span class="n">3</span><div><span class="k">Create new</span> — attach a fresh take <em>with a note</em> for David when the auto tools can't get it right.</div></div>
+  <div class="call"><span class="n">4</span><div><span class="k">Report a problem</span> — describe the issue in your language; the current text + audio are saved automatically. <span class="tag">being added</span></div></div>
+
+  <h2>Two things that trip people up</h2>
+  <div class="two">
+    <div class="card">
+      <p class="tag">Mandarin</p>
+      <p style="margin:.4em 0 0">You edit four scripts — <span class="k">繁體 / 简体 / 注音 / English</span>. The <span class="k">简体 (Simplified)</span> line is what the voice speaks. <span class="k">You never type pinyin</span> — it's generated from Zhuyin.</p>
+    </div>
+    <div class="card">
+      <p class="tag">Japanese</p>
+      <p style="margin:.4em 0 0">Each narration has a <span class="k">Kanji</span> line and a <span class="k">Kana</span> line. <span class="k">The voice speaks the Kana line.</span> To change the audio you must edit the <span class="k">Kana</span> — editing only the Kanji won't change the sound.</p>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:16px">
+    <span class="k">Marking "Done" needs a full listen.</span> The Done button stays locked until you've played the whole clip (seeking to the end doesn't count) — this is deliberate, so nothing ships un-checked.
+  </div>
+
+  <footer>Review app · internal tool · this is a visual companion to the written guides in <code>docs/user-guides/</code>.</footer>
+</div>
+</body>
+</html>
