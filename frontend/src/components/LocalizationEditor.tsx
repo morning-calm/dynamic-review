@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { toast } from 'react-toastify';
 import { api, ApiError, flushLocalizationBeacon, type Field, type ZhScript } from '../api';
 import { useDebouncedCallback } from '../hooks';
@@ -23,6 +23,9 @@ interface ScriptRowProps {
   orig: string;
   rows: number;
   onFieldUpdate: (f: Field) => void;
+  /** Register an awaitable flush (pending save → resolved PUT) with the parent, so a
+   * regenerate can persist the latest hanzi before the server reads it. */
+  registerFlush?: (script: ZhScript, fn: (() => Promise<void>) | null) => void;
 }
 
 /**
@@ -32,7 +35,7 @@ interface ScriptRowProps {
  * single `{script, text}` PUT against the localization endpoint, so the 4
  * scripts on a field save independently of one another.
  */
-const ScriptRow = ({ sid, fid, script, cur, orig, rows, onFieldUpdate }: ScriptRowProps) => {
+const ScriptRow = ({ sid, fid, script, cur, orig, rows, onFieldUpdate, registerFlush }: ScriptRowProps) => {
   const [value, setValue] = useState(cur);
   const savedRef = useRef(cur);
   const valueRef = useRef(value); // read latest value without re-binding the hide/unload listener
@@ -90,6 +93,17 @@ const ScriptRow = ({ sid, fid, script, cur, orig, rows, onFieldUpdate }: ScriptR
 
   const save = useDebouncedCallback((text: string) => void persist(text), 1000);
 
+  // Expose an awaitable flush to the parent (S3): run any pending debounce now and wait
+  // for the in-flight PUT, so a regenerate reads the just-saved hanzi.
+  useEffect(() => {
+    if (!registerFlush) return;
+    registerFlush(script, async () => {
+      save.flush();
+      if (inFlightRef.current) await inFlightRef.current;
+    });
+    return () => registerFlush(script, null);
+  }, [registerFlush, script, save]);
+
   // Flush a pending save when the tab is hidden or unloaded.
   useEffect(() => {
     const flushOnHide = () => {
@@ -141,6 +155,8 @@ interface LocalizationEditorProps {
   onFieldUpdate: (f: Field) => void;
   label?: string;
   rows?: number;
+  /** Parent-owned handle: flush + await every script's pending save (before regenerate). */
+  flushRef?: RefObject<(() => Promise<void>) | null>;
 }
 
 /**
@@ -153,8 +169,22 @@ interface LocalizationEditorProps {
  * approve. Renders nothing if the field has no localization data (the caller
  * should fall back to the plain editor in that case).
  */
-const LocalizationEditor = ({ field, sid, onFieldUpdate, label, rows = 3 }: LocalizationEditorProps) => {
+const LocalizationEditor = ({ field, sid, onFieldUpdate, label, rows = 3, flushRef }: LocalizationEditorProps) => {
   const loc = field.localization;
+  const flushers = useRef<Map<ZhScript, () => Promise<void>>>(new Map());
+  const registerFlush = useCallback((script: ZhScript, fn: (() => Promise<void>) | null) => {
+    if (fn) flushers.current.set(script, fn);
+    else flushers.current.delete(script);
+  }, []);
+  useEffect(() => {
+    if (!flushRef) return;
+    flushRef.current = async () => {
+      await Promise.all([...flushers.current.values()].map((f) => f()));
+    };
+    return () => {
+      flushRef.current = null;
+    };
+  }, [flushRef]);
   if (!loc) return null;
   return (
     <div className="space-y-2">
@@ -170,6 +200,7 @@ const LocalizationEditor = ({ field, sid, onFieldUpdate, label, rows = 3 }: Loca
             orig={loc.orig[s] ?? ''}
             rows={rows}
             onFieldUpdate={onFieldUpdate}
+            registerFlush={registerFlush}
           />
         ))}
       </div>

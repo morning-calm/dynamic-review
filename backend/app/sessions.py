@@ -759,7 +759,9 @@ def create_or_resume(trip_id: str, user) -> dict:
                       source_text=(opts_en[k] if k < len(opts_en) else ""))
 
     # _ZH A/B: stage both ElevenLabs takes for side-by-side audition (served via /ab/{ver}).
-    if zh_mode:
+    # Guard on ab_sets (not zh_mode): a finalised _ZH trip has localization → zh_mode True
+    # but no _voice_test sets → ab_sets None, and must keep its normal single working take.
+    if ab_sets:
         _copy_audio_set(ab_sets["v2"], _ab_dir(sid, "v2"))
         _copy_audio_set(ab_sets["v3"], _ab_dir(sid, "v3"))
 
@@ -853,9 +855,10 @@ def _coverage_for(sid: str, frow) -> tuple[list[list[float]], bool]:
     the working take OR (untouched field only) of the original."""
     if not frow["has_audio"]:
         return [], True
-    # _ZH is A/B audition, not the splice/coverage flow — done is not playback-gated
-    # (the reviewer picks V2/V3 side by side; the human listen is the backstop).
-    if _is_zh_session(sid):
+    # _ZH BEFORE a pick = A/B audition (no working take yet → current_mp3_path NULL):
+    # not playback-gated, the human A/B listen is the backstop. AFTER the pick (promoted)
+    # or a finalised single-audio _ZH trip, current_mp3_path is set → normal playback gate.
+    if _is_zh_session(sid) and not frow["current_mp3_path"]:
         return [], True
     cov = json.loads(frow["played_coverage_json"] or "{}")
     ranges = cov.get("ranges", []) if cov.get("hash") == frow["working_audio_hash"] else []
@@ -934,8 +937,11 @@ def serialize_field(sid: str, frow) -> dict:
     if _is_zh_session(sid):
         loc_raw = _srow_get(frow, "localization_json")
         result["localization"] = json.loads(loc_raw) if loc_raw else None
+        # Expose the V2/V3 audition ONLY before a pick (current_mp3_path NULL). After the
+        # pick the chosen set is promoted into orig/working → the normal single take (built
+        # above) is served and the side-by-side collapses to one player.
         ab = {}
-        if has_audio and frow["mp3_name"]:
+        if has_audio and frow["mp3_name"] and not frow["current_mp3_path"]:
             for ver in ("v2", "v3"):
                 p = WORK_ROOT / sid / ver / frow["mp3_name"]   # no mkdir side effect
                 if p.exists():
@@ -1124,14 +1130,68 @@ def update_localization(sid: str, fid: int, script: str, text: str) -> dict:
 
 
 def set_version(sid: str, version: str) -> dict:
-    """Set the trip's preferred ElevenLabs A/B version (v2|v3) — the per-trip audio pick,
-    surfaced to the admin so the speaker→version mapping can be finalised."""
-    _session_row(sid)
+    """Pick the trip's ElevenLabs A/B version (v2|v3) and COLLAPSE to a single editable
+    take: promote work/{sid}/{version} into the orig/working splice slots so the _ZH
+    session becomes a normal single-version session (regenerate/combine/trim/import/
+    fallback all apply, and Done becomes playback-gated). Switching version re-promotes
+    and RESETS audio edit state (versions/candidate/fallback/coverage/done); the 4-script
+    text edits live on the field row and are preserved."""
+    srow = _session_row(sid)
     if version not in ("v2", "v3"):
         raise HTTPException(422, detail={"error": "bad_version",
                                          "detail": "version must be 'v2' or 'v3'"})
-    db.execute("UPDATE sessions SET preferred_version=?, updated_at=? WHERE id=?",
-               (version, time.time(), sid))
+    src_root = WORK_ROOT / sid / version
+    prev = _srow_get(srow, "preferred_version")
+    # A/B is V2 (eleven_multilingual_v2, honours the HSK speed) vs V3 (eleven_v3, speed
+    # ignored). Pin the session's model/speed to the picked version so a later regenerate
+    # matches the take the reviewer chose (dave: "a V3 pick must regenerate with v3").
+    model_ov = "eleven_v3" if version == "v3" else "eleven_multilingual_v2"
+    speed_ov = 1.0 if version == "v3" else None   # v2 → speed_for_trip (HSK3 = 0.85)
+    # Re-picking the SAME already-collapsed version is a no-op (don't wipe in-progress
+    # audio edits). A finalised _ZH trip has no A/B sets staged → just record the choice.
+    already_collapsed = bool(db.query_one(
+        "SELECT 1 FROM field_edits WHERE session_id=? AND has_audio=1 "
+        "AND current_mp3_path IS NOT NULL LIMIT 1", (sid,)))
+    if not src_root.is_dir() or (prev == version and already_collapsed):
+        db.execute("UPDATE sessions SET preferred_version=?, updated_at=? WHERE id=?",
+                   (version, time.time(), sid))
+        return get_session(sid)
+
+    dirs = work_dirs(sid)
+    for frow in db.query("SELECT * FROM field_edits WHERE session_id=?", (sid,)):
+        if not frow["has_audio"] or not frow["mp3_name"]:
+            continue
+        name = frow["mp3_name"]
+        src = src_root / name
+        if not src.exists():
+            continue
+        audio_io.mp3_to_mp3_copy(src, dirs["orig"] / name)
+        audio_io.mp3_to_mp3_copy(src, dirs["working"] / name)
+        # reset the audio history to a clean v0 on the chosen take
+        db.execute("DELETE FROM audio_versions WHERE field_id=?", (frow["id"],))
+        stem = name[:-4]
+        db.execute(
+            "INSERT INTO audio_versions(session_id,field_id,scene_index,n,kind,path,"
+            "label,created_at) VALUES(?,?,?,?,?,?,?,?)",
+            (sid, frow["id"], frow["scene_index"], 0, "v0_original",
+             str(dirs["orig"] / name), f"{stem}v0", time.time()))
+        patch = {
+            "current_mp3_path": str(dirs["working"] / name),
+            "working_audio_hash": _file_hash(dirs["working"] / name),
+            "candidate_mp3_path": None,
+            "fallback_mp3_path": None,
+            "played_coverage_json": "{}",
+            "original_coverage_json": "{}",
+            "version_cursor": None,
+        }
+        if frow["flag"] == "done":
+            patch["flag"] = "none"
+        db.update_fields(frow["id"], **patch)
+
+    db.execute("UPDATE sessions SET preferred_version=?, model_override=?, speed_override=?, "
+               "updated_at=? WHERE id=?",
+               (version, model_ov, speed_ov, time.time(), sid))
+    db.touch_session(sid)
     return get_session(sid)
 
 
@@ -1163,6 +1223,17 @@ def _set_working(sid: str, frow, samples: np.ndarray | None = None,
     return _file_hash(working)
 
 
+def _zh_hans_for_tts(frow) -> str | None:
+    """The Simplified-hanzi narration text for a _ZH audio field (localization cur.Hans),
+    or None if the field has no 4-script block. This is what the reviewer edits (never
+    current_text), so it is the source of truth for regenerating the Mandarin take."""
+    loc_raw = _srow_get(frow, "localization_json")
+    if not loc_raw:
+        return None
+    hans = ((json.loads(loc_raw).get("cur") or {}).get("Hans") or "").strip()
+    return hans or None
+
+
 def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
                alt_text: str | None = None) -> dict:
     srow = _session_row(sid)
@@ -1179,10 +1250,17 @@ def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
     field_path = frow["field_path"]
     cur = audio_core.strip_url_lines(frow["current_text"] or "")
 
+    # _ZH: the narrated text is the Simplified hanzi (SceneDesc line 1); the reviewer edits
+    # the 4-script block, never current_text. Voice it verbatim as a WHOLE take — the Gemini
+    # number-speller is English-specific and there is no surgical CJK splice (K3 whole-regen).
+    zh_hans = _zh_hans_for_tts(frow) if _is_zh_session(sid) else None
+    if zh_hans is not None:
+        text = alt_text.strip() if (alt_text and alt_text.strip()) else zh_hans
+        plan = audio_splice.plan_whole(text, False, voice_id, voice_settings, model_id)
     # Q&A fields and SceneDesc 'whole' → whole regenerate (no splice). Alt text (if
     # supplied) is voiced VERBATIM as the whole block — "regenerate with alt text" for a
     # question option, mirroring highlight-with-alt-text but for the entire field.
-    if field_path != "SceneDesc" or mode == "whole":
+    elif field_path != "SceneDesc" or mode == "whole":
         if alt_text is not None and alt_text.strip():
             plan = audio_splice.plan_whole(alt_text.strip(), False, voice_id,
                                            voice_settings, model_id)
@@ -2013,6 +2091,15 @@ def validate(sid: str) -> tuple[list[dict], list[dict]]:
         hard.append({"scene_index": None, "field_path": "*",
                      "issue": f"{not_done} section(s) not yet marked done — listen to "
                               "the audio and mark every section done before submitting",
+                     "severity": "block"})
+
+    # _ZH: a voice version must be picked before submit — until the pick promotes a take,
+    # the A/B fields carry no working audio (current_mp3_path NULL) and nothing is editable.
+    if _is_zh_session(sid) and any(
+            f["has_audio"] and not f["current_mp3_path"] for f in frows):
+        hard.append({"scene_index": None, "field_path": "*",
+                     "issue": "pick a voice version (V2 or V3) before submitting — the "
+                              "chosen take becomes the trip's working audio",
                      "severity": "block"})
 
     return hard, soft

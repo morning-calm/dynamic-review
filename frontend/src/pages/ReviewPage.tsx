@@ -142,7 +142,9 @@ const ReviewBody = () => {
     <>
       <NavBar
         title={session.trip_id}
-        subtitle={`${session.folder_name} · voice: ${session.voice_display}${isZh ? ' · A/B audition (V2/V3)' : ''}`}
+        subtitle={`${session.folder_name} · voice: ${session.voice_display}${
+          isZh ? (session.preferred_version ? ` · ${session.preferred_version.toUpperCase()} audio` : ' · A/B audition (V2/V3)') : ''
+        }`}
         right={
           <>
             <SaveStatus state={saveState} />

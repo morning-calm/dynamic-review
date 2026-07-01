@@ -1,8 +1,10 @@
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import type { Field } from '../api';
 import EditableField from './EditableField';
 import LocalizationEditor from './LocalizationEditor';
 import ZhAudioAB from './ZhAudioAB';
+import AudioReview from './AudioReview';
+import RegenerateControls from './RegenerateControls';
 import FlagControl from './FlagControl';
 import CommentBox from './CommentBox';
 
@@ -29,22 +31,48 @@ interface ZhFieldBlockProps {
  * flag/comment controls every other language uses. One component covers both
  * trip-level fields (ReviewPage's header) and scene fields (SceneCard).
  */
-const ZhFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine, rows, readOnly = false }: ZhFieldBlockProps) => (
-  <div className="space-y-2">
-    {header}
-    <div inert={readOnly}>
-      {field.localization ? (
-        <LocalizationEditor field={field} sid={sid} onFieldUpdate={onFieldUpdate} label={label} rows={rows} />
-      ) : (
-        <EditableField field={field} sid={sid} onFieldUpdate={onFieldUpdate} label={label} singleLine={singleLine} rows={rows} />
-      )}
+const ZhFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine, rows, readOnly = false }: ZhFieldBlockProps) => {
+  const flushRef = useRef<(() => Promise<void>) | null>(null);
+  // Before a version pick the backend serves the V2/V3 audition (audio.v2/v3) and no
+  // working take; after the pick it collapses to a single working take (audio.working, no
+  // v2/v3) that regenerates/combines like any other language. Presence drives which UI.
+  const auditioning = Boolean(field.audio.v2 || field.audio.v3);
+  return (
+    <div className="space-y-2">
+      {header}
+      <div inert={readOnly}>
+        {field.localization ? (
+          <LocalizationEditor field={field} sid={sid} onFieldUpdate={onFieldUpdate} label={label} rows={rows} flushRef={flushRef} />
+        ) : (
+          <EditableField field={field} sid={sid} onFieldUpdate={onFieldUpdate} label={label} singleLine={singleLine} rows={rows} flushRef={flushRef} />
+        )}
+      </div>
+      {field.has_audio &&
+        (auditioning ? (
+          <ZhAudioAB v2={field.audio.v2} v3={field.audio.v3} />
+        ) : (
+          <>
+            <AudioReview field={field} sid={sid} onFieldUpdate={onFieldUpdate} />
+            <div inert={readOnly}>
+              <RegenerateControls
+                field={field}
+                sid={sid}
+                onFieldUpdate={onFieldUpdate}
+                hasTextChange={false}
+                wholeOnly
+                onBeforeRegenerate={async () => {
+                  await flushRef.current?.();
+                }}
+              />
+            </div>
+          </>
+        ))}
+      <div className="space-y-2" inert={readOnly}>
+        <FlagControl field={field} sid={sid} onFieldUpdate={onFieldUpdate} />
+        <CommentBox field={field} sid={sid} onFieldUpdate={onFieldUpdate} />
+      </div>
     </div>
-    {field.has_audio && <ZhAudioAB v2={field.audio.v2} v3={field.audio.v3} />}
-    <div className="space-y-2" inert={readOnly}>
-      <FlagControl field={field} sid={sid} onFieldUpdate={onFieldUpdate} />
-      <CommentBox field={field} sid={sid} onFieldUpdate={onFieldUpdate} />
-    </div>
-  </div>
-);
+  );
+};
 
 export default ZhFieldBlock;
