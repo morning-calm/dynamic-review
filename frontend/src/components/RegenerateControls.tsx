@@ -48,11 +48,16 @@ const RegenerateControls = ({
   const [altRange, setAltRange] = useState<{ start: number; end: number } | null>(null);
   const [altText, setAltText] = useState('');
   const [altWhole, setAltWhole] = useState(false); // true → voice alt text as the WHOLE field
+  // The exact params of the last regenerate, so a candidate can be re-rolled identically
+  // (TTS is non-deterministic → a fresh take) if the first one has an issue.
+  const [lastRegen, setLastRegen] = useState<
+    { mode: RegenerateMode; range?: { start: number; end: number }; alt?: string } | null
+  >(null);
 
   const afterRegen = (updated: Field) => {
     onFieldUpdate(updated);
     if (!updated.audio.candidate && updated.flag === 'edit_required') {
-      toast.info('Could not splice automatically — flagged edit-required. Try whole-regenerate or send to manual edit.');
+      toast.info('Could not splice automatically — flagged edit-required. Try whole-regenerate or send to Create new.');
     }
   };
 
@@ -62,6 +67,7 @@ const RegenerateControls = ({
     alt?: string,
   ) => {
     setBusy(true);
+    setLastRegen({ mode, range, alt });
     try {
       await onBeforeRegenerate?.(); // S3: persist the latest text before the server diffs it
       const updated = await api.regenerate(sid, field.fid, mode, range, alt);
@@ -71,6 +77,24 @@ const RegenerateControls = ({
     } finally {
       setBusy(false);
     }
+  };
+
+  // Re-roll the current candidate with the IDENTICAL request (same span/alt text).
+  const redoCandidate = () => {
+    if (!lastRegen) return;
+    regen(lastRegen.mode, lastRegen.range, lastRegen.alt);
+  };
+
+  // Undo / redo through the working take's audio version history.
+  const stepHistory = (dir: 'undo' | 'redo') => {
+    setBusy(true);
+    (dir === 'undo' ? api.undoAudio(sid, field.fid) : api.redoAudio(sid, field.fid))
+      .then((updated) => onFieldUpdate(updated))
+      .catch((e: unknown) => {
+        if (e instanceof ApiError && e.status === 409) toast.info(e.detail);
+        else toast.error(`${dir} failed: ${e instanceof ApiError ? e.detail : 'network error'}`);
+      })
+      .finally(() => setBusy(false));
   };
 
   const onHighlight = () => {
@@ -136,6 +160,56 @@ const RegenerateControls = ({
     setAltOpen(false);
   };
 
+  // Insert a 1s pause at the TEXT caret (normally after a full stop). The caret char
+  // offset is mapped to an audio time on the backend via the clip's word timing.
+  const onInsertSilence = async () => {
+    const range = getSelectionRange?.() ?? null;
+    if (!range) {
+      toast.warn('Click in the narration where the pause should go (usually after a full stop), then click.');
+      return;
+    }
+    setBusy(true);
+    try {
+      await onBeforeRegenerate?.(); // align the caret offset with the saved text
+      const updated = await api.insertSilence(sid, field.fid, range.start, 1);
+      onFieldUpdate(updated);
+      toast.success('Extended the pause by 1s at the cursor — re-listen to confirm.');
+    } catch (e: unknown) {
+      if (e instanceof ApiError && e.status === 409) toast.warn(e.detail); // no pause to extend
+      else toast.error(`Insert failed: ${e instanceof ApiError ? e.detail : 'network error'}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Normalize the trailing pause: beginner trips (A1-2/N5/HSK1-2) keep ~3s of end
+  // silence, every other level has excess end-silence removed. Level is decided on the
+  // backend from the trip id; the working URL hash tells us whether anything changed.
+  const onTrimSilence = () => {
+    setBusy(true);
+    const before = field.audio.working;
+    api
+      .trimSilence(sid, field.fid)
+      .then((updated) => {
+        onFieldUpdate(updated);
+        if (updated.audio.working === before) toast.info('End silence already correct — nothing to trim.');
+        else toast.success('Adjusted the trailing silence — re-listen to confirm.');
+      })
+      .catch((e: unknown) => toast.error(`Trim failed: ${e instanceof ApiError ? e.detail : 'network error'}`))
+      .finally(() => setBusy(false));
+  };
+
+  // Nudge the trailing trim on the candidate before combining (drop a TTS breath / the
+  // start of the next sound). +50 ms trims more off the end; −50 ms restores.
+  const onTrimCandidate = (deltaMs: number) => {
+    setBusy(true);
+    api
+      .trimCandidate(sid, field.fid, deltaMs)
+      .then((updated) => onFieldUpdate(updated))
+      .catch((e: unknown) => toast.error(`Trim failed: ${e instanceof ApiError ? e.detail : 'network error'}`))
+      .finally(() => setBusy(false));
+  };
+
   const doCombine = () => {
     setBusy(true);
     api
@@ -151,8 +225,42 @@ const RegenerateControls = ({
   const btn =
     'rounded border px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40 enabled:hover:bg-gray-700';
 
+  // Saved 'Create new' attachments (a note is what commits a take) → highlight the button.
+  const savedClips = field.manual_clips.filter((c) => c.comment.trim()).length;
+
+  const trimSilenceBtn = (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={onTrimSilence}
+      title="Trim the silence at the end of this clip (beginner trips keep a 3s tail; other levels remove excess)"
+      className={`${btn} border-gray-600 text-gray-200`}
+    >
+      Trim end silence
+    </button>
+  );
+
   return (
     <div className="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        disabled={busy || !field.can_undo}
+        onClick={() => stepHistory('undo')}
+        title="Undo the last audio change (step back through this clip's takes)"
+        className={`${btn} border-gray-600 text-gray-200`}
+      >
+        ↶ Undo
+      </button>
+      <button
+        type="button"
+        disabled={busy || !field.can_redo}
+        onClick={() => stepHistory('redo')}
+        title="Redo (step forward through this clip's takes)"
+        className={`${btn} border-gray-600 text-gray-200`}
+      >
+        ↷ Redo
+      </button>
+
       <button type="button" disabled={busy} onClick={() => regen('whole')} className={`${btn} border-gray-600 text-gray-200`}>
         Regenerate whole block
       </button>
@@ -168,6 +276,8 @@ const RegenerateControls = ({
           …with alt text
         </button>
       )}
+
+      {wholeOnly && trimSilenceBtn}
 
       {!wholeOnly && (
         <>
@@ -207,17 +317,68 @@ const RegenerateControls = ({
           >
             Trim highlighted noise
           </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onInsertSilence}
+            title="Click in the narration where a pause should go (usually after a full stop), then click to insert a 1s silence there"
+            className={`${btn} border-gray-600 text-gray-200`}
+          >
+            Insert 1s pause at cursor
+          </button>
+          {trimSilenceBtn}
         </>
       )}
 
       {field.audio.candidate && (
-        <button type="button" disabled={busy} onClick={doCombine} className={`${btn} border-custom-green text-custom-green`}>
-          Combine
-        </button>
+        <>
+          <button type="button" disabled={busy} onClick={doCombine} className={`${btn} border-custom-green text-custom-green`}>
+            Combine
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onTrimCandidate(50)}
+            title="Trim 50 ms more off the END of the candidate (drop a trailing breath or the start of the next sound) before combining"
+            className={`${btn} border-gray-600 text-gray-200`}
+          >
+            Trim end −
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onTrimCandidate(-50)}
+            title="Restore 50 ms of the candidate's end (undo a trim-too-far)"
+            className={`${btn} border-gray-600 text-gray-200`}
+          >
+            Trim end +
+          </button>
+          <button
+            type="button"
+            disabled={busy || !lastRegen}
+            onClick={redoCandidate}
+            title="Re-roll this candidate with the exact same request (a fresh take, in case the first has an issue)"
+            className={`${btn} border-gray-600 text-gray-200`}
+          >
+            Redo candidate
+          </button>
+        </>
       )}
 
-      <button type="button" disabled={busy} onClick={() => setManualOpen(true)} className={`${btn} border-amber-600 text-amber-400`}>
-        Manual edit
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => setManualOpen(true)}
+        title={
+          savedClips > 0
+            ? `${savedClips} take${savedClips === 1 ? '' : 's'} attached for the admin — open to review`
+            : 'Create a new take as an attachment with instructions for the admin (does not replace the working audio)'
+        }
+        className={`${btn} ${
+          savedClips > 0 ? 'border-amber-500 bg-amber-500/10 text-amber-300' : 'border-gray-600 text-gray-200'
+        }`}
+      >
+        Create new{savedClips > 0 ? ` (${savedClips})` : ''}
       </button>
 
       {busy && <span className="text-xs text-gray-500">working…</span>}

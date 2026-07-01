@@ -15,6 +15,9 @@ interface AudioFieldBlockProps {
   header?: ReactNode;
   singleLine?: boolean;
   rows?: number;
+  /** Session is locked (submitted/approving/approved) — edit controls go
+   * `inert`, but the audio player stays interactive so the take can still be heard. */
+  readOnly?: boolean;
 }
 
 /**
@@ -23,38 +26,44 @@ interface AudioFieldBlockProps {
  * text first (S3). SceneDesc is rendered inline in SceneCard because it has the
  * extra segment/highlight controls.
  */
-const AudioFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine, rows }: AudioFieldBlockProps) => {
+const AudioFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine, rows, readOnly = false }: AudioFieldBlockProps) => {
   const flushRef = useRef<(() => Promise<void>) | null>(null);
 
   return (
     <div className="space-y-2">
       {header}
-      <EditableField
-        field={field}
-        sid={sid}
-        onFieldUpdate={onFieldUpdate}
-        label={label}
-        singleLine={singleLine}
-        rows={rows}
-        flushRef={flushRef}
-      />
+      <div inert={readOnly}>
+        <EditableField
+          field={field}
+          sid={sid}
+          onFieldUpdate={onFieldUpdate}
+          label={label}
+          singleLine={singleLine}
+          rows={rows}
+          flushRef={flushRef}
+        />
+      </div>
       {field.has_audio && (
         <>
           <AudioReview field={field} sid={sid} onFieldUpdate={onFieldUpdate} />
-          <RegenerateControls
-            field={field}
-            sid={sid}
-            onFieldUpdate={onFieldUpdate}
-            hasTextChange={false}
-            wholeOnly
-            onBeforeRegenerate={async () => {
-              await flushRef.current?.();
-            }}
-          />
+          <div inert={readOnly}>
+            <RegenerateControls
+              field={field}
+              sid={sid}
+              onFieldUpdate={onFieldUpdate}
+              hasTextChange={false}
+              wholeOnly
+              onBeforeRegenerate={async () => {
+                await flushRef.current?.();
+              }}
+            />
+          </div>
         </>
       )}
-      <FlagControl field={field} sid={sid} onFieldUpdate={onFieldUpdate} />
-      <CommentBox field={field} sid={sid} onFieldUpdate={onFieldUpdate} />
+      <div className="space-y-2" inert={readOnly}>
+        <FlagControl field={field} sid={sid} onFieldUpdate={onFieldUpdate} />
+        <CommentBox field={field} sid={sid} onFieldUpdate={onFieldUpdate} />
+      </div>
     </div>
   );
 };

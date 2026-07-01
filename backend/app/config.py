@@ -74,7 +74,16 @@ REVIEW_AUDIO_BUCKET = "review-audio"
 REVIEW_AUDIO_PUBLIC_BASE = "https://reviewaudio.dynamiclanguages.org/"
 
 # --- Security / server ------------------------------------------------------
-REVIEW_TOKEN = os.environ.get("REVIEW_APP_TOKEN", "dev-token")
+# Auth is DB-backed (users + auth_sessions; see app/auth.py). The old static
+# REVIEW_APP_TOKEN shared-secret path has been removed entirely.
+#   AUTH_COOKIE_SECURE  — mark the review_session cookie Secure. MUST be off in dev
+#                         (plain-HTTP localhost) so <audio>/<img> media GETs carry the
+#                         cookie; turn ON once served over HTTPS (the tunnel/edge).
+#   AUTH_TOKEN_TTL_SECONDS — opaque bearer/cookie token lifetime (default 14 days).
+AUTH_COOKIE_NAME = "review_session"
+AUTH_COOKIE_SECURE = os.environ.get("REVIEW_APP_COOKIE_SECURE", "0").strip().lower() in (
+    "1", "true", "yes", "on")
+AUTH_TOKEN_TTL_SECONDS = int(os.environ.get("REVIEW_APP_TOKEN_TTL", str(14 * 24 * 3600)))
 CORS_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",

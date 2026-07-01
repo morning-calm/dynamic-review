@@ -6,10 +6,17 @@ change a shape, change it here first. The full design rationale is the plan at
 
 ## Conventions
 - Backend: `http://127.0.0.1:8000` (bound to localhost only).
-- Auth: every request carries header **`X-Review-Token: <token>`** (env `REVIEW_APP_TOKEN`; dev default `dev-token`). Missing/wrong → `401`.
-- Frontend dev (`vite`, port 5173) **proxies** `/api` and `/audio` → `127.0.0.1:8000`.
+- **Auth (see "Auth & roles" below):** every request except `POST /api/login` + `GET /api/health` must present a session token — `Authorization: Bearer <token>` for all writes; media/download **GET**s may instead use the httpOnly `review_session` cookie. Missing/invalid → `401`. Two roles (`admin`/`reviewer`); reviewers are scoped to their trip languages → `403` otherwise.
+- Frontend dev (`vite`, port 5173) **proxies** `/api`, `/audio`, `/overlays` → `127.0.0.1:8000`.
 - All JSON. Times in seconds (float). Errors: `{ "error": "<code>", "detail": "<human>" }` with status 400/401/404/409/422/500.
 - **MP3 only** in this tool. No ogg, no S3, no subtitles/timings — Stage 9 owns those.
+
+## Auth & roles
+- **Login:** `POST /api/login {username,password}` → `{ "token", "user": {"username","role","languages"} }` and sets `Set-Cookie: review_session=<token>; HttpOnly; SameSite=Lax; Path=/` (`; Secure` when env `REVIEW_APP_COOKIE_SECURE=1`). `401` on bad creds (generic — no user-enumeration). `POST /api/logout` revokes the token + clears the cookie; `GET /api/me` → `{username,role,languages}`.
+- **Token transport:** send `Authorization: Bearer <token>` on every request. State-changing requests (POST/PUT/DELETE) **must** use the header — a cookie alone is rejected (CSRF defence). Browser `<audio>`/`<img>`/download **GET**s authenticate via the httpOnly cookie (they can't set a header). Tokens are opaque, DB-backed (revocable), and expire (default 14d).
+- **Roles:** `admin` (sees all trips, approves, writes staging) and `reviewer` (scoped to `languages`; corrects + submits). Language = the trip's narration language (`_EN`→English, `_JP`→Japanese, `_ZH`→Mandarin). English has no reviewer — admins handle it. Accounts are admin-provisioned via `backend/manage.py` (no signup).
+- **Scoping:** `GET /api/trips` is filtered to the caller's language(s); `POST /api/sessions` and every `/api/sessions/{sid}/*` + media/download route return `403` if the trip's language isn't the caller's (admins bypass).
+- **Review workflow (submit → approve):** a reviewer edits (`in_review`), then `submit` (validate-only, **no writes**) → `submitted` (locked read-only). An admin reviews the diff and either `approve` (writes staging text + promotes the corrected `{i}.mp3` masters) → `approved`, or `request-changes` (→ `changes_requested`, editable again). **Masters/staging are written only on approve, never on reviewer submit.** For English the admin submits + approves in one pass.
 
 ## Core objects
 
@@ -70,7 +77,10 @@ The atom the UI renders/edits. One per editable thing.
   "id": "sess_abc",
   "trip_id": "Edinburgh1_OldTownGreyfriars_EN",
   "folder_name": "Scotland/Edinburgh/Edinburgh1_OldTownGreyfriars_EN",
-  "status": "in_review",         // "in_review" | "submitted"
+  "status": "in_review",         // in_review | submitted | approving | approved | changes_requested
+  "submitted_by": null,          // username, once submitted
+  "approved_by": null,           // username, once approved
+  "review_note": "",             // admin's note when changes_requested
   "voice": "isla",               // narrator voice name (registry key)
   "voice_display": "Isla",       // human label for the voice
   "speed": 0.7,                  // effective TTS speed (override or level/auto)
@@ -87,10 +97,13 @@ The atom the UI renders/edits. One per editable thing.
 
 | Method · Path | Body | Returns |
 |---|---|---|
-| `GET /api/health` | — | `{ "ok": true }` |
-| `GET /api/trips` | — | `[ { "trip_id", "title", "folder_name", "has_session", "status" } ]` (trips with local MP3 masters under the configured roots) |
+| `GET /api/health` | — | `{ "ok": true }` **(unauthenticated)** |
+| `POST /api/login` | `{ "username","password" }` | `{ "token", "user": {"username","role","languages"} }` + `Set-Cookie: review_session`. `401` generic on bad creds. **(unauthenticated)** |
+| `POST /api/logout` | — | `204` — revokes the presented token + clears the cookie. |
+| `GET /api/me` | — | `{ "username","role","languages" }` — the caller's identity (FE bootstraps from this). |
+| `GET /api/trips` | — | `[ { "trip_id","title","folder_name","lane","level","family","has_session","status","edit_required","reviewable" } ]` — **filtered to the caller's language(s)** (admins see all). |
 | `GET /api/voices` | — | `{ "voices": [ {"name","display","gender","language","country","model"} ], "models": ["eleven_multilingual_v2","eleven_v3"] }` — the approved-voice registry for the narration picker. |
-| `POST /api/sessions` | `{ "trip_id": "…" }` | `Session` — **creates or resumes** the trip's open session. `422` if folderName isn't a ≥2-segment Scotland/England path. |
+| `POST /api/sessions` | `{ "trip_id": "…" }` | `Session` — **creates or resumes** the trip's session (resumes any `in_review`/`submitted`/`changes_requested` one). **`403`** if the trip's language isn't the caller's. `422` if folderName isn't a valid path. |
 | `GET /api/sessions/{sid}` | — | `Session` (full state, for resume) |
 | `POST /api/sessions/{sid}/narration` | `{ "voice"?, "speed"?, "model"?, "clear_speed"?, "clear_model"? }` | `Session` — correct the trip's narrator voice/speed/model mid-review. Omit a field to leave it; `clear_*` drops an override back to auto. Any take **regenerated under the old settings** is reset to the master (text edits kept); untouched master audio + coverage are preserved. `422` on unknown voice/model or speed out of `0.5–1.2`. |
 | `PUT /api/sessions/{sid}/fields/{fid}` | `{ "current_text": "…" }` | `Field` — autosave. Resets `played_coverage` + drops `flag` off `done` if text changed. |
@@ -105,10 +118,14 @@ The atom the UI renders/edits. One per editable thing.
 | `GET /audio/{sid}/{fid}/{which}` | — (`which` ∈ `original｜working｜candidate｜fallback`) | `audio/mpeg`, **HTTP Range supported** |
 | `GET /audio/{sid}/{fid}/v/{n}` | — | `audio/mpeg` (archived version n), Range supported |
 | `GET /api/sessions/{sid}/download` | — | `application/zip` — all originals + every version + current `{i}.mp3` |
-| `POST /api/sessions/{sid}/submit` | — | `{ "ok": bool, "validation": [ {scene_index,field_path,issue} ], "written": [field_path…], "awaiting_stage9": true }` — validates, then writes changed **text** to staging Trip + TripGroup desc/categories; corrected `{i}.mp3` masters are already in place for Stage 9. **No S3/ogg.** |
+| `POST /api/sessions/{sid}/submit` | — | `{ "ok": bool, "validation": [ {scene_index,field_path,issue} ] }` — reviewer/admin (own language): **validates only, no writes**; on `ok` flips the session to `submitted` (locked read-only, awaiting admin). Hard-fail issues keep it `in_review`. |
+| `POST /api/sessions/{sid}/approve` | — | `{ "ok": bool, "validation": […], "written": [field_path…], "promoted_mp3": [name…], "awaiting_stage9": true }` — **admin only.** Writes changed **text** to staging Trip + TripGroup desc/categories and promotes the corrected `{i}.mp3` masters (archiving prior). `409` if the session isn't `submitted`; if live staging drifted so validation now fails, returns `ok:false` and reverts to `submitted`. **No S3/ogg** (Stage 9). |
+| `POST /api/sessions/{sid}/request-changes` | `{ "note": "…" }` | `{ "ok": true }` — **admin only.** Sends a `submitted` trip back to the reviewer (`changes_requested`) with a note; `409` from other states. |
+| `GET /api/review-queue` | — | `[ { "sid","trip_id","title","language","submitted_by","submitted_at","edit_required" } ]` — **admin only.** Sessions awaiting approval. |
 
 ## Notes for implementers
 - `fid` is the `field_edits.id`. The frontend never constructs audio paths — it uses the URLs in `Field.audio` / `Field.versions`.
+- **Media auth:** `/audio/*`, `/overlays/*`, and `/api/sessions/{sid}/download` are language-scoped and require auth; browser `<audio>`/`<img>` send the httpOnly `review_session` cookie (set at login) since they can't set a header. The FE fetches all `/api` with `Authorization: Bearer` + `credentials:'include'`, and on any `401` clears the token and returns to the login page.
 - `can_mark_done` is **server-authoritative**; the client also disables the button, but the server re-checks on `/flag`.
 - After `combine`/`import`/`revert`/text-edit, the working audio changed → server clears coverage; the client must reload that field's audio element (new content at the same URL).
 - `regenerate` should return as soon as the ElevenLabs clip is ready (candidate audible); the heavy splice/align happens on `combine`.

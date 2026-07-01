@@ -319,6 +319,16 @@ def plan_segment(doc_id: str, cleaned_orig: str, cleaned_new: str,
     # are unchanged, so they map 1:1 into NEW token space around the change)
     new_blo = max(0, blo - (oa - l_word))
     new_bhi = min(len(new_toks), bhi + (r_word - (ob - 1)))
+    # Alt text must replace STRICTLY the highlighted words. If the clean-seam search had to
+    # expand the cut into neighbouring words (connected speech at the boundary), voicing the
+    # alt phrase would re-voice those neighbours too — so refuse and ask for a cleaner
+    # highlight instead of bleeding fragments of adjacent words into the splice.
+    if alt_text is not None and alt_text.strip() and (new_blo < blo or new_bhi > bhi):
+        return RegenPlan(
+            edit_required=True,
+            reason="The highlighted words run into connected speech with no pause to cut at "
+                   "— extend the highlight to a natural pause (or use Create new) so only the "
+                   "highlighted words are replaced.")
     if alt_text is not None and alt_text.strip():
         parts = new_toks[new_blo:blo] + [alt_text.strip()] + new_toks[bhi:new_bhi]
     else:

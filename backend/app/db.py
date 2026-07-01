@@ -82,15 +82,49 @@ CREATE TABLE IF NOT EXISTS manual_clips (
     field_id    INTEGER NOT NULL,
     text        TEXT NOT NULL DEFAULT '',
     kind        TEXT NOT NULL DEFAULT 'generated',   -- generated | imported
+    comment     TEXT NOT NULL DEFAULT '',            -- instructions to the admin for this take
     path        TEXT NOT NULL,
     created_at  REAL NOT NULL,
     FOREIGN KEY (session_id) REFERENCES sessions(id)
+);
+
+-- Auth: admin-provisioned users (no self-signup) + opaque bearer/cookie tokens.
+-- languages_json = JSON array of narration languages a reviewer may see (admins bypass).
+-- auth_sessions stores sha256(token) ONLY — the raw handle is never persisted.
+CREATE TABLE IF NOT EXISTS users (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    username       TEXT NOT NULL UNIQUE,
+    password_hash  TEXT NOT NULL,
+    role           TEXT NOT NULL DEFAULT 'reviewer',   -- admin | reviewer
+    languages_json TEXT NOT NULL DEFAULT '[]',
+    active         INTEGER NOT NULL DEFAULT 1,
+    created_at     REAL NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS auth_sessions (
+    token_hash TEXT PRIMARY KEY,       -- sha256 hex of the opaque token
+    user_id    INTEGER NOT NULL,
+    created_at REAL NOT NULL,
+    expires_at REAL NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- Append-only approvals audit (who promoted what to staging, and when).
+CREATE TABLE IF NOT EXISTS approvals (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id   TEXT NOT NULL,
+    trip_id      TEXT NOT NULL,
+    approved_by  TEXT NOT NULL,
+    approved_at  REAL NOT NULL,
+    written_json TEXT NOT NULL DEFAULT '[]'
 );
 
 CREATE INDEX IF NOT EXISTS ix_fields_session ON field_edits(session_id);
 CREATE INDEX IF NOT EXISTS ix_versions_field ON audio_versions(field_id);
 CREATE INDEX IF NOT EXISTS ix_sessions_trip ON sessions(trip_id, status);
 CREATE INDEX IF NOT EXISTS ix_clips_field ON manual_clips(field_id);
+CREATE INDEX IF NOT EXISTS ix_auth_sessions_user ON auth_sessions(user_id);
+CREATE INDEX IF NOT EXISTS ix_auth_sessions_expires ON auth_sessions(expires_at);
 """
 
 
@@ -128,6 +162,22 @@ def init() -> None:
             # on the combined take instead of restarting from the pristine master.
             conn.execute("ALTER TABLE field_edits ADD COLUMN "
                          "working_text TEXT NOT NULL DEFAULT ''")
+        if "version_cursor" not in fcols:
+            # which audio_versions.n the working take currently sits on, for undo/redo.
+            # NULL = the latest version (no undo applied yet).
+            conn.execute("ALTER TABLE field_edits ADD COLUMN version_cursor INTEGER")
+        ccols = {r["name"] for r in conn.execute("PRAGMA table_info(manual_clips)")}
+        if "comment" not in ccols:
+            conn.execute("ALTER TABLE manual_clips ADD COLUMN "
+                         "comment TEXT NOT NULL DEFAULT ''")
+        # Submit -> approve workflow columns (auth/roles feature). Additive; existing
+        # in_review/submitted rows stay valid under the widened status value set.
+        if "submitted_by" not in have:
+            conn.execute("ALTER TABLE sessions ADD COLUMN submitted_by TEXT")
+        if "approved_by" not in have:
+            conn.execute("ALTER TABLE sessions ADD COLUMN approved_by TEXT")
+        if "review_note" not in have:
+            conn.execute("ALTER TABLE sessions ADD COLUMN review_note TEXT")
         conn.commit()
         _CONN = conn
 
@@ -157,6 +207,15 @@ def execute(sql: str, params: tuple = ()) -> int:
         cur = _conn().execute(sql, params)
         _conn().commit()
         return cur.lastrowid
+
+
+def execute_rowcount(sql: str, params: tuple = ()) -> int:
+    """Run a write; returns the number of rows affected (for compare-and-set claims,
+    e.g. the submit->approve CAS). Serialized + committed."""
+    with _LOCK:
+        cur = _conn().execute(sql, params)
+        _conn().commit()
+        return cur.rowcount
 
 
 def update_fields(field_id: int, **cols: Any) -> None:

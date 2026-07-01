@@ -42,6 +42,11 @@ const NarrationControls = ({ session, onUpdate }: Props) => {
   const [models, setModels] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
+  // Narration is a stricter gate than the general editable-status set: the
+  // backend only allows /narration while status is exactly 'in_review' (not
+  // 'changes_requested' too) — a voice/speed/model change is disruptive enough
+  // (can reset every field's regenerated audio) that it's restricted to the
+  // first review pass. See sessions.py:set_narration.
   const disabled = busy || session.status !== 'in_review';
 
   useEffect(() => {

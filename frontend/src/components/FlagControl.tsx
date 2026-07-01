@@ -41,7 +41,13 @@ const FlagControl = ({ field, sid, onFieldUpdate }: FlagControlProps) => {
   const badge = FLAG_BADGE[field.flag];
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div
+      id={`field-${field.fid}`}
+      data-field-anchor
+      data-fid={field.fid}
+      data-done={field.flag === 'done' ? 'true' : 'false'}
+      className="flex scroll-mt-24 flex-wrap items-center gap-2 rounded"
+    >
       <span className={`rounded px-2 py-0.5 text-xs font-medium ${badge.cls}`}>{badge.label}</span>
 
       <button

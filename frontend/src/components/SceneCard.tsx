@@ -13,6 +13,9 @@ interface SceneCardProps {
   fields: Field[];
   sid: string;
   onFieldUpdate: (f: Field) => void;
+  /** Session is locked (submitted/approving/approved) — edit controls go
+   * `inert`, but audio players stay interactive so the take can still be heard. */
+  readOnly?: boolean;
 }
 
 const optionIndex = (fieldPath: string): number | null => {
@@ -47,7 +50,7 @@ const SceneMedia = ({ scene }: { scene: Scene }) => {
   );
 };
 
-const SceneCard = ({ scene, fields, sid, onFieldUpdate }: SceneCardProps) => {
+const SceneCard = ({ scene, fields, sid, onFieldUpdate, readOnly = false }: SceneCardProps) => {
   const sceneDesc = fields.find((f) => f.field_path === 'SceneDesc');
   const titleKey = fields.find((f) => f.field_path === 'titleKey');
   const questionKey = fields.find((f) => f.field_path === 'questionKey');
@@ -97,39 +100,45 @@ const SceneCard = ({ scene, fields, sid, onFieldUpdate }: SceneCardProps) => {
       <div className="mt-4 space-y-4">
         {titleKey && (
           <FieldShell>
-            <AudioFieldBlock field={titleKey} sid={sid} onFieldUpdate={onFieldUpdate} label="Title" rows={2} />
+            <AudioFieldBlock field={titleKey} sid={sid} onFieldUpdate={onFieldUpdate} label="Title" rows={2} readOnly={readOnly} />
           </FieldShell>
         )}
 
         {sceneDesc && (
           <FieldShell>
-            <EditableField
-              field={sceneDesc}
-              sid={sid}
-              onFieldUpdate={onFieldUpdate}
-              onLocalChange={setDescLive}
-              label="Narration (SceneDesc)"
-              textareaRef={descTextareaRef}
-              flushRef={descFlushRef}
-              rows={4}
-            />
+            <div inert={readOnly}>
+              <EditableField
+                field={sceneDesc}
+                sid={sid}
+                onFieldUpdate={onFieldUpdate}
+                onLocalChange={setDescLive}
+                label="Narration (SceneDesc)"
+                textareaRef={descTextareaRef}
+                flushRef={descFlushRef}
+                rows={4}
+              />
+            </div>
             {sceneDesc.has_audio && (
               <>
                 <AudioReview field={sceneDesc} sid={sid} onFieldUpdate={onFieldUpdate} />
-                <RegenerateControls
-                  field={sceneDesc}
-                  sid={sid}
-                  onFieldUpdate={onFieldUpdate}
-                  hasTextChange={descLive !== sceneDesc.original_text}
-                  getSelectionRange={getSelectionRange}
-                  onBeforeRegenerate={async () => {
-                    await descFlushRef.current?.();
-                  }}
-                />
+                <div inert={readOnly}>
+                  <RegenerateControls
+                    field={sceneDesc}
+                    sid={sid}
+                    onFieldUpdate={onFieldUpdate}
+                    hasTextChange={descLive !== sceneDesc.original_text}
+                    getSelectionRange={getSelectionRange}
+                    onBeforeRegenerate={async () => {
+                      await descFlushRef.current?.();
+                    }}
+                  />
+                </div>
               </>
             )}
-            <FlagControl field={sceneDesc} sid={sid} onFieldUpdate={onFieldUpdate} />
-            <CommentBox field={sceneDesc} sid={sid} onFieldUpdate={onFieldUpdate} />
+            <div className="space-y-2" inert={readOnly}>
+              <FlagControl field={sceneDesc} sid={sid} onFieldUpdate={onFieldUpdate} />
+              <CommentBox field={sceneDesc} sid={sid} onFieldUpdate={onFieldUpdate} />
+            </div>
           </FieldShell>
         )}
 
@@ -137,7 +146,7 @@ const SceneCard = ({ scene, fields, sid, onFieldUpdate }: SceneCardProps) => {
           <FieldShell>
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Question</p>
             {questionKey && (
-              <AudioFieldBlock field={questionKey} sid={sid} onFieldUpdate={onFieldUpdate} label="Prompt" rows={2} />
+              <AudioFieldBlock field={questionKey} sid={sid} onFieldUpdate={onFieldUpdate} label="Prompt" rows={2} readOnly={readOnly} />
             )}
 
             {options.map((opt) => {
@@ -149,6 +158,7 @@ const SceneCard = ({ scene, fields, sid, onFieldUpdate }: SceneCardProps) => {
                     sid={sid}
                     onFieldUpdate={onFieldUpdate}
                     rows={3}
+                    readOnly={readOnly}
                     header={
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-400">Option {k}</span>

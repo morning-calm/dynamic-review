@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import UserMenu from './UserMenu';
 
 interface NavBarProps {
   title: string;
@@ -21,7 +22,10 @@ const NavBar = ({ title, subtitle, right, backTo = '/', backLabel = 'Trips' }: N
         <h1 className="truncate text-lg font-semibold text-white">{title}</h1>
         {subtitle && <p className="truncate text-xs text-gray-400">{subtitle}</p>}
       </div>
-      <div className="flex shrink-0 items-center gap-3">{right}</div>
+      <div className="flex shrink-0 items-center gap-3">
+        {right}
+        <UserMenu />
+      </div>
     </div>
   </header>
 );

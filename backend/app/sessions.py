@@ -271,29 +271,42 @@ def _trip_meta(trip_id: str) -> dict:
     return meta
 
 
-def _session_meta(tid: str) -> tuple[bool, str | None]:
+def _session_meta(tid: str) -> tuple[bool, str | None, bool]:
+    """(has_session, status, any_edit_required) for the latest session of a trip."""
     srow = db.query_one(
         "SELECT id,status FROM sessions WHERE trip_id=? "
         "ORDER BY created_at DESC LIMIT 1", (tid,))
-    return srow is not None, (srow["status"] if srow else None)
+    if not srow:
+        return False, None, False
+    er = db.query_one("SELECT 1 FROM field_edits WHERE session_id=? AND "
+                      "flag='edit_required' LIMIT 1", (srow["id"],))
+    return True, srow["status"], er is not None
 
 
-def list_trips() -> list[dict]:
+def list_trips(user=None) -> list[dict]:
     """Trello-manifest-driven when ``trips_to_review.json`` exists, else the legacy
     Quicktrips MP3-dir scan.
 
     A present-but-unreadable manifest (e.g. a partial write mid re-export, or a bare
     list) returns an EMPTY list — it must NOT fall back to the all-audio-dir scan, which
     surfaces every `_EN` trip including ones outside the review lanes (Edinburgh etc.).
-    The scan is only for first-run setups with no manifest at all."""
+    The scan is only for first-run setups with no manifest at all.
+
+    Language scoping is applied HERE (in the wrapper) so neither the manifest branch nor
+    the scan branch can forget it — admins see all; reviewers only their language(s)."""
     if config.MANIFEST_PATH.exists():
         try:
-            return _list_trips_from_manifest()
+            trips = _list_trips_from_manifest()
         except Exception as e:  # noqa: BLE001 - never 500 the list on a bad manifest
             print(f"[trips] manifest unreadable ({e}); returning empty list — fix "
                   "trips_to_review.json (NOT scanning all audio dirs)")
-            return []
-    return _list_trips_from_scan()
+            trips = []
+    else:
+        trips = _list_trips_from_scan()
+    if user is not None:
+        from . import auth   # lazy (auth imports sessions) — no module-load cycle
+        trips = [t for t in trips if auth.language_allowed(user, t["trip_id"])]
+    return trips
 
 
 def _list_trips_from_manifest() -> list[dict]:
@@ -318,7 +331,7 @@ def _list_trips_from_manifest() -> list[dict]:
                 reviewable = _has_scene_mp3(resolve_audio_dir(tid, trip))
             except Exception:  # noqa: BLE001
                 reviewable = False
-        has_session, status = _session_meta(tid)
+        has_session, status, edit_required = _session_meta(tid)
         lvl, fam = _level_family(tid)
         out.append({
             "trip_id": tid,
@@ -329,6 +342,7 @@ def _list_trips_from_manifest() -> list[dict]:
             "family": t.get("family") or fam,
             "has_session": has_session,
             "status": status,
+            "edit_required": edit_required,
             "reviewable": reviewable,
         })
     return out
@@ -352,6 +366,21 @@ def _level_family(trip_id: str) -> tuple[str, str]:
     return "", trip_id
 
 
+# Beginner trips keep a fixed trailing pause so the learner has time to absorb the
+# clip; every other level has its excess end-silence removed. Level labels are the
+# ones _level_family returns.
+_BEGINNER_LEVELS = {"A12", "N5", "HSK1-2"}
+_BEGINNER_TAIL_SECONDS = 3.0
+_DEFAULT_TAIL_SECONDS = 0.4   # small natural tail kept on all other levels
+
+
+def _target_tail_seconds(trip_id: str) -> float:
+    """Required trailing silence for a trip: 3s on beginner levels (A1-2 / N5 / HSK1-2),
+    otherwise a small 0.4s tail (excess beyond that is trimmed)."""
+    lvl, _ = _level_family(trip_id)
+    return _BEGINNER_TAIL_SECONDS if lvl in _BEGINNER_LEVELS else _DEFAULT_TAIL_SECONDS
+
+
 def _list_trips_from_scan() -> list[dict]:
     seen: set[str] = set()
     out: list[dict] = []
@@ -370,7 +399,7 @@ def _list_trips_from_scan() -> list[dict]:
                     continue
                 seen.add(tid)
                 meta = _trip_meta(tid)
-                has_session, status = _session_meta(tid)
+                has_session, status, edit_required = _session_meta(tid)
                 out.append({
                     "trip_id": tid,
                     "title": meta["title"],
@@ -378,6 +407,7 @@ def _list_trips_from_scan() -> list[dict]:
                     "lane": None,
                     "has_session": has_session,
                     "status": status,
+                    "edit_required": edit_required,
                     "reviewable": True,
                 })
     return out
@@ -386,9 +416,19 @@ def _list_trips_from_scan() -> list[dict]:
 # --------------------------------------------------------------------------- #
 # Seed / resume
 # --------------------------------------------------------------------------- #
-def create_or_resume(trip_id: str) -> dict:
+def create_or_resume(trip_id: str, user) -> dict:
+    # [P0-1] Language gate at the TOP — the create is keyed on trip_id, so the
+    # per-{sid} scoping dependency structurally can't cover it. Admins bypass.
+    from . import auth   # lazy import (auth imports sessions) — no module-load cycle
+    if not auth.language_allowed(user, trip_id):
+        raise HTTPException(403, detail={
+            "error": "forbidden",
+            "detail": "this trip's narration language is not assigned to you"})
+    # Resume the newest non-terminal session (in_review / submitted / changes_requested);
+    # `approved` is terminal, so a fresh open re-seeds from the now-promoted masters.
     existing = db.query_one(
-        "SELECT id FROM sessions WHERE trip_id=? AND status='in_review' "
+        "SELECT id FROM sessions WHERE trip_id=? AND "
+        "status IN ('in_review','submitted','changes_requested') "
         "ORDER BY created_at DESC LIMIT 1", (trip_id,))
     if existing:
         return get_session(existing["id"])
@@ -520,6 +560,33 @@ def _field_row(sid: str, fid: int):
     return row
 
 
+# Reviewer-editable states. `submitted`/`approving` are locked (admin owns the review
+# snapshot); `approved` is terminal. `changes_requested` is editable again.
+_EDITABLE_STATUSES = ("in_review", "changes_requested")
+
+
+def trip_id_for_session(sid: str) -> str:
+    """Resolve a session's trip_id (for the auth language-scoping dependency). 404 if
+    the session is unknown."""
+    row = db.query_one("SELECT trip_id FROM sessions WHERE id=?", (sid,))
+    if not row:
+        raise HTTPException(404, detail={"error": "no_session", "detail": sid})
+    return row["trip_id"]
+
+
+def assert_editable(sid: str) -> None:
+    """403 while a session is locked (submitted/approving/approved). Called by the
+    scope_sid_editable dependency to gate every editing route once a trip is submitted."""
+    row = db.query_one("SELECT status FROM sessions WHERE id=?", (sid,))
+    if not row:
+        raise HTTPException(404, detail={"error": "no_session", "detail": sid})
+    if row["status"] not in _EDITABLE_STATUSES:
+        raise HTTPException(403, detail={
+            "error": "locked",
+            "detail": f"session is '{row['status']}' and read-only; it is awaiting "
+                      "admin approval (or already approved)"})
+
+
 def _working_duration(frow) -> float:
     if not frow["has_audio"] or not frow["current_mp3_path"]:
         return 0.0
@@ -594,6 +661,14 @@ def serialize_field(sid: str, frow) -> dict:
         versions.append({"label": v["label"], "kind": v["kind"],
                          "url": f"/audio/{sid}/{fid}/v/{v['n']}"})
 
+    # Undo/redo through the audio version history (v0 master → each edit). cursor=None
+    # means "on the latest take".
+    max_n = max((v_["n"] for v_ in db.query(
+        "SELECT n FROM audio_versions WHERE field_id=?", (fid,))), default=0)
+    cursor = frow["version_cursor"] if frow["version_cursor"] is not None else max_n
+    can_undo = has_audio and cursor > 0
+    can_redo = has_audio and cursor < max_n
+
     return {
         "fid": fid,
         "scene_index": frow["scene_index"],
@@ -610,6 +685,8 @@ def serialize_field(sid: str, frow) -> dict:
         "original_played_coverage": (
             json.loads(frow["original_coverage_json"] or "{}")).get("ranges", []),
         "can_mark_done": done_ok,
+        "can_undo": can_undo,
+        "can_redo": can_redo,
         "audio": audio,
         "versions": versions,
         "manual_clips": _clips_for(sid, fid) if has_audio else [],
@@ -670,6 +747,9 @@ def get_session(sid: str) -> dict:
         "trip_id": srow["trip_id"],
         "folder_name": srow["folder_name"],
         "status": srow["status"],
+        "submitted_by": _srow_get(srow, "submitted_by"),
+        "approved_by": _srow_get(srow, "approved_by"),
+        "review_note": _srow_get(srow, "review_note"),
         "voice": srow["voice"],
         "voice_display": audio_core.display_name(srow["voice"]),
         "speed": _effective_speed(srow),
@@ -777,6 +857,9 @@ def _set_working(sid: str, frow, samples: np.ndarray | None = None,
         "label,created_at) VALUES(?,?,?,?,?,?,?,?)",
         (sid, frow["id"], frow["scene_index"], n, kind, str(vpath),
          f"{stem}v{n}", time.time()))
+    # the working take now sits on this newest version → undo can step back to n-1,
+    # and any redo branch that an earlier undo left open is truncated.
+    db.execute("UPDATE field_edits SET version_cursor=? WHERE id=?", (n, frow["id"]))
     return _file_hash(working)
 
 
@@ -843,7 +926,19 @@ def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
         return serialize_field(sid, _field_row(sid, fid))
 
     # Candidate available (segment splice plan, or a whole regen that may be S2-flagged).
+    # Keep a pristine copy, then auto-trim a trailing breath / next-sound bleed off the END
+    # so the audition (and the splice) don't carry it. Trailing-only → candidate word
+    # timings (cand_words, indexed from the start) stay valid for the span splice. The
+    # reviewer can fine-tune via /trim-candidate, re-derived from this pristine copy.
     cand_path.write_bytes(plan.candidate_mp3)
+    pristine = dirs["candidate"] / f"{fid}.orig.mp3"
+    pristine.write_bytes(plan.candidate_mp3)
+    cand_samples = audio_io.mp3_to_samples(cand_path)
+    trimmed = audio_io.trim_trailing_breath(cand_samples, audio_io.SR)
+    if len(trimmed) < len(cand_samples):
+        audio_io.samples_to_mp3(trimmed, cand_path)
+    plan.meta["cand_trim_ms"] = round(
+        (len(cand_samples) - len(trimmed)) / audio_io.SR * 1000.0, 1)
     patch = {"candidate_mp3_path": str(cand_path),
              "splice_meta_json": json.dumps(plan.meta)}
     if plan.edit_required:        # S2: whole regen voiced from raw (uncleaned) text
@@ -862,20 +957,16 @@ def combine(sid: str, fid: int) -> dict:
                                          "detail": "regenerate first"})
     meta = json.loads(frow["splice_meta_json"] or "{}")
     dirs = work_dirs(sid)
+    # Every combined take ends on the trip's required trailing pause: beginner trips
+    # (A1-2 / N5 / HSK1-2) keep 3s, other levels a small 0.4s. A whole TTS candidate
+    # lacks the beginner tail and a segment splice can disturb it, so normalize here
+    # rather than relying on what the candidate happens to carry.
+    tail_target = _target_tail_seconds(srow["trip_id"])
 
     if meta.get("mode") == "whole":
-        # whole-block / Q&A: replace working with the candidate take. Conserve the
-        # original's trailing pause — beginner SceneDesc masters carry ~3s of end silence
-        # that the TTS candidate lacks; a plain replace would drop it.
+        # whole-block / Q&A: replace working with the candidate take.
         cand = audio_io.mp3_to_samples(frow["candidate_mp3_path"])
-        name = frow["mp3_name"]
-        orig_path = (dirs["orig"] / name) if name else None
-        if orig_path and orig_path.exists():
-            extra = (audio_io.trailing_silence_seconds(audio_io.mp3_to_samples(orig_path))
-                     - audio_io.trailing_silence_seconds(cand))
-            if extra > 0.15:
-                cand = np.concatenate(
-                    [cand, np.zeros(int(round(extra * audio_io.SR)), dtype=np.float32)])
+        cand = audio_io.set_trailing_silence(cand, audio_io.SR, tail_target)
         whash = _set_working(sid, frow, samples=cand, kind="splice")
         _r2_upload_working(srow["trip_id"], dirs, frow)
         patch = {"working_audio_hash": whash, "splice_confidence": None,
@@ -892,7 +983,8 @@ def combine(sid: str, fid: int) -> dict:
     cand = audio_io.mp3_to_samples(frow["candidate_mp3_path"])
     result = audio_splice.do_splice(base, cand, meta)
 
-    whash = _set_working(sid, frow, samples=result.samples, kind="splice")
+    spliced = audio_io.set_trailing_silence(result.samples, audio_io.SR, tail_target)
+    whash = _set_working(sid, frow, samples=spliced, kind="splice")
     _r2_upload_working(srow["trip_id"], dirs, frow)
     patch = {"working_audio_hash": whash,
              "splice_confidence": result.confidence,
@@ -906,6 +998,35 @@ def combine(sid: str, fid: int) -> dict:
             f"Low splice confidence ({result.confidence}); please verify or send to "
             f"manual edit.")
     db.update_fields(fid, **patch)
+    db.touch_session(sid)
+    return serialize_field(sid, _field_row(sid, fid))
+
+
+def trim_candidate(sid: str, fid: int, delta_ms: float) -> dict:
+    """Nudge how much is trimmed off the END of the current candidate before combining
+    (Issue 3 — TTS leaves a breath/next-sound bleed). ``delta_ms`` > 0 trims more, < 0
+    restores. Re-derived from the pristine candidate copy so it is fully reversible; the
+    span splice respects the shorter of this trim and its own word-based end."""
+    srow = _session_row(sid)
+    frow = _field_row(sid, fid)
+    cand = frow["candidate_mp3_path"]
+    if not cand or not Path(cand).exists():
+        raise HTTPException(409, detail={"error": "no_candidate", "detail": "regenerate first"})
+    dirs = work_dirs(sid)
+    pristine = dirs["candidate"] / f"{fid}.orig.mp3"
+    if not pristine.exists():                     # older candidate → seed pristine from it
+        audio_io.mp3_to_mp3_copy(cand, pristine)
+    meta = json.loads(frow["splice_meta_json"] or "{}")
+    samples = audio_io.mp3_to_samples(pristine)
+    sr = audio_io.SR
+    n = len(samples)
+    max_trim_ms = max(0.0, (n / sr - 0.15) * 1000.0)        # always keep ≥150 ms
+    new_trim = min(max(0.0, float(meta.get("cand_trim_ms", 0.0)) + float(delta_ms)),
+                   max_trim_ms)
+    keep = max(0, n - int(round(new_trim / 1000.0 * sr)))
+    audio_io.samples_to_mp3(samples[:keep], Path(cand))
+    meta["cand_trim_ms"] = round(new_trim, 1)
+    db.update_fields(fid, splice_meta_json=json.dumps(meta))
     db.touch_session(sid)
     return serialize_field(sid, _field_row(sid, fid))
 
@@ -979,6 +1100,7 @@ def _serialize_clip(sid: str, c) -> dict:
     p = Path(c["path"])
     h = (_file_hash(p) or "")[:8] if p.exists() else ""
     return {"id": c["id"], "text": c["text"], "kind": c["kind"],
+            "comment": (c["comment"] if "comment" in c.keys() else "") or "",
             "created_at": c["created_at"],
             "url": (f"/audio/{sid}/{c['field_id']}/clip/{c['id']}"
                     + (f"?v={h}" if h else ""))}
@@ -1000,7 +1122,17 @@ def _render_clip(srow, cid: int, text: str) -> None:
     db.execute("UPDATE manual_clips SET path=? WHERE id=?", (str(path), cid))
 
 
-def create_clip(sid: str, fid: int, text: str) -> dict:
+def _flag_edit_required_for_clip(fid: int, frow) -> None:
+    """A 'Create new' attachment is an instruction to the admin → the field is edit_required
+    (it is NOT the working take). Never downgrades an existing flag away from edit_required."""
+    if frow["flag"] != "edit_required":
+        db.update_fields(fid, flag="edit_required")
+
+
+def create_clip(sid: str, fid: int, text: str, comment: str = "") -> dict:
+    """Voice a 'Create new' take. Comment is OPTIONAL here: the reviewer generates a DRAFT
+    (no comment, no flag), auditions it, then commits it with a note via set_clip_comment —
+    which is what flags the field edit-required. A clip with no comment is an unsaved draft."""
     srow = _session_row(sid)
     frow = _field_row(sid, fid)
     if not frow["has_audio"]:
@@ -1009,9 +1141,25 @@ def create_clip(sid: str, fid: int, text: str) -> dict:
     if not txt:
         raise HTTPException(400, detail={"error": "empty", "detail": "clip text required"})
     cid = db.execute(
-        "INSERT INTO manual_clips(session_id,field_id,text,kind,path,created_at) "
-        "VALUES(?,?,?,?,?,?)", (sid, fid, text or "", "generated", "", time.time()))
+        "INSERT INTO manual_clips(session_id,field_id,text,kind,comment,path,created_at) "
+        "VALUES(?,?,?,?,?,?,?)",
+        (sid, fid, text or "", "generated", (comment or "").strip(), "", time.time()))
     _render_clip(srow, cid, txt)
+    if (comment or "").strip():
+        _flag_edit_required_for_clip(fid, frow)
+    db.touch_session(sid)
+    return serialize_field(sid, _field_row(sid, fid))
+
+
+def set_clip_comment(sid: str, fid: int, cid: int, comment: str) -> dict:
+    """Attach / edit the admin note on a 'Create new' take. A non-empty note commits the
+    draft → the field is flagged edit-required so the admin acts on the attachment."""
+    _session_row(sid)
+    frow = _field_row(sid, fid)
+    _clip_row(sid, fid, cid)
+    db.execute("UPDATE manual_clips SET comment=? WHERE id=?", ((comment or "").strip(), cid))
+    if (comment or "").strip():
+        _flag_edit_required_for_clip(fid, frow)
     db.touch_session(sid)
     return serialize_field(sid, _field_row(sid, fid))
 
@@ -1030,15 +1178,16 @@ def regenerate_clip(sid: str, fid: int, cid: int, text: str | None) -> dict:
     return serialize_field(sid, _field_row(sid, fid))
 
 
-def import_clip(sid: str, fid: int, data: bytes) -> dict:
+def import_clip(sid: str, fid: int, data: bytes, comment: str = "") -> dict:
     _session_row(sid)
     frow = _field_row(sid, fid)
     if not frow["has_audio"]:
         raise HTTPException(400, detail={"error": "no_audio", "detail": "text field"})
     dirs = work_dirs(sid)
     cid = db.execute(
-        "INSERT INTO manual_clips(session_id,field_id,text,kind,path,created_at) "
-        "VALUES(?,?,?,?,?,?)", (sid, fid, "(imported file)", "imported", "", time.time()))
+        "INSERT INTO manual_clips(session_id,field_id,text,kind,comment,path,created_at) "
+        "VALUES(?,?,?,?,?,?,?)",
+        (sid, fid, "(imported file)", "imported", (comment or "").strip(), "", time.time()))
     tmp = dirs["clips"] / f"import_{cid}.tmp.mp3"
     tmp.write_bytes(data)
     # re-encode to a clean 44100/mono master (any source rate/channels → consistent).
@@ -1046,6 +1195,8 @@ def import_clip(sid: str, fid: int, data: bytes) -> dict:
     audio_io.samples_to_mp3(audio_io.mp3_to_samples(tmp), path)
     tmp.unlink(missing_ok=True)
     db.execute("UPDATE manual_clips SET path=? WHERE id=?", (str(path), cid))
+    if (comment or "").strip():
+        _flag_edit_required_for_clip(fid, frow)
     db.touch_session(sid)
     return serialize_field(sid, _field_row(sid, fid))
 
@@ -1092,9 +1243,17 @@ def clip_path(sid: str, fid: int, cid: int) -> Path:
 
 
 def trim_noise(sid: str, fid: int, start: int, end: int) -> dict:
-    """Manual backstop: the reviewer highlights the space where an unwanted sliver/noise
-    is; map that text range to the working audio and drop short isolated voiced blips
-    there (keeping real words). Archives a version + resets the done gate; revertable."""
+    """Manual backstop: the reviewer highlights where an unwanted noise/artefact sits and
+    we clean it off the working take. Two cases (both honour 'trust my highlight'):
+
+    * GAP — the selection is the SPACE between two words (overlaps no word). The artefact
+      lives in that inter-word gap, so we blank the gap to clean silence (≥0.2 s), bounded
+      to the prev word's release and the next word's true (energy-detected) onset so no
+      speech is touched.
+    * WORDS — the selection overlaps one or more words. We strip non-speech blips/breaths
+      inside that window (and only that window — clamped to the neighbouring words).
+
+    Archives a version + resets the done gate; revertable."""
     srow = _session_row(sid)
     frow = _field_row(sid, fid)
     if not (frow["has_audio"] and frow["mp3_name"]):
@@ -1105,22 +1264,141 @@ def trim_noise(sid: str, fid: int, start: int, end: int) -> dict:
     dur = audio_io.duration_seconds(base, sr)
     cleaned_working, _ = _cleaned_orig(srow, frow)
     cur = audio_core.strip_url_lines(frow["current_text"] or "")
-    blo, bhi = audio_splice.highlight_span_in_cleaned(cur, cleaned_working, start, end)
     words = _whisper_orig(srow, frow)
     if not words:
         raise HTTPException(400, detail={"error": "no_audio", "detail": "no word timing"})
     wmap = audio_splice._whisper_index_map(audio_splice.tokens(cleaned_working), words)
-    starts = [wmap[t][0] for t in range(blo, bhi) if t in wmap]
-    ends = [wmap[t][1] for t in range(blo, bhi) if t in wmap]
-    if not starts:
-        raise HTTPException(400, detail={"error": "no_window",
-                                         "detail": "couldn't locate the highlighted audio"})
-    tA = max(0.0, min(starts) - 0.15)
-    tB = min(dur, max(ends) + 0.20)
-    new = audio_io.trim_slivers(base, sr, tA, tB)
-    if len(new) >= len(base) - int(0.01 * sr):       # nothing removed
-        return serialize_field(sid, frow)
+    raw_toks = list(audio_splice._TOKEN_RE.finditer(cur))
+
+    def _word_times(ri: int) -> tuple[float, float] | None:
+        """Audio (start, end) of raw token ``ri`` via its cleaned-token span + Whisper map."""
+        m = raw_toks[ri]
+        blo, bhi = audio_splice.highlight_span_in_cleaned(
+            cur, cleaned_working, m.start(), m.end())
+        ss = [wmap[t][0] for t in range(blo, bhi) if t in wmap]
+        ee = [wmap[t][1] for t in range(blo, bhi) if t in wmap]
+        return (min(ss), max(ee)) if ss else None
+
+    overlap = [i for i, m in enumerate(raw_toks) if m.end() > start and m.start() < end]
+
+    if overlap:
+        # WORDS highlighted: strip non-speech inside the selected words' window only.
+        spans = [t for t in (_word_times(i) for i in overlap) if t]
+        if not spans:
+            raise HTTPException(400, detail={"error": "no_window",
+                                             "detail": "couldn't locate the highlighted audio"})
+        tA = max(0.0, min(s for s, _ in spans) - 0.05)
+        tB = min(dur, max(e for _, e in spans) + 0.05)
+        lo, hi = min(overlap), max(overlap)
+        if lo - 1 >= 0 and (pt := _word_times(lo - 1)):
+            tA = max(tA, pt[1] + 0.02)
+        if hi + 1 < len(raw_toks) and (nt := _word_times(hi + 1)):
+            tB = min(tB, nt[0] - 0.02)
+        if tB <= tA:
+            return serialize_field(sid, frow)
+        new = audio_io.trim_slivers(base, sr, tA, tB, sliver_max=0.35, sil_min=0.03)
+        if len(new) >= len(base) - int(0.01 * sr):       # nothing removed
+            return serialize_field(sid, frow)
+    else:
+        # GAP highlighted between two words: blank the inter-word space to clean silence.
+        prev = max((i for i, m in enumerate(raw_toks) if m.end() <= start), default=None)
+        nxt = min((i for i, m in enumerate(raw_toks) if m.start() >= end), default=None)
+        pt = _word_times(prev) if prev is not None else None
+        nt = _word_times(nxt) if nxt is not None else None
+        g0 = pt[1] if pt else 0.0
+        search_to = nt[1] if nt else dur
+        # start the blank AFTER the prev word's release; end at the next word's true onset.
+        q0 = audio_io.first_silence_after(base, sr, g0, search_to)
+        g0 = q0 if q0 is not None else g0
+        onset = audio_io.first_voice_onset(base, sr, g0, search_to)
+        g1 = onset if onset is not None else (nt[0] if nt else dur)
+        s0 = max(0, min(int(round(g0 * sr)), len(base)))
+        s1 = max(s0, min(int(round(g1 * sr)), len(base)))
+        gap_len = (s1 - s0) / sr
+        sil = np.zeros(int(round(max(0.2, gap_len) * sr)), dtype=np.float32)
+        new = np.concatenate([base[:s0], sil, base[s1:]]).astype(np.float32)
+
     whash = _set_working(sid, frow, samples=new, kind="noise_trim")
+    _r2_upload_working(srow["trip_id"], dirs, frow)
+    patch = {"working_audio_hash": whash, "splice_confidence": None}
+    patch.update(_clear_coverage_and_done(frow))
+    db.update_fields(fid, **patch)
+    db.touch_session(sid)
+    return serialize_field(sid, _field_row(sid, fid))
+
+
+def trim_silence(sid: str, fid: int) -> dict:
+    """Normalize the trailing pause on the working take to the trip's level requirement:
+    beginner trips (A1-2 / N5 / HSK1-2) keep 3s of end silence, every other level has its
+    excess trailing silence removed. Only touches end-silence (never voiced audio); when
+    nothing needs changing the working take is left untouched. Archives a version + resets
+    the done gate; revertable."""
+    srow = _session_row(sid)
+    frow = _field_row(sid, fid)
+    if not (frow["has_audio"] and frow["mp3_name"]):
+        raise HTTPException(400, detail={"error": "no_audio", "detail": "text field"})
+    dirs = work_dirs(sid)
+    base = audio_io.mp3_to_samples(dirs["working"] / frow["mp3_name"])
+    sr = audio_io.SR
+    target = _target_tail_seconds(srow["trip_id"])
+    new = audio_io.set_trailing_silence(base, sr, target)
+    if abs(len(new) - len(base)) < int(0.02 * sr):       # <20 ms change → no-op
+        return serialize_field(sid, frow)
+    whash = _set_working(sid, frow, samples=new, kind="silence_trim")
+    _r2_upload_working(srow["trip_id"], dirs, frow)
+    patch = {"working_audio_hash": whash, "splice_confidence": None}
+    patch.update(_clear_coverage_and_done(frow))
+    db.update_fields(fid, **patch)
+    db.touch_session(sid)
+    return serialize_field(sid, _field_row(sid, fid))
+
+
+def insert_silence(sid: str, fid: int, pos: int, seconds: float = 1.0) -> dict:
+    """EXTEND an existing pause by ``seconds`` at the TEXT caret ``pos`` (a char offset into
+    current_text — normally just after a full stop). The caret is mapped to an audio time via
+    the clip's word timing, then the lengthening is dropped INTO the genuine silence run at
+    that word boundary. If there is no pause there (connected speech) it refuses rather than
+    split a word. Archives a version + resets the done gate; revertable."""
+    srow = _session_row(sid)
+    frow = _field_row(sid, fid)
+    if not (frow["has_audio"] and frow["mp3_name"]):
+        raise HTTPException(400, detail={"error": "no_audio", "detail": "text field"})
+    seconds = max(0.05, min(float(seconds), 10.0))
+    dirs = work_dirs(sid)
+    base = audio_io.mp3_to_samples(dirs["working"] / frow["mp3_name"])
+    sr = audio_io.SR
+    n = len(base)
+    dur = audio_io.duration_seconds(base, sr)
+
+    # Map the caret to the end-time of the last spoken word before it (same char→audio
+    # alignment the highlight/trim tools use). pos<=0 → the clip's lead-in.
+    t_ins = 0.0
+    if int(pos) > 0:
+        cleaned_working, _ = _cleaned_orig(srow, frow)
+        cur = audio_core.strip_url_lines(frow["current_text"] or "")
+        blo, bhi = audio_splice.highlight_span_in_cleaned(cur, cleaned_working, 0, int(pos))
+        words = _whisper_orig(srow, frow)
+        if not words:
+            raise HTTPException(400, detail={"error": "no_audio", "detail": "no word timing"})
+        wmap = audio_splice._whisper_index_map(audio_splice.tokens(cleaned_working), words)
+        t_ins = dur                          # default to the end if nothing maps
+        for t in range(bhi - 1, blo - 1, -1):
+            if t in wmap:
+                t_ins = wmap[t][1]
+                break
+
+    # Only ever lengthen a REAL pause — never cut into voiced audio and split a word.
+    run = audio_io.silence_run_nearest(base, sr, t_ins, 0.4, 0.4)
+    if run is None:
+        raise HTTPException(409, detail={
+            "error": "no_pause",
+            "detail": "No pause at the cursor to extend — put the caret right after a "
+                      "full stop (or other gap). This lengthens a pause, it won't split a word."})
+    mid = (run[0] + run[1]) / 2.0            # drop the gap inside the existing silence
+    cut = max(0, min(int(round(mid * sr)), n))
+    gap = np.zeros(int(round(seconds * sr)), dtype=np.float32)
+    new = np.concatenate([base[:cut], gap, base[cut:]])
+    whash = _set_working(sid, frow, samples=new, kind="insert_silence")
     _r2_upload_working(srow["trip_id"], dirs, frow)
     patch = {"working_audio_hash": whash, "splice_confidence": None}
     patch.update(_clear_coverage_and_done(frow))
@@ -1189,7 +1467,8 @@ def revert(sid: str, fid: int) -> dict:
     frow = _field_row(sid, fid)
     patch = {"current_text": frow["original_text"], "flag": "none",
              "candidate_mp3_path": None, "splice_confidence": None,
-             "played_coverage_json": "{}", "working_text": frow["original_text"]}
+             "played_coverage_json": "{}", "working_text": frow["original_text"],
+             "version_cursor": 0}   # working now == the pristine master (v0)
     if frow["has_audio"] and frow["mp3_name"]:
         dirs = work_dirs(sid)
         name = frow["mp3_name"]
@@ -1200,6 +1479,58 @@ def revert(sid: str, fid: int) -> dict:
     db.update_fields(fid, **patch)
     db.touch_session(sid)
     return serialize_field(sid, _field_row(sid, fid))
+
+
+def _max_version_n(fid: int) -> int:
+    row = db.query_one(
+        "SELECT COALESCE(MAX(n),0) AS mx FROM audio_versions WHERE field_id=?", (fid,))
+    return int(row["mx"] or 0)
+
+
+def _restore_audio_version(sid: str, fid: int, target_n: int) -> dict:
+    """Make audio_versions.n == ``target_n`` the working take (undo/redo step). Does NOT
+    archive a new version — it just moves the cursor and copies that take back to working.
+    Clears any pending candidate and resets coverage/done (the audio changed)."""
+    frow = _field_row(sid, fid)
+    if not (frow["has_audio"] and frow["mp3_name"]):
+        raise HTTPException(400, detail={"error": "no_audio", "detail": "text field"})
+    row = db.query_one(
+        "SELECT path FROM audio_versions WHERE field_id=? AND n=?", (fid, target_n))
+    if not row or not Path(row["path"]).exists():
+        raise HTTPException(404, detail={"error": "no_version", "detail": str(target_n)})
+    dirs = work_dirs(sid)
+    working = dirs["working"] / frow["mp3_name"]
+    audio_io.mp3_to_mp3_copy(Path(row["path"]), working)
+    patch = {"working_audio_hash": _file_hash(working), "version_cursor": target_n,
+             "candidate_mp3_path": None, "splice_confidence": None}
+    patch.update(_clear_coverage_and_done(frow))
+    db.update_fields(fid, **patch)
+    _r2_upload_working(_session_row(sid)["trip_id"], dirs, frow)
+    db.touch_session(sid)
+    return serialize_field(sid, _field_row(sid, fid))
+
+
+def undo_audio(sid: str, fid: int) -> dict:
+    """Step the working take back one version (v0 = pristine master)."""
+    _session_row(sid)
+    frow = _field_row(sid, fid)
+    cur = frow["version_cursor"] if frow["version_cursor"] is not None else _max_version_n(fid)
+    if cur <= 0:
+        raise HTTPException(409, detail={"error": "nothing_to_undo",
+                                         "detail": "already at the earliest take"})
+    return _restore_audio_version(sid, fid, cur - 1)
+
+
+def redo_audio(sid: str, fid: int) -> dict:
+    """Step the working take forward one version (towards the most recent edit)."""
+    _session_row(sid)
+    frow = _field_row(sid, fid)
+    max_n = _max_version_n(fid)
+    cur = frow["version_cursor"] if frow["version_cursor"] is not None else max_n
+    if cur >= max_n:
+        raise HTTPException(409, detail={"error": "nothing_to_redo",
+                                         "detail": "already at the latest take"})
+    return _restore_audio_version(sid, fid, cur + 1)
 
 
 # --------------------------------------------------------------------------- #
@@ -1335,13 +1666,15 @@ def _validate_text(field_path: str, scene_index, text: str) -> list[dict]:
     return issues
 
 
-def submit(sid: str) -> dict:
+def validate(sid: str) -> tuple[list[dict], list[dict]]:
+    """PURE pre-submit validation — NO writes. Returns (hard, soft) issue lists.
+    Reads the FRESH live staging trip for the final-360 check (a read, not a write).
+    Shared by reviewer ``submit`` (gate) and admin ``approve`` (re-check vs live)."""
     srow = _session_row(sid)
     trip_id = srow["trip_id"]
     frows = db.query(
         "SELECT * FROM field_edits WHERE session_id=? ORDER BY id", (sid,))
 
-    # ---- validation ----
     hard: list[dict] = []
     soft: list[dict] = []
     changed = [f for f in frows if (f["current_text"] or "") != (f["original_text"] or "")]
@@ -1358,7 +1691,6 @@ def submit(sid: str) -> dict:
                          "severity": "note"})
 
     # last 360 scene must carry no question/keyword
-    trip_live = None
     try:
         trip_live = get_trip(trip_id)
     except SystemExit as e:
@@ -1374,9 +1706,35 @@ def submit(sid: str) -> dict:
                          "issue": "question/keyword on the final 360 scene — not allowed",
                          "severity": "block"})
 
-    if hard:
-        return {"ok": False, "validation": hard + soft, "written": [],
-                "awaiting_stage9": False}
+    # every field must be listened-to (the `done` flag only unlocks after full
+    # playback) and explicitly marked done before the trip can be submitted
+    not_done = sum(1 for f in frows if (f["flag"] or "none") != "done")
+    if not_done:
+        hard.append({"scene_index": None, "field_path": "*",
+                     "issue": f"{not_done} section(s) not yet marked done — listen to "
+                              "the audio and mark every section done before submitting",
+                     "severity": "block"})
+
+    return hard, soft
+
+
+def commit(sid: str, user) -> dict:
+    """Perform the STAGING WRITES + master promotion for an approved session. Assumes
+    ``validate`` has already passed. Re-fetches the live trip so it writes onto the
+    freshest quickTrips. Returns {"written": [...], "promoted_mp3": [...]}.
+
+    INVARIANT (§5): the working->master promotion + versions/ archive happen ONLY here
+    (admin approve), NEVER in reviewer submit."""
+    srow = _session_row(sid)
+    trip_id = srow["trip_id"]
+    try:
+        trip_live = get_trip(trip_id)
+    except SystemExit as e:
+        raise HTTPException(404, detail=str(e))
+    qt_live = list(trip_live.get("quickTrips") or [])
+    frows = db.query(
+        "SELECT * FROM field_edits WHERE session_id=? ORDER BY id", (sid,))
+    changed = [f for f in frows if (f["current_text"] or "") != (f["original_text"] or "")]
 
     # ---- write changed TEXT onto the FRESH live quickTrips (one update) ----
     written: list[str] = []
@@ -1482,10 +1840,103 @@ def submit(sid: str) -> dict:
         audio_io.mp3_to_mp3_copy(working, master)
         promoted.append(name)
 
-    db.execute("UPDATE sessions SET status='submitted', updated_at=? WHERE id=?",
-               (time.time(), sid))
-    return {"ok": True, "validation": soft, "written": written,
-            "promoted_mp3": promoted, "awaiting_stage9": True}
+    return {"written": written, "promoted_mp3": promoted}
+
+
+def submit(sid: str, user) -> dict:
+    """Reviewer/admin (own language): VALIDATE ONLY. On success flip to `submitted`
+    (locked read-only, awaiting admin). NO staging writes, NO master promotion."""
+    srow = _session_row(sid)
+    if srow["status"] not in _EDITABLE_STATUSES:
+        raise HTTPException(403, detail={
+            "error": "locked",
+            "detail": f"session is '{srow['status']}' — cannot submit"})
+    hard, soft = validate(sid)
+    if hard:
+        return {"ok": False, "validation": hard + soft}
+    db.execute(
+        "UPDATE sessions SET status='submitted', submitted_by=?, updated_at=? WHERE id=?",
+        (getattr(user, "username", None), time.time(), sid))
+    return {"ok": True, "validation": soft}
+
+
+def approve(sid: str, user) -> dict:
+    """ADMIN ONLY: claim-first CAS (submitted -> approving), re-validate against live
+    staging, run `commit` (Firebase text + master promotion), then approved + audit.
+    409 if the session isn't currently `submitted`. Any failure reverts to `submitted`."""
+    _session_row(sid)   # 404 if missing
+    claimed = db.execute_rowcount(
+        "UPDATE sessions SET status='approving', updated_at=? "
+        "WHERE id=? AND status='submitted'",
+        (time.time(), sid))
+    if claimed == 0:
+        raise HTTPException(409, detail={
+            "error": "not_submitted",
+            "detail": "session is not awaiting approval (must be 'submitted')"})
+    try:
+        hard, soft = validate(sid)
+        if hard:
+            # Live staging drifted / a gate now fails: don't write. Revert so an admin
+            # can send it back (request-changes) for the reviewer to fix.
+            db.execute("UPDATE sessions SET status='submitted', updated_at=? WHERE id=?",
+                       (time.time(), sid))
+            return {"ok": False, "validation": hard + soft, "written": [],
+                    "promoted_mp3": [], "awaiting_stage9": False}
+        result = commit(sid, user)
+        now = time.time()
+        db.execute(
+            "UPDATE sessions SET status='approved', approved_by=?, updated_at=? WHERE id=?",
+            (getattr(user, "username", None), now, sid))
+        db.execute(
+            "INSERT INTO approvals(session_id,trip_id,approved_by,approved_at,written_json)"
+            " VALUES(?,?,?,?,?)",
+            (sid, trip_id_for_session(sid), getattr(user, "username", None), now,
+             json.dumps(result["written"])))
+        return {"ok": True, "validation": soft, "written": result["written"],
+                "promoted_mp3": result["promoted_mp3"], "awaiting_stage9": True}
+    except Exception:
+        # Never leave a session stuck in the transient `approving` claim.
+        db.execute("UPDATE sessions SET status='submitted', updated_at=? WHERE id=?",
+                   (time.time(), sid))
+        raise
+
+
+def request_changes(sid: str, user, note: str) -> dict:
+    """ADMIN ONLY: send a submitted trip back to the reviewer with a note (editable
+    again)."""
+    srow = _session_row(sid)
+    if srow["status"] not in ("submitted", "approving"):
+        raise HTTPException(409, detail={
+            "error": "bad_state",
+            "detail": f"cannot request changes from '{srow['status']}'"})
+    db.execute(
+        "UPDATE sessions SET status='changes_requested', review_note=?, updated_at=? "
+        "WHERE id=?", (note or "", time.time(), sid))
+    return {"ok": True}
+
+
+def review_queue() -> list[dict]:
+    """ADMIN ONLY: the submitted sessions awaiting approval. (submitted_at is the row's
+    updated_at — a session is locked once submitted, so it stays the submit time.)"""
+    rows = db.query(
+        "SELECT id, trip_id, submitted_by, updated_at FROM sessions "
+        "WHERE status='submitted' ORDER BY updated_at")
+    out: list[dict] = []
+    for r in rows:
+        tid = r["trip_id"]
+        meta = _trip_meta(tid)
+        er = db.query_one("SELECT 1 FROM field_edits WHERE session_id=? AND "
+                          "flag='edit_required' LIMIT 1", (r["id"],))
+        out.append({
+            "sid": r["id"],
+            "trip_id": tid,
+            "title": meta.get("title") or tid,
+            "language": audio_core.language_of(tid),
+            "submitted_by": r["submitted_by"],
+            "submitted_at": r["updated_at"],
+            "edit_required": er is not None,
+        })
+    return out
 
 
 # --------------------------------------------------------------------------- #

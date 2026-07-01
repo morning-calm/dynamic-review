@@ -4,10 +4,15 @@ FastAPI app for the review-app backend.
 IMPORTANT: ``app.config`` is imported first so SCRIPTS_ROOT lands on sys.path and the
 Scripts .env is loaded before anything touches the reused modules.
 
-Security (stage-1): uvicorn binds to 127.0.0.1 only; every /api request (except the
-health probe) must carry ``X-Review-Token``. Media GETs (/audio, /overlays) are token
--exempt because browser <audio>/<img> elements cannot attach custom headers — the
-localhost-only bind is the control there.
+Security: DB-backed users + opaque tokens (see app/auth.py). Every request except
+``POST /api/login`` and ``GET /api/health`` must resolve to a live, active user:
+  * writes (POST/PUT/DELETE) MUST carry ``Authorization: Bearer <token>`` (a cookie is
+    never accepted for a write — CSRF defence);
+  * safe GET/HEAD (media, download) may use the httpOnly ``review_session`` cookie so
+    browser <audio>/<img> subresource requests authenticate without a header.
+Fail-closed: an empty users table (or a missing/expired token) => 401. Interactive docs
+(/docs, /redoc, /openapi.json) are DISABLED so an unauthenticated tunnel client can't
+enumerate the API. uvicorn also binds 127.0.0.1 only.
 """
 
 from __future__ import annotations
@@ -18,10 +23,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from . import db, routes_audio, routes_sessions
-from .config import CORS_ORIGINS, HOST, PORT, REVIEW_TOKEN
+from . import auth, db, routes_audio, routes_sessions
+from .config import CORS_ORIGINS, HOST, PORT
 
-app = FastAPI(title="review-app backend", version="1.0")
+app = FastAPI(title="review-app backend", version="1.0",
+              docs_url=None, redoc_url=None, openapi_url=None)
 
 app.add_middleware(
     CORSMiddleware,
@@ -31,21 +37,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-_TOKEN_EXEMPT_PREFIXES = ("/audio/", "/overlays/")
-_TOKEN_EXEMPT_PATHS = {"/api/health", "/docs", "/openapi.json", "/redoc"}
+# The ONLY unauthenticated routes (method + path exact).
+_AUTH_EXEMPT = {("POST", "/api/login"), ("GET", "/api/health")}
 
 
 @app.middleware("http")
-async def require_token(request: Request, call_next):
-    path = request.url.path
-    if (request.method == "OPTIONS"
-            or path in _TOKEN_EXEMPT_PATHS
-            or any(path.startswith(p) for p in _TOKEN_EXEMPT_PREFIXES)):
+async def require_auth(request: Request, call_next):
+    if request.method == "OPTIONS":               # CORS preflight
         return await call_next(request)
-    if request.headers.get("X-Review-Token") != REVIEW_TOKEN:
+    if (request.method, request.url.path) in _AUTH_EXEMPT:
+        return await call_next(request)
+    # Header for writes; cookie also accepted for GET/HEAD (see auth.extract_token).
+    user = auth.resolve_user(auth.extract_token(request))
+    if user is None:
         return JSONResponse(status_code=401,
                             content={"error": "unauthorized",
-                                     "detail": "missing or invalid X-Review-Token"})
+                                     "detail": "authentication required"})
+    request.state.user = user
     return await call_next(request)
 
 
@@ -75,6 +83,7 @@ def health():
     return {"ok": True}
 
 
+app.include_router(auth.router)
 app.include_router(routes_sessions.router)
 app.include_router(routes_audio.router)
 

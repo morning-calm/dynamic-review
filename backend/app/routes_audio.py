@@ -9,12 +9,18 @@ import re
 import zipfile
 from pathlib import Path
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import FileResponse, Response, StreamingResponse
 
 from . import db, sessions
+from .auth import scope_sid
 
 router = APIRouter()
+
+# Every {sid} media/zip route is language-scoped (403 on mismatch). These GETs
+# authenticate via the httpOnly review_session cookie (browser <audio>/<img> can't
+# send a header); the middleware accepts the cookie for GET/HEAD only.
+_SCOPE = [Depends(scope_sid)]
 
 _RANGE_RE = re.compile(r"bytes=(\d*)-(\d*)")
 _CHUNK = 256 * 1024
@@ -62,24 +68,24 @@ def _serve_range(path: Path, request: Request, media_type: str) -> Response:
                              headers=headers)
 
 
-@router.get("/audio/{sid}/{fid}/v/{n}")
+@router.get("/audio/{sid}/{fid}/v/{n}", dependencies=_SCOPE)
 def get_version(sid: str, fid: int, n: int, request: Request):
     return _serve_range(sessions.version_path(sid, fid, n), request, "audio/mpeg")
 
 
-@router.get("/audio/{sid}/{fid}/clip/{cid}")
+@router.get("/audio/{sid}/{fid}/clip/{cid}", dependencies=_SCOPE)
 def get_clip(sid: str, fid: int, cid: int, request: Request):
     return _serve_range(sessions.clip_path(sid, fid, cid), request, "audio/mpeg")
 
 
-@router.get("/audio/{sid}/{fid}/{which}")
+@router.get("/audio/{sid}/{fid}/{which}", dependencies=_SCOPE)
 def get_audio(sid: str, fid: int, which: str, request: Request):
     if which not in ("original", "working", "candidate", "fallback"):
         return Response(status_code=404)
     return _serve_range(sessions.audio_path(sid, fid, which), request, "audio/mpeg")
 
 
-@router.get("/overlays/{sid}/{filename}")
+@router.get("/overlays/{sid}/{filename}", dependencies=_SCOPE)
 def get_overlay(sid: str, filename: str, request: Request):
     path = sessions.overlay_path(sid, filename)
     if not path:
@@ -89,7 +95,7 @@ def get_overlay(sid: str, filename: str, request: Request):
     return _serve_range(path, request, media)
 
 
-@router.get("/api/sessions/{sid}/download")
+@router.get("/api/sessions/{sid}/download", dependencies=_SCOPE)
 def download_all(sid: str):
     sessions._session_row(sid)   # 404 if missing
     dirs = sessions.work_dirs(sid)

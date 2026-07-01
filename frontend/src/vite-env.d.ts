@@ -1,9 +1,4 @@
 /// <reference types="vite/client" />
 
-interface ImportMetaEnv {
-  readonly VITE_REVIEW_TOKEN?: string;
-}
-
-interface ImportMeta {
-  readonly env: ImportMetaEnv;
-}
+// No custom VITE_* env vars today — auth is a per-user login (POST /api/login),
+// not a build-time static token. Keep this file as the place to add any.

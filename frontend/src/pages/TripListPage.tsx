@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { api, ApiError, type TripListItem } from '../api';
+import { api, ApiError, type SessionStatus, type TripListItem } from '../api';
+import UserMenu from '../components/UserMenu';
 
 type LaneFilter = 'all' | '6' | '7';
 
@@ -12,14 +13,27 @@ const levelRank = (l: string): number => {
   return i < 0 ? 99 : i;
 };
 
+const STATUS_BADGE: Record<SessionStatus, { label: string; cls: string }> = {
+  in_review: { label: 'In review', cls: 'bg-custom-green' },
+  submitted: { label: 'Submitted', cls: 'bg-blue-600' },
+  approving: { label: 'Approving…', cls: 'bg-blue-500' },
+  approved: { label: 'Approved', cls: 'bg-emerald-700' },
+  changes_requested: { label: 'Changes requested', cls: 'bg-amber-600' },
+};
+
 const StatusBadge = ({ trip }: { trip: TripListItem }) => {
-  if (!trip.has_session) {
+  if (!trip.has_session || !trip.status) {
     return <span className="rounded bg-gray-700 px-2 py-0.5 text-xs text-gray-300">Not started</span>;
   }
-  const submitted = trip.status === 'submitted';
+  const badge = STATUS_BADGE[trip.status];
   return (
-    <span className={`rounded px-2 py-0.5 text-xs text-white ${submitted ? 'bg-blue-600' : 'bg-custom-green'}`}>
-      {submitted ? 'Submitted' : 'In review'}
+    <span className="flex items-center gap-1.5">
+      <span className={`rounded px-2 py-0.5 text-xs text-white ${badge.cls}`}>{badge.label}</span>
+      {trip.edit_required && (
+        <span className="rounded bg-amber-600 px-2 py-0.5 text-xs font-medium text-white" title="A field is flagged edit-required">
+          Edit required
+        </span>
+      )}
     </span>
   );
 };
@@ -96,7 +110,10 @@ const TripListPage = () => {
 
   return (
     <div className="mx-auto max-w-review px-4 py-8">
-      <h1 className="mb-1 text-2xl font-semibold text-white">Trip review</h1>
+      <div className="mb-1 flex items-start justify-between gap-4">
+        <h1 className="text-2xl font-semibold text-white">Trip review</h1>
+        <UserMenu />
+      </div>
       <p className="mb-4 text-sm text-gray-400">
         Trips in Trello lanes 6 (translator review) &amp; 7 (KP confirm), grouped by place. Open a reviewable
         variant to correct.

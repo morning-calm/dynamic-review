@@ -8,6 +8,15 @@ from typing import Literal, Optional
 from pydantic import BaseModel
 
 
+class Login(BaseModel):
+    username: str
+    password: str
+
+
+class RequestChanges(BaseModel):
+    note: str = ""
+
+
 class CreateSession(BaseModel):
     trip_id: str
 
@@ -38,6 +47,14 @@ class TrimNoise(BaseModel):
     end: int
 
 
+class InsertSilence(BaseModel):
+    """Insert a pause into the working take at the TEXT caret (char offset into
+    current_text — normally just after a full stop). The caret is mapped to an audio
+    time via the clip's word timing."""
+    pos: int                 # caret char offset into current_text
+    seconds: float = 1.0     # length of silence to insert
+
+
 class Fallback(BaseModel):
     extent: Literal["sentence", "scene", "custom"]
     text: Optional[str] = None
@@ -59,10 +76,21 @@ class CommentSet(BaseModel):
 
 class ClipCreate(BaseModel):
     text: str
+    comment: str = ""   # required instruction to the admin about this 'Create new' take
 
 
 class ClipRegen(BaseModel):
     text: Optional[str] = None   # None → re-voice the clip's existing text
+
+
+class ClipComment(BaseModel):
+    comment: str = ""   # admin note; non-empty commits the draft + flags edit-required
+
+
+class TrimCandidate(BaseModel):
+    """Nudge the trailing trim on the current candidate before combining. >0 trims more
+    off the end (drop a breath/bleed), <0 restores."""
+    delta_ms: float
 
 
 class NarrationSet(BaseModel):

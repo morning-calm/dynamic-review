@@ -1,9 +1,42 @@
 // Typed client for the review-app backend. Every endpoint in API_CONTRACT.md
-// has a matching function here, and every request carries the shared review
-// token header. The frontend NEVER constructs audio paths — it uses the URLs
+// has a matching function here. Authenticated requests carry an opaque bearer
+// token (issued by POST /api/login, persisted in localStorage); safe GETs for
+// media/download additionally ride the httpOnly `review_session` cookie the
+// backend sets on login — `credentials: 'include'` on every fetch lets that
+// cookie travel. The frontend NEVER constructs audio paths — it uses the URLs
 // the backend returns in Field.audio / Field.versions.
 
-const TOKEN: string = import.meta.env.VITE_REVIEW_TOKEN ?? 'dev-token';
+const TOKEN_STORAGE_KEY = 'review_app_token';
+
+let token: string | null = null;
+try {
+  token = localStorage.getItem(TOKEN_STORAGE_KEY);
+} catch {
+  /* localStorage unavailable (private mode etc.) — falls back to in-memory only */
+}
+
+/** Current bearer token, if any (rehydrated from localStorage on module load). */
+export const getToken = (): string | null => token;
+
+/** Set (or clear, with null) the bearer token and persist it. */
+export const setToken = (t: string | null): void => {
+  token = t;
+  try {
+    if (t) localStorage.setItem(TOKEN_STORAGE_KEY, t);
+    else localStorage.removeItem(TOKEN_STORAGE_KEY);
+  } catch {
+    /* best effort */
+  }
+};
+
+export const clearToken = (): void => setToken(null);
+
+let unauthorizedHandler: (() => void) | null = null;
+
+/** Registered once by AuthProvider: clears app auth state on any 401 response. */
+export const setUnauthorizedHandler = (fn: (() => void) | null): void => {
+  unauthorizedHandler = fn;
+};
 
 // ---------------------------------------------------------------------------
 // Types (mirror the contract's core objects)
@@ -12,7 +45,36 @@ const TOKEN: string = import.meta.env.VITE_REVIEW_TOKEN ?? 'dev-token';
 export type FlagValue = 'none' | 'done' | 'edit_required';
 export type RegenerateMode = 'segment' | 'whole' | 'highlight' | 'alt';
 export type FallbackExtent = 'sentence' | 'scene' | 'custom';
-export type SessionStatus = 'in_review' | 'submitted';
+export type SessionStatus = 'in_review' | 'submitted' | 'approving' | 'approved' | 'changes_requested';
+
+/** Statuses in which a reviewer may still edit text/audio/flags/narration.
+ * `submitted`/`approving`/`approved` are locked (read-only) in the FE; the
+ * backend enforces the same boundary with a 403 on the write endpoints. */
+export const isEditableStatus = (s: SessionStatus): boolean =>
+  s === 'in_review' || s === 'changes_requested';
+
+export type Role = 'admin' | 'reviewer';
+
+export interface AuthUser {
+  username: string;
+  role: Role;
+  languages: string[];
+}
+
+export interface LoginResponse {
+  token: string;
+  user: AuthUser;
+}
+
+export interface ReviewQueueItem {
+  sid: string;
+  trip_id: string;
+  title: string;
+  language: string;
+  submitted_by: string | null;
+  submitted_at: number | null;
+  edit_required: boolean;
+}
 
 /** field_path values from the contract's field_path table. */
 export type FieldPath =
@@ -40,6 +102,7 @@ export interface ManualClip {
   id: number;
   text: string;
   kind: string; // generated | imported
+  comment: string; // instructions to the admin about this take
   url: string;
   created_at: number;
 }
@@ -61,6 +124,8 @@ export interface Field {
   played_coverage: Array<[number, number]>;
   original_played_coverage: Array<[number, number]>;
   can_mark_done: boolean;
+  can_undo: boolean;
+  can_redo: boolean;
   audio: AudioLinks;
   versions: AudioVersion[];
   manual_clips: ManualClip[];
@@ -87,6 +152,10 @@ export interface Session {
   trip_id: string;
   folder_name: string;
   status: SessionStatus;
+  submitted_by: string | null;
+  approved_by: string | null;
+  /** Set by admin request-changes; the reason to show the reviewer. */
+  review_note: string | null;
   voice: string;
   voice_display: string;
   speed: number;
@@ -127,6 +196,8 @@ export interface TripListItem {
   folder_name: string;
   has_session: boolean;
   status: SessionStatus | null;
+  /** Any field in the latest session flagged edit_required. */
+  edit_required: boolean;
   lane: string | null;
   /** Variant label (EN / A12 / B1 / N4 / HSK1-2 …) and the family (place) base id. */
   level: string;
@@ -145,10 +216,20 @@ export interface ValidationIssue {
   issue: string;
 }
 
+/** POST /submit is validate-only (no writes) — on ok it just locks the session
+ * to `submitted` and awaits admin approval. */
 export interface SubmitResponse {
   ok: boolean;
   validation: ValidationIssue[];
+}
+
+/** POST /approve runs the actual commit (staging text write + master mp3
+ * promotion) that used to happen on submit. Admin-only. */
+export interface ApproveResponse {
+  ok: boolean;
+  validation: ValidationIssue[];
   written: FieldPath[];
+  promoted_mp3: FieldPath[];
   awaiting_stage9: boolean;
 }
 
@@ -179,8 +260,10 @@ export class ApiError extends Error {
 // Low-level fetch helpers
 // ---------------------------------------------------------------------------
 
+const authHeaders = (): HeadersInit => (token ? { Authorization: `Bearer ${token}` } : {});
+
 const jsonHeaders = (): HeadersInit => ({
-  'X-Review-Token': TOKEN,
+  ...authHeaders(),
   'Content-Type': 'application/json',
 });
 
@@ -197,17 +280,29 @@ const throwFromResponse = async (res: Response): Promise<never> => {
 const requestJson = async <T>(path: string, init?: RequestInit): Promise<T> => {
   let res: Response;
   try {
-    res = await fetch(path, init);
+    // credentials: 'include' lets the httpOnly review_session cookie ride
+    // along (media/download GETs authenticate that way); writes still need
+    // the explicit Authorization header set by the caller.
+    res = await fetch(path, { credentials: 'include', ...init });
   } catch (e) {
     // Network failure / backend down — surface as a 0-status ApiError so the
     // UI can degrade gracefully rather than throwing a raw TypeError.
     throw new ApiError(0, 'network', e instanceof Error ? e.message : 'network error');
   }
+  // Central 401 handling: an expired/invalid/revoked token clears local auth
+  // state so the route guard bounces to Login. Exempt /api/login itself — a
+  // bad-credentials 401 there is a form error, not a "your session expired"
+  // event.
+  if (res.status === 401 && path !== '/api/login') {
+    clearToken();
+    unauthorizedHandler?.();
+  }
   if (!res.ok) await throwFromResponse(res);
+  if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
 };
 
-const getJson = <T>(path: string): Promise<T> => requestJson<T>(path, { headers: { 'X-Review-Token': TOKEN } });
+const getJson = <T>(path: string): Promise<T> => requestJson<T>(path, { headers: authHeaders() });
 
 const postJson = <T>(path: string, body?: unknown): Promise<T> =>
   requestJson<T>(path, {
@@ -266,9 +361,22 @@ export const api = {
 
   combine: (sid: string, fid: number): Promise<Field> => postJson(field(sid, fid, '/combine')),
 
+  // Nudge the trailing trim on the current candidate before combining (drop a TTS
+  // breath/next-sound bleed). deltaMs > 0 trims more off the end, < 0 restores.
+  trimCandidate: (sid: string, fid: number, deltaMs: number): Promise<Field> =>
+    postJson(field(sid, fid, '/trim-candidate'), { delta_ms: deltaMs }),
+
   // Manual backstop: trim a leftover sliver/noise the reviewer highlighted in the narration.
   trimNoise: (sid: string, fid: number, start: number, end: number): Promise<Field> =>
     postJson(field(sid, fid, '/trim'), { start, end }),
+
+  // Normalize the trailing pause to the trip's level requirement (beginner = 3s, else trim).
+  trimSilence: (sid: string, fid: number): Promise<Field> =>
+    postJson(field(sid, fid, '/trim-silence')),
+
+  // Insert `seconds` of silence into the working take at the TEXT caret `pos` (char offset).
+  insertSilence: (sid: string, fid: number, pos: number, seconds = 1): Promise<Field> =>
+    postJson(field(sid, fid, '/insert-silence'), { pos, seconds }),
 
   fallback: (
     sid: string,
@@ -285,7 +393,7 @@ export const api = {
     // NOTE: do not set Content-Type — the browser sets the multipart boundary.
     return requestJson<Field>(field(sid, fid, '/import-mp3'), {
       method: 'POST',
-      headers: { 'X-Review-Token': TOKEN },
+      headers: authHeaders(),
       body: form,
     });
   },
@@ -305,16 +413,21 @@ export const api = {
 
   revert: (sid: string, fid: number): Promise<Field> => postJson(field(sid, fid, '/revert')),
 
-  // --- Manual-edit clip workspace ---
-  createClip: (sid: string, fid: number, text: string): Promise<Field> =>
-    postJson(field(sid, fid, '/clips'), { text }),
+  // Step the working audio back/forward through its version history (undo/redo).
+  undoAudio: (sid: string, fid: number): Promise<Field> => postJson(field(sid, fid, '/undo')),
+  redoAudio: (sid: string, fid: number): Promise<Field> => postJson(field(sid, fid, '/redo')),
 
-  importClip: async (sid: string, fid: number, file: File): Promise<Field> => {
+  // --- "Create new" attachments (manual edit): new takes for the admin, NOT the working take ---
+  createClip: (sid: string, fid: number, text: string, comment: string): Promise<Field> =>
+    postJson(field(sid, fid, '/clips'), { text, comment }),
+
+  importClip: async (sid: string, fid: number, file: File, comment: string): Promise<Field> => {
     const form = new FormData();
     form.append('file', file);
+    form.append('comment', comment);
     return requestJson<Field>(field(sid, fid, '/clips/upload'), {
       method: 'POST',
-      headers: { 'X-Review-Token': TOKEN },
+      headers: authHeaders(),
       body: form,
     });
   },
@@ -322,14 +435,16 @@ export const api = {
   regenClip: (sid: string, fid: number, cid: number, text?: string): Promise<Field> =>
     postJson(field(sid, fid, `/clips/${cid}/regenerate`), { text }),
 
-  useClip: (sid: string, fid: number, cid: number): Promise<Field> =>
-    postJson(field(sid, fid, `/clips/${cid}/use`)),
+  // Attach / edit the admin note on a take. A non-empty note commits a draft (flags the
+  // field edit-required); '' leaves it a draft.
+  setClipComment: (sid: string, fid: number, cid: number, comment: string): Promise<Field> =>
+    postJson(field(sid, fid, `/clips/${cid}/comment`), { comment }),
 
   deleteClip: (sid: string, fid: number, cid: number): Promise<Field> =>
     requestJson<Field>(field(sid, fid, `/clips/${cid}`), { method: 'DELETE', headers: jsonHeaders() }),
 
   /**
-   * Download the session zip. A plain <a href> can't send the X-Review-Token
+   * Download the session zip. A plain <a href> can't send the Authorization
    * header (→ 401), so the caller fetches the blob with the header and triggers
    * a programmatic download.
    */
@@ -337,22 +452,47 @@ export const api = {
     let res: Response;
     try {
       res = await fetch(`/api/sessions/${encodeURIComponent(sid)}/download`, {
-        headers: { 'X-Review-Token': TOKEN },
+        credentials: 'include',
+        headers: authHeaders(),
       });
     } catch (e) {
       throw new ApiError(0, 'network', e instanceof Error ? e.message : 'network error');
+    }
+    if (res.status === 401) {
+      clearToken();
+      unauthorizedHandler?.();
     }
     if (!res.ok) await throwFromResponse(res);
     return res.blob();
   },
 
+  /** Reviewer/admin: validate only (no writes) and lock the session to `submitted`. */
   submit: (sid: string): Promise<SubmitResponse> =>
     postJson(`/api/sessions/${encodeURIComponent(sid)}/submit`),
+
+  /** Admin only: commit — staging text write + master mp3 promotion. 409 if the
+   * session isn't currently `submitted` (double-click / two admins racing). */
+  approve: (sid: string): Promise<ApproveResponse> =>
+    postJson(`/api/sessions/${encodeURIComponent(sid)}/approve`),
+
+  /** Admin only: send the session back to the reviewer with a note. */
+  requestChanges: (sid: string, note: string): Promise<{ ok: boolean }> =>
+    postJson(`/api/sessions/${encodeURIComponent(sid)}/request-changes`, { note }),
+
+  /** Admin only: sessions currently awaiting approval. */
+  reviewQueue: (): Promise<ReviewQueueItem[]> => getJson('/api/review-queue'),
+
+  login: (username: string, password: string): Promise<LoginResponse> =>
+    postJson('/api/login', { username, password }),
+
+  logout: (): Promise<void> => requestJson<void>('/api/logout', { method: 'POST', headers: authHeaders() }),
+
+  me: (): Promise<AuthUser> => getJson('/api/me'),
 };
 
 /**
  * Best-effort flush of a single field's text on page unload. `sendBeacon`
- * cannot set the X-Review-Token header, so we use `fetch(..., keepalive)` which
+ * cannot set the Authorization header, so we use `fetch(..., keepalive)` which
  * survives unload AND keeps the auth header the contract requires.
  */
 export const flushFieldBeacon = (sid: string, fid: number, currentText: string): void => {
@@ -360,6 +500,7 @@ export const flushFieldBeacon = (sid: string, fid: number, currentText: string):
     void fetch(field(sid, fid), {
       method: 'PUT',
       keepalive: true,
+      credentials: 'include',
       headers: jsonHeaders(),
       body: JSON.stringify({ current_text: currentText }),
     });
@@ -374,6 +515,7 @@ export const flushCommentBeacon = (sid: string, fid: number, text: string): void
     void fetch(field(sid, fid, '/comment'), {
       method: 'POST',
       keepalive: true,
+      credentials: 'include',
       headers: jsonHeaders(),
       body: JSON.stringify({ text }),
     });

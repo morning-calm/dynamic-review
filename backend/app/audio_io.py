@@ -196,7 +196,7 @@ def silence_run(samples: np.ndarray, sr: int, t0: float, t1: float,
 
 def silence_run_nearest(samples: np.ndarray, sr: int, t_anchor: float,
                         back: float, fwd: float, thresh_db: float = -38.0,
-                        min_ms: float = 60.0) -> tuple[float, float] | None:
+                        min_ms: float = 40.0) -> tuple[float, float] | None:
     """(start, end) of the genuine-silence run (RMS below ``thresh_db`` re. peak, ≥
     ``min_ms``) whose nearest edge is CLOSEST to ``t_anchor``, among runs starting in
     [t_anchor−back, t_anchor+fwd]. Unlike :func:`silence_run` (first run in a window) this
@@ -274,8 +274,107 @@ def trim_slivers(samples: np.ndarray, sr: int, t0: float, t1: float,
         return samples
     pieces = [win[int(fi * hop * sr):int(fj * hop * sr)]
               for k, (_s, fi, fj) in enumerate(runs) if k not in drop]
-    cleaned = crossfade_join(pieces, sr, 8.0) if pieces else win[:0]
+    # butt_join (NOT crossfade_join): crossfade OVERLAPS the kept pieces, lopping ~fade_ms
+    # off every silence/voice seam and so eating the ends of perfectly good words. butt_join
+    # is length-preserving — only the dropped slivers are removed, kept audio is verbatim.
+    cleaned = butt_join(pieces, sr, 6.0) if pieces else win[:0]
     return np.concatenate([samples[:a], cleaned, samples[b:]]).astype(np.float32)
+
+
+def first_voice_onset(samples: np.ndarray, sr: int, t0: float, t1: float,
+                      rel_db: float = 26.0, min_run_ms: float = 60.0) -> float | None:
+    """First time in [t0, t1] where the RMS stays above (peak − ``rel_db``) for at least
+    ``min_run_ms`` — i.e. a real voiced onset, not a breath/click. ``None`` if the region
+    is all silence/artefacts. Absorption-proof: Whisper routinely reports the next word's
+    ``start`` early (it swallows the preceding pause), so the gap before a word is found
+    from energy, not from the word boundary."""
+    n = len(samples)
+    a, b = max(0, int(t0 * sr)), min(n, int(t1 * sr))
+    if b - a < int(min_run_ms / 1000 * sr):
+        return None
+    times, rms = _frame_rms(samples[a:b], sr, frame_ms=10.0, hop_ms=5.0)
+    if len(rms) == 0:
+        return None
+    thr = (float(np.max(np.abs(samples))) or 1e-9) * (10.0 ** (-rel_db / 20.0))
+    voiced = rms >= thr
+    need = max(1, int(min_run_ms / 1000.0 / 0.005))      # frames (5 ms hop)
+    i, m = 0, len(voiced)
+    while i < m:
+        if voiced[i]:
+            j = i
+            while j < m and voiced[j]:
+                j += 1
+            if (j - i) >= need:
+                return t0 + float(times[i])
+            i = j
+        else:
+            i += 1
+    return None
+
+
+def first_silence_after(samples: np.ndarray, sr: int, t0: float, t1: float,
+                        rel_db: float = 34.0, min_run_ms: float = 20.0) -> float | None:
+    """First time in [t0, t1] where the RMS DROPS below (peak − ``rel_db``) for at least
+    ``min_run_ms``. Used to start a gap-blank AFTER a word's release so genuinely voiced
+    audio is never silenced. ``None`` if it never goes quiet in the window."""
+    n = len(samples)
+    a, b = max(0, int(t0 * sr)), min(n, int(t1 * sr))
+    if b - a < int(min_run_ms / 1000 * sr):
+        return None
+    times, rms = _frame_rms(samples[a:b], sr, frame_ms=10.0, hop_ms=5.0)
+    if len(rms) == 0:
+        return None
+    thr = (float(np.max(np.abs(samples))) or 1e-9) * (10.0 ** (-rel_db / 20.0))
+    quiet = rms < thr
+    need = max(1, int(min_run_ms / 1000.0 / 0.005))
+    i, m = 0, len(quiet)
+    while i < m:
+        if quiet[i]:
+            j = i
+            while j < m and quiet[j]:
+                j += 1
+            if (j - i) >= need:
+                return t0 + float(times[i])
+            i = j
+        else:
+            i += 1
+    return None
+
+
+def trim_trailing_breath(samples: np.ndarray, sr: int = SR, rel_db: float = 26.0,
+                         min_speech_ms: float = 80.0, release_ms: float = 90.0) -> np.ndarray:
+    """Drop a trailing breath / next-sound bleed that TTS leaves AFTER the last word.
+    Finds the end of the last sustained voiced run (above peak − ``rel_db`` for ≥
+    ``min_speech_ms``), keeps a ``release_ms`` tail so the natural word release is intact,
+    and cuts everything after it. Never cuts into sustained speech; returns the samples
+    unchanged when the tail beyond the last word is negligible (< 40 ms)."""
+    n = len(samples)
+    if n < int(0.05 * sr):
+        return samples
+    times, rms = _frame_rms(samples, sr, frame_ms=10.0, hop_ms=5.0)
+    if len(rms) == 0:
+        return samples
+    thr = (float(np.max(np.abs(samples))) or 1e-9) * (10.0 ** (-rel_db / 20.0))
+    voiced = rms >= thr
+    need = max(1, int(min_speech_ms / 1000.0 / 0.005))
+    end_idx = None
+    k, m = 0, len(voiced)
+    while k < m:
+        if voiced[k]:
+            j = k
+            while j < m and voiced[j]:
+                j += 1
+            if (j - k) >= need:
+                end_idx = j - 1
+            k = j
+        else:
+            k += 1
+    if end_idx is None:
+        return samples
+    cut = int(round((float(times[end_idx]) + release_ms / 1000.0) * sr))
+    if cut >= n - int(0.04 * sr):                        # negligible tail → no-op
+        return samples
+    return samples[: max(0, cut)].astype(np.float32)
 
 
 def trailing_silence_seconds(samples: np.ndarray, sr: int = SR,
@@ -294,6 +393,28 @@ def trailing_silence_seconds(samples: np.ndarray, sr: int = SR,
     if len(above) == 0:
         return total
     return max(0.0, total - (float(times[int(above[-1])]) + 0.02))
+
+
+def set_trailing_silence(samples: np.ndarray, sr: int = SR,
+                         target_seconds: float = 0.0,
+                         thresh_db: float = -50.0) -> np.ndarray:
+    """Normalize the END pause to ``target_seconds``: cut excess trailing silence, or
+    pad with zeros when short (beginner trips need a fixed ~3s tail). Only ever removes
+    silence — the cut is bounded by the measured trailing-silence run, so a voiced sample
+    is never clipped. Returns the (possibly unchanged) samples."""
+    n = len(samples)
+    if n == 0:
+        return samples
+    cur = trailing_silence_seconds(samples, sr, thresh_db)
+    delta = cur - max(0.0, target_seconds)            # >0 too much, <0 too little
+    if delta > 0:                                     # trim excess silence off the end
+        cut = min(n, int(round(delta * sr)))
+        return samples[: n - cut].copy() if cut > 0 else samples
+    if delta < 0:                                     # pad up to the required tail
+        pad = int(round((-delta) * sr))
+        return (np.concatenate([samples, np.zeros(pad, dtype=np.float32)])
+                if pad > 0 else samples)
+    return samples
 
 
 # --------------------------------------------------------------------------- #
