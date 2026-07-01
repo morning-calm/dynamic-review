@@ -1,0 +1,19 @@
+=== jp_1.mp3  dur=27.00s  chars=180  mean_conf=0.265  min_conf=0.0
+    aligned span: 0.04s .. 23.958s
+    clause/sentence boundaries within +-120ms of a silence: 12/16
+      'で'、 @ 2.222s  ok=True  nearest_silence=50ms
+      'す'。 @ 5.244s  ok=True  nearest_silence=0ms
+      'て'、 @ 8.827s  ok=True  nearest_silence=50ms
+      'す'。 @ 10.007s  ok=False  nearest_silence=200ms
+      'は'、 @ 10.608s  ok=True  nearest_silence=50ms
+      '前'「 @ 12.229s  ok=True  nearest_silence=70ms
+      'し'」 @ 12.409s  ok=True  nearest_silence=90ms
+      'す'。 @ 13.23s  ok=True  nearest_silence=0ms
+      'で'、 @ 15.732s  ok=False  nearest_silence=280ms
+      'す'。 @ 16.752s  ok=True  nearest_silence=10ms
+      'て'、 @ 17.453s  ok=False  nearest_silence=280ms
+      'す'。 @ 18.734s  ok=False  nearest_silence=240ms
+      'は'、 @ 19.715s  ok=True  nearest_silence=50ms
+      'え'「 @ 20.535s  ok=True  nearest_silence=10ms
+      'し'」 @ 22.056s  ok=True  nearest_silence=70ms
+      'す'。 @ 23.958s  ok=True  nearest_silence=0ms

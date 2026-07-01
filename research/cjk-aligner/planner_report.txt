@@ -1,0 +1,16 @@
+verdict: splice
+clip: 1.mp3
+dur_s: 10.59
+changed_orig: 干净
+revoiced_old: 水很干净
+revoiced_new: 水很清澈
+tL_s: 4.121
+tR_s: 5.318
+removed_s: 1.2
+cutL_energy: 0.00054
+cutR_energy: 0.00119
+sil_thr: 0.01594
+anchorL_conf: 0.995
+anchorR_conf: 0.964
+sil_ok: True
+conf_ok: True

@@ -1,0 +1,17 @@
+# Isolated env for the CJK forced-alignment R&D (Path B). Keep OUT of the backend env,
+# which is deliberately torch-free (CTranslate2 / faster-whisper) to avoid a numpy/numba
+# conflict. CPU wheels are fine — alignment of a scene clip takes ~1s on CPU.
+#
+#   python -m venv venv
+#   venv/Scripts/python -m pip install --index-url https://download.pytorch.org/whl/cpu torch torchaudio
+#   venv/Scripts/python -m pip install soundfile numpy uroman
+#
+# torch/torchaudio: install from the CPU index above (do NOT pin here — the CPU wheel tag
+# is resolved by that index-url, not by a plain version spec).
+torch
+torchaudio
+soundfile
+numpy
+uroman
+# gather_clips.py additionally needs `requests`, but run THAT with the main interpreter
+# (which already has requests + talks to the backend), not this venv.

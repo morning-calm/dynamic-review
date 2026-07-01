@@ -1,0 +1,146 @@
+[
+  {
+    "clip": "24.mp3",
+    "dur_s": 11.94,
+    "n_chars": 43,
+    "mean_conf": 0.957,
+    "min_conf": 0.0,
+    "first_start_s": 0.08,
+    "last_end_s": 11.515,
+    "punct_good": 5,
+    "punct_total": 5,
+    "punct": [
+      {
+        "after": "像",
+        "mark": "。",
+        "boundary_s": 2.523,
+        "sil_within_120ms": true,
+        "nearest_sil_ms": 30
+      },
+      {
+        "after": "楼",
+        "mark": "，",
+        "boundary_s": 4.926,
+        "sil_within_120ms": true,
+        "nearest_sil_ms": 70
+      },
+      {
+        "after": "阁",
+        "mark": "，",
+        "boundary_s": 6.208,
+        "sil_within_120ms": true,
+        "nearest_sil_ms": 80
+      },
+      {
+        "after": "子",
+        "mark": "。",
+        "boundary_s": 9.091,
+        "sil_within_120ms": true,
+        "nearest_sil_ms": 100
+      },
+      {
+        "after": "雄",
+        "mark": "。",
+        "boundary_s": 11.515,
+        "sil_within_120ms": true,
+        "nearest_sil_ms": 20
+      }
+    ]
+  },
+  {
+    "clip": "1.mp3",
+    "dur_s": 10.59,
+    "n_chars": 35,
+    "mean_conf": 0.961,
+    "min_conf": 0.0,
+    "first_start_s": 0.1,
+    "last_end_s": 10.208,
+    "punct_good": 6,
+    "punct_total": 6,
+    "punct": [
+      {
+        "after": "潭",
+        "mark": "。",
+        "boundary_s": 1.781,
+        "sil_within_120ms": true,
+        "nearest_sil_ms": 40
+      },
+      {
+        "after": "湖",
+        "mark": "，",
+        "boundary_s": 3.723,
+        "sil_within_120ms": true,
+        "nearest_sil_ms": 70
+      },
+      {
+        "after": "净",
+        "mark": "。",
+        "boundary_s": 5.204,
+        "sil_within_120ms": true,
+        "nearest_sil_ms": 20
+      },
+      {
+        "after": "候",
+        "mark": "，",
+        "boundary_s": 7.005,
+        "sil_within_120ms": true,
+        "nearest_sil_ms": 70
+      },
+      {
+        "after": "花",
+        "mark": "，",
+        "boundary_s": 8.467,
+        "sil_within_120ms": true,
+        "nearest_sil_ms": 100
+      },
+      {
+        "after": "亮",
+        "mark": "。",
+        "boundary_s": 10.208,
+        "sil_within_120ms": true,
+        "nearest_sil_ms": 30
+      }
+    ]
+  },
+  {
+    "clip": "5.mp3",
+    "dur_s": 10.91,
+    "n_chars": 34,
+    "mean_conf": 0.977,
+    "min_conf": 0.507,
+    "first_start_s": 0.08,
+    "last_end_s": 10.473,
+    "punct_good": 2,
+    "punct_total": 4,
+    "punct": [
+      {
+        "after": "里",
+        "mark": "，",
+        "boundary_s": 0.621,
+        "sil_within_120ms": false,
+        "nearest_sil_ms": 140
+      },
+      {
+        "after": "去",
+        "mark": "，",
+        "boundary_s": 3.304,
+        "sil_within_120ms": false,
+        "nearest_sil_ms": 130
+      },
+      {
+        "after": "来",
+        "mark": "。",
+        "boundary_s": 5.727,
+        "sil_within_120ms": true,
+        "nearest_sil_ms": 10
+      },
+      {
+        "after": "要",
+        "mark": "。",
+        "boundary_s": 10.473,
+        "sil_within_120ms": true,
+        "nearest_sil_ms": 0
+      }
+    ]
+  }
+]

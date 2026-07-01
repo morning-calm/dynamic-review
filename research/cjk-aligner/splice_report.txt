@@ -1,0 +1,8 @@
+clip=1.mp3 native_sr=44100 dur=10.59s aligned_chars=35
+removed chars (orig pos (9, 21)): 它是一个很大的湖水很干净
+kept text: 这是高雄的莲池潭。 + 夏天的时候，湖里开很多花，非常漂亮。
+cut L: raw=2.562s -> refined=2.439s  energy=0.00067 (silence<0.01594? True)
+cut R: raw=5.204s -> refined=5.318s  energy=0.00119 (silence<0.01594? True)
+GUARD (both cuts in real silence): PASS
+result dur=7.70s (removed 2.88s)  seam crossfade=10ms equal-power
+min char confidence in kept spans: 0.000

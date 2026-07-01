@@ -1,0 +1,24 @@
+=== 24.mp3  dur=11.94s  chars=43  mean_conf=0.957  min_conf=0.0
+    aligned span: 0.08s .. 11.515s
+    clause/sentence boundaries within +-120ms of a silence: 5/5
+      '像'。 @ 2.523s  ok=True  nearest_silence=30ms
+      '楼'， @ 4.926s  ok=True  nearest_silence=70ms
+      '阁'， @ 6.208s  ok=True  nearest_silence=80ms
+      '子'。 @ 9.091s  ok=True  nearest_silence=100ms
+      '雄'。 @ 11.515s  ok=True  nearest_silence=20ms
+=== 1.mp3  dur=10.59s  chars=35  mean_conf=0.961  min_conf=0.0
+    aligned span: 0.1s .. 10.208s
+    clause/sentence boundaries within +-120ms of a silence: 6/6
+      '潭'。 @ 1.781s  ok=True  nearest_silence=40ms
+      '湖'， @ 3.723s  ok=True  nearest_silence=70ms
+      '净'。 @ 5.204s  ok=True  nearest_silence=20ms
+      '候'， @ 7.005s  ok=True  nearest_silence=70ms
+      '花'， @ 8.467s  ok=True  nearest_silence=100ms
+      '亮'。 @ 10.208s  ok=True  nearest_silence=30ms
+=== 5.mp3  dur=10.91s  chars=34  mean_conf=0.977  min_conf=0.507
+    aligned span: 0.08s .. 10.473s
+    clause/sentence boundaries within +-120ms of a silence: 2/4
+      '里'， @ 0.621s  ok=False  nearest_silence=140ms
+      '去'， @ 3.304s  ok=False  nearest_silence=130ms
+      '来'。 @ 5.727s  ok=True  nearest_silence=10ms
+      '要'。 @ 10.473s  ok=True  nearest_silence=0ms

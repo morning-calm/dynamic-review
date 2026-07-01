@@ -1,0 +1,11 @@
+=== jp_1.mp3  dur=27.00s  chars=98  mean_conf=0.602  min_conf=0.0
+    aligned span: 0.04s .. 23.958s
+    clause/sentence boundaries within +-120ms of a silence: 8/8
+      'で'、 @ 2.222s  ok=True  nearest_silence=50ms
+      'す'。 @ 5.244s  ok=True  nearest_silence=0ms
+      'て'、 @ 9.207s  ok=True  nearest_silence=30ms
+      'す'。 @ 13.23s  ok=True  nearest_silence=0ms
+      'は'、 @ 17.693s  ok=True  nearest_silence=40ms
+      'え'「 @ 20.535s  ok=True  nearest_silence=10ms
+      'し'」 @ 22.056s  ok=True  nearest_silence=70ms
+      'す'。 @ 23.958s  ok=True  nearest_silence=0ms
