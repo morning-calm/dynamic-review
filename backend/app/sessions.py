@@ -30,7 +30,7 @@ import numpy as np
 from fastapi import HTTPException
 
 from . import config  # noqa: F401  (ensures SCRIPTS_ROOT on sys.path) — keep first
-from . import audio_core, audio_io, audio_splice, db, review_audio, thumbs
+from . import audio_core, audio_io, audio_splice, cjk_splice, db, review_audio, thumbs
 from .config import (COUNTRY_VOICE_GUESS, COVERAGE_DONE_FRACTION,
                      LANGUAGE_FALLBACK_VOICE, WORK_ROOT)
 from .locks import WHISPER_LOCK
@@ -1020,6 +1020,10 @@ def get_session(sid: str) -> dict:
         "model_override": _srow_get(srow, "model_override"),
         "trip_categories": json.loads(srow["trip_categories_json"] or "[]"),
         "is_zh": bool(_srow_get(srow, "is_zh")),
+        # Narration language ("English"/"Mandarin"/"Japanese") — lets the FE gate the
+        # CJK-specific SceneDesc controls (JP hides the English selection ops; the kana
+        # line is what's voiced). is_zh stays the Mandarin A/B-audition flag.
+        "language": audio_core.language_of(srow["trip_id"]),
         "preferred_version": _srow_get(srow, "preferred_version"),
         "trip_fields": trip_fields,
         "scenes": scenes_out,
@@ -1234,6 +1238,67 @@ def _zh_hans_for_tts(frow) -> str | None:
     return hans or None
 
 
+def _last_spoken_line(text: str) -> str:
+    """The last non-empty line — for Japanese, the KANA (phonetic) line under the kanji.
+    The kanji line is NOT forced-alignable (0.27 conf); the kana is what's voiced/aligned."""
+    text = audio_core.strip_url_lines(text or "")
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    return lines[-1] if lines else ""
+
+
+def _zh_working_hans_patch(frow) -> dict:
+    """After a ZH combine, record the hanzi the working take now says (cur.Hans) as the
+    re-baseline for the NEXT surgical splice's OLD text (see _cjk_spoken). A no-op (empty
+    patch) for non-ZH fields — localization_json is only populated for Mandarin."""
+    loc_raw = _srow_get(frow, "localization_json")
+    if not loc_raw:
+        return {}
+    try:
+        loc = json.loads(loc_raw)
+    except (ValueError, TypeError):
+        return {}
+    hans = ((loc.get("cur") or {}).get("Hans") or "").strip()
+    if not hans:
+        return {}
+    loc["working_hans"] = hans
+    return {"localization_json": json.dumps(loc, ensure_ascii=False)}
+
+
+def _cjk_spoken(srow, frow) -> tuple[str, str, str] | None:
+    """``(lang, OLD, NEW)`` spoken text for a CJK audio field — the surgical-splice /
+    whole-regen source — or ``None`` for Latin trips (English/Welsh untouched).
+
+      _ZH → ``('zh', orig.Hans, cur.Hans)``: the Simplified hanzi. OLD = what the master was
+            voiced from; NEW = the reviewer's edited hanzi (the 4-script block, never
+            current_text).
+      _JP → ``('jp', <kana of working/original text>, <kana of current_text>)``: the KANA
+            line. OLD tracks the current working take (working_text, set at combine); NEW is
+            the reviewer's edit (current_text).
+    A near-zero aligner mean-score on OLD↔audio (stale text↔audio) makes the splice bail to
+    whole-regen, so OLD need only be a good approximation of the take."""
+    lang_full = audio_core.language_of(srow["trip_id"])
+    if lang_full == "Mandarin":
+        new = _zh_hans_for_tts(frow)
+        if not new:
+            return None
+        loc = json.loads(_srow_get(frow, "localization_json") or "{}")
+        # OLD = the hanzi the WORKING take currently says. Re-baselined to cur.Hans at every
+        # combine (working_hans); falls back to the seed orig.Hans before the first combine.
+        # Using the seed AFTER a combine would align stale text against the new audio (the
+        # mean-conf gate only catches large divergence, not a one-char drift), so a second
+        # consecutive edit could mis-place a cut or needlessly re-voice a correct clause.
+        old = ((loc.get("working_hans")
+                or (loc.get("orig") or {}).get("Hans") or "").strip())
+        return ("zh", old, new)
+    if lang_full == "Japanese":
+        new = _last_spoken_line(frow["current_text"] or "")
+        if not new:
+            return None
+        old = _last_spoken_line(frow["working_text"] or frow["original_text"] or "")
+        return ("jp", old, new)
+    return None
+
+
 def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
                alt_text: str | None = None) -> dict:
     srow = _session_row(sid)
@@ -1250,13 +1315,32 @@ def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
     field_path = frow["field_path"]
     cur = audio_core.strip_url_lines(frow["current_text"] or "")
 
-    # _ZH: the narrated text is the Simplified hanzi (SceneDesc line 1); the reviewer edits
-    # the 4-script block, never current_text. Voice it verbatim as a WHOLE take — the Gemini
-    # number-speller is English-specific and there is no surgical CJK splice (K3 whole-regen).
-    zh_hans = _zh_hans_for_tts(frow) if _is_zh_session(sid) else None
-    if zh_hans is not None:
-        text = alt_text.strip() if (alt_text and alt_text.strip()) else zh_hans
-        plan = audio_splice.plan_whole(text, False, voice_id, voice_settings, model_id)
+    # CJK (_ZH hanzi / _JP kana): the narrated text is the Simplified hanzi (localization
+    # cur.Hans) or the kana line — NOT current_text/Gemini (the number-speller is
+    # English-only). This branch is ADDITIVE and SEPARATE from the English token engine
+    # below. On a SceneDesc text edit it tries a surgical CHAR-LEVEL splice (cjk_splice, via
+    # the isolated MMS forced aligner); on ANY uncertainty plan_cjk returns None and we
+    # WHOLE-regenerate the narration (the safe Path-A floor). Q&A fields, an explicit 'whole'
+    # request, and alt text always whole-regenerate.
+    cjk_fell_back = False   # surgical splice was requested but bailed to whole-regen (#5)
+    cjk = _cjk_spoken(srow, frow)
+    if cjk is not None:
+        cjk_lang, cjk_old, cjk_new = cjk
+        plan = None
+        cjk_wanted_surgical = False
+        if alt_text and alt_text.strip():
+            plan = audio_splice.plan_whole(alt_text.strip(), False, voice_id,
+                                           voice_settings, model_id)
+        elif (field_path == "SceneDesc" and mode != "whole"
+              and cjk_old and cjk_new and cjk_old != cjk_new and frow["mp3_name"]):
+            working_mp3 = dirs["working"] / frow["mp3_name"]
+            if working_mp3.exists():
+                cjk_wanted_surgical = True
+                plan = cjk_splice.plan_cjk(str(working_mp3), cjk_old, cjk_new,
+                                           voice_id, voice_settings, model_id, cjk_lang)
+        if plan is None:      # Q&A / whole / no clean splice → whole-regenerate the narration
+            cjk_fell_back = cjk_wanted_surgical
+            plan = audio_splice.plan_whole(cjk_new, False, voice_id, voice_settings, model_id)
     # Q&A fields and SceneDesc 'whole' → whole regenerate (no splice). Alt text (if
     # supplied) is voiced VERBATIM as the whole block — "regenerate with alt text" for a
     # question option, mirroring highlight-with-alt-text but for the entire field.
@@ -1324,7 +1408,10 @@ def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
         patch["comment"] = _append_note(frow["comment"], plan.reason)
     db.update_fields(fid, **patch)
     db.touch_session(sid)
-    return serialize_field(sid, _field_row(sid, fid))
+    resp = serialize_field(sid, _field_row(sid, fid))
+    if cjk_fell_back:      # tell the FE the whole clip changed (not a surgical splice)
+        resp["cjk_fallback"] = True
+    return resp
 
 
 def combine(sid: str, fid: int) -> dict:
@@ -1350,6 +1437,7 @@ def combine(sid: str, fid: int) -> dict:
         patch = {"working_audio_hash": whash, "splice_confidence": None,
                  "candidate_mp3_path": None, "working_text": frow["current_text"]}
         patch.update(_clear_coverage_and_done(frow))
+        patch.update(_zh_working_hans_patch(frow))   # re-baseline ZH OLD to this take
         db.update_fields(fid, **patch)
         db.touch_session(sid)
         return serialize_field(sid, _field_row(sid, fid))
@@ -1369,6 +1457,7 @@ def combine(sid: str, fid: int) -> dict:
              "candidate_mp3_path": None, "working_text": frow["current_text"],
              "splice_meta_json": json.dumps({**meta, "splice_detail": result.detail})}
     patch.update(_clear_coverage_and_done(frow))
+    patch.update(_zh_working_hans_patch(frow))       # re-baseline ZH OLD to this take
     if result.edit_required:
         patch["flag"] = "edit_required"
         patch["comment"] = _append_note(
@@ -1698,7 +1787,11 @@ def trim_noise(sid: str, fid: int, start: int, end: int) -> dict:
 
     whash = _set_working(sid, frow, samples=new, kind="noise_trim")
     _r2_upload_working(srow["trip_id"], dirs, frow)
-    patch = {"working_audio_hash": whash, "splice_confidence": None}
+    # Editing the working take invalidates any pending regenerate candidate — its tL/tR were
+    # computed against the pre-edit audio, so combining it now would splice at stale offsets
+    # (mirrors undo/redo/revert). Only reached when the take actually changed (no-ops above).
+    patch = {"working_audio_hash": whash, "splice_confidence": None,
+             "candidate_mp3_path": None}
     patch.update(_clear_coverage_and_done(frow))
     db.update_fields(fid, **patch)
     db.touch_session(sid)
@@ -1724,7 +1817,9 @@ def trim_silence(sid: str, fid: int) -> dict:
         return serialize_field(sid, frow)
     whash = _set_working(sid, frow, samples=new, kind="silence_trim")
     _r2_upload_working(srow["trip_id"], dirs, frow)
-    patch = {"working_audio_hash": whash, "splice_confidence": None}
+    # Working take changed → drop any pending candidate (its cut times are now stale).
+    patch = {"working_audio_hash": whash, "splice_confidence": None,
+             "candidate_mp3_path": None}
     patch.update(_clear_coverage_and_done(frow))
     db.update_fields(fid, **patch)
     db.touch_session(sid)
@@ -1778,7 +1873,9 @@ def insert_silence(sid: str, fid: int, pos: int, seconds: float = 1.0) -> dict:
     new = np.concatenate([base[:cut], gap, base[cut:]])
     whash = _set_working(sid, frow, samples=new, kind="insert_silence")
     _r2_upload_working(srow["trip_id"], dirs, frow)
-    patch = {"working_audio_hash": whash, "splice_confidence": None}
+    # Working take changed → drop any pending candidate (its cut times are now stale).
+    patch = {"working_audio_hash": whash, "splice_confidence": None,
+             "candidate_mp3_path": None}
     patch.update(_clear_coverage_and_done(frow))
     db.update_fields(fid, **patch)
     db.touch_session(sid)
@@ -2044,6 +2141,35 @@ def _validate_text(field_path: str, scene_index, text: str) -> list[dict]:
     return issues
 
 
+def _leak_scan_targets(f) -> list[str]:
+    """The edited text strings to leak-scan for a field. For a Latin field that's the
+    edited ``current_text``; for a ``_ZH`` field the reviewer edits the 4-script block
+    (``localization_json`` cur vs orig), NOT current_text, so scan every CHANGED script
+    (Hans/Hant/zhuyin/en) — the leak patterns are ASCII/symbol artefacts (URLs, media
+    filenames, ⚠, [source]) that can slip into any script. Empty when the field is
+    unchanged. (The ``working_hans`` re-baseline key is a sibling of cur/orig, so iterating
+    ``cur`` never picks it up.)"""
+    loc_raw = _srow_get(f, "localization_json")
+    if loc_raw:
+        loc = json.loads(loc_raw)
+        cur, orig = loc.get("cur") or {}, loc.get("orig") or {}
+        return [v for k, v in cur.items()
+                if isinstance(v, str) and v and v != orig.get(k)]
+    if (f["current_text"] or "") != (f["original_text"] or ""):
+        return [f["current_text"]]
+    return []
+
+
+def _field_has_edit(f) -> bool:
+    """True if commit / zh_writeback would write this field back to staging — a changed
+    localization block (_ZH), current_text, or the editable English sibling (source_text)."""
+    loc_raw = _srow_get(f, "localization_json")
+    if loc_raw and (json.loads(loc_raw).get("cur") or {}) != (json.loads(loc_raw).get("orig") or {}):
+        return True
+    return ((f["current_text"] or "") != (f["original_text"] or "")
+            or (f["source_text"] or "") != (f["original_source"] or ""))
+
+
 def validate(sid: str) -> tuple[list[dict], list[dict]]:
     """PURE pre-submit validation — NO writes. Returns (hard, soft) issue lists.
     Reads the FRESH live staging trip for the final-360 check (a read, not a write).
@@ -2055,13 +2181,19 @@ def validate(sid: str) -> tuple[list[dict], list[dict]]:
 
     hard: list[dict] = []
     soft: list[dict] = []
-    changed = [f for f in frows if (f["current_text"] or "") != (f["original_text"] or "")]
 
-    for f in changed:
+    # Leak-scan every edited field. Keyed off the actual edit location (current_text for
+    # Latin, the changed localization scripts for _ZH) so Mandarin edits — which never touch
+    # current_text — are scanned too.
+    for f in frows:
+        targets = _leak_scan_targets(f)
+        if not targets:
+            continue
         fp = f["field_path"]
         out_fp = (f"questionOption[{f['option_index']}]"
                   if fp == "questionOption" else fp)
-        hard += _validate_text(out_fp, f["scene_index"], f["current_text"])
+        for text in targets:
+            hard += _validate_text(out_fp, f["scene_index"], text)
         if fp in ("questionKey", "questionOption"):
             soft.append({"scene_index": f["scene_index"], "field_path": out_fp,
                          "issue": "edited question/option — check additionalAnswerKeys "
@@ -2083,6 +2215,26 @@ def validate(sid: str) -> tuple[list[dict], list[dict]]:
             hard.append({"scene_index": last, "field_path": "questionKey",
                          "issue": "question/keyword on the final 360 scene — not allowed",
                          "severity": "block"})
+
+    # Staging-drift guard: an edit to a scene that no longer exists in the LIVE trip would be
+    # SILENTLY dropped by commit / zh_writeback (their `si < len(qt_live)` / loc-index checks
+    # just skip it, and approve still reports success). Block instead so the drift is visible.
+    # _ZH needs BOTH the live Trip scene AND its TripLocalizations scene to write back.
+    live_scene_ids = set(range(len(qt_live)))
+    if _is_zh_session(sid):
+        live_loc = _fetch_localization(trip_id)
+        if live_loc is not None:
+            live_scene_ids &= {sc.get("index") for sc in (live_loc.get("scenes") or [])
+                               if sc.get("index") is not None}
+    missing = sorted({f["scene_index"] for f in frows
+                      if f["scene_index"] is not None and _field_has_edit(f)
+                      and f["scene_index"] not in live_scene_ids})
+    if missing:
+        hard.append({"scene_index": None, "field_path": "*",
+                     "issue": f"scene(s) {missing} in this review no longer exist in the live "
+                              "staging trip — it changed since this review was seeded; "
+                              "re-seed or resolve before approving",
+                     "severity": "block"})
 
     # every field must be listened-to (the `done` flag only unlocks after full
     # playback) and explicitly marked done before the trip can be submitted

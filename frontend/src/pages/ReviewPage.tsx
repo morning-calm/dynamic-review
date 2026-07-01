@@ -254,6 +254,7 @@ const ReviewBody = () => {
             onFieldUpdate={updateField}
             readOnly={!editable}
             isZh={isZh}
+            language={session.language}
           />
         ))}
 

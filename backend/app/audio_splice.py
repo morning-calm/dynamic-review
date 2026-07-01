@@ -8,10 +8,12 @@ Two phases, mirroring the API contract:
                       the anchors, then calls ElevenLabs /with-timestamps for the
                       anchor-context phrase. Returns the candidate mp3 + a splice plan
                       (or edit_required).
-  * do_splice()     — runs at /combine. Refines each cut to a local RMS-energy
-                      minimum, level-matches the candidate to the retained original
-                      context, assembles orig[:tL] + cand[tL':tR'] + orig[tR:] in PCM
-                      with equal-power edge fades, peak-limits, and scores confidence.
+  * do_splice()     — runs at /combine. TODAY every plan is span_only, so it delegates to
+                      _splice_span_only: cuts are already silence-anchored at plan time, so
+                      it just trims/level-matches the candidate to the retained context and
+                      equal-power crossfades it between tL/tR. (The older anchor-word +
+                      combine-time seam-gate branch below it is currently UNREACHABLE — see
+                      the note in do_splice.)
 
 Correctness points enforced (from two code reviews):
   C1  cut times come from raw Whisper word.start/.end, never interpolated timelines.
@@ -382,6 +384,7 @@ def highlight_span_in_cleaned(current_text: str, cleaned_new: str,
 # Phase 2 — splice (runs at /combine)
 # --------------------------------------------------------------------------- #
 def _find_cand_anchor(cand_words: list[dict], norm: str, last: bool) -> dict | None:
+    # UNUSED: referenced only by the unreachable non-span branch of do_splice (see note there).
     matches = [w for w in cand_words if _norm(w["word"]) == norm]
     if not matches:
         return None
@@ -439,6 +442,17 @@ def do_splice(orig: np.ndarray, cand: np.ndarray, meta: dict,
     od = audio_io.duration_seconds(orig, sr)
     if meta.get("span_only"):
         return _splice_span_only(orig, cand, meta, sr, od)
+
+    # === UNUSED / UNREACHABLE (as of 2026-07) ================================
+    # Every plan producer — plan_segment AND cjk_splice.plan_cjk — emits `span_only: True`
+    # (cuts are anchored in REAL silence at PLAN time), so control never reaches below and
+    # nothing sets left_anchor/right_anchor. This is the OLDER anchor-word + combine-time
+    # seam splice (find_energy_min refinement, SEAM_DEPTH_MIN dip gate, seam-led confidence),
+    # kept for reference / a future non-span mode. Its constants (SEAM_DEPTH_MIN, SEAM_FADE_MS,
+    # ENERGY_MIN_WINDOW) and `_find_cand_anchor` are referenced ONLY from here. The live guard
+    # is now the plan-time silence anchoring in `_silence_cut`; if you resurrect this path,
+    # re-red-team the seam gate before trusting it.
+    # =========================================================================
     cd = audio_io.duration_seconds(cand, sr)
     cand_words = meta.get("cand_words") or []
 

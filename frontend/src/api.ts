@@ -144,6 +144,10 @@ export interface LocalizationScripts {
 export interface LocalizationBlock {
   cur: LocalizationScripts;
   orig: LocalizationScripts;
+  /** The Simplified hanzi the WORKING take currently says — re-baselined at each combine.
+   * Undefined before the first combine (then compare against `orig.Hans`). Drives whether
+   * "Generate from edit" has anything new to do since the last take was built. */
+  working_hans?: string | null;
 }
 
 export interface Field {
@@ -170,6 +174,10 @@ export interface Field {
   audio: AudioLinks;
   versions: AudioVersion[];
   manual_clips: ManualClip[];
+  /** Transient (regenerate response only): a CJK surgical splice was requested but bailed,
+   * so the WHOLE narration was regenerated instead. Lets the FE flag that the whole clip
+   * changed. Not persisted — absent on normal field fetches. */
+  cjk_fallback?: boolean;
 }
 
 export interface Overlay {
@@ -211,6 +219,9 @@ export interface Session {
    * editor + V2/V3 audition and hides splice/regenerate/coverage UI. Additive —
    * every other language renders exactly as before. */
   is_zh: boolean;
+  /** Narration language ("English" | "Mandarin" | "Japanese"). Gates the CJK-specific
+   * SceneDesc controls (JP hides the English selection ops; its last/kana line is voiced). */
+  language: string;
   /** Reviewer's per-trip V2/V3 pick for the A/B audition; null until chosen. */
   preferred_version: PreferredVersion | null;
   trip_fields: Field[];

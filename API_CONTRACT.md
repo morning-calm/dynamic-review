@@ -90,6 +90,7 @@ The atom the UI renders/edits. One per editable thing.
   "model_override": null,        // per-session override, null = auto
   "trip_categories": ["UNESCO","Medieval"],   // read-only display
   "is_zh": false,                // Mandarin 4-script + A/B-audio mode (see below)
+  "language": "English",         // narration language: "English"|"Mandarin"|"Japanese" — gates the CJK SceneDesc controls
   "preferred_version": null,     // _ZH only: "v2" | "v3" | null (the per-trip audio pick)
   "trip_fields": [ Field(contentTitleKey), Field(tripgroup_description) ],
   "scenes": [ Scene, … ]
@@ -104,14 +105,21 @@ below is absent/`false`/`null` for non-`_ZH` trips, which are unchanged.
   `cur` = live edited value, `orig` = seed value (for diffing):
   ```jsonc
   { "cur":  { "Hans": "…", "Hant": "…", "zhuyin": "…", "en": "…" },
-    "orig": { "Hans": "…", "Hant": "…", "zhuyin": "…", "en": "…" } }
+    "orig": { "Hans": "…", "Hant": "…", "zhuyin": "…", "en": "…" },
+    "working_hans": "…" }   // Hans the WORKING take currently says; re-baselined at each
+                            // combine (absent before the first). Drives whether "Generate
+                            // from edit" has anything new + is the OLD text for the splice.
   ```
   The trip **description** field carries a 3-key block (`Hans`/`Hant`/`en`, **no** `zhuyin`).
   Pinyin is **never** shown/edited — it is regenerated from the confirmed `zhuyin` at approve.
 - **`Field.audio.v2` / `.v3`** (`_ZH` only) — the two A/B takes for side-by-side audition.
-  In `_ZH` mode the splice slots (`original`/`working`/`candidate`/`fallback`) are all `null`
-  (Chinese audio is A/B, not spliced) and there is **no coverage gating** (`can_mark_done`
-  is server-`true` once the field exists — the human A/B listen is the backstop).
+  **Before the version pick**, the splice slots (`original`/`working`/`candidate`/`fallback`)
+  are all `null` (audio is A/B, not spliced) and there is **no coverage gating** (`can_mark_done`
+  is server-`true` once the field exists — the human A/B listen is the backstop). **After the
+  pick** the chosen take is promoted to `working`, `v2`/`v3` drop, and the field regenerates/
+  combines like any other language — SceneDesc gets the **surgical CJK splice** (see
+  `regenerate`), Q&A stays whole-regen. Hanzi is edited in the 4-script block, so the
+  narration-selection ops (highlight / alt-text / trim-noise / insert-pause) are hidden.
 - On **approve**, an `_ZH` trip's reviewed text writes back to `TripLocalizations/{id}`
   (`target.{Hans,Hant,zhuyin}` + `home.en`, regenerated `target.pinyin`, `status:"reviewed"`)
   and the derived Trip doc `quickTrips[i]` (`SceneDesc`/`questionKey`/`questionOption` =
@@ -134,7 +142,7 @@ below is absent/`false`/`null` for non-`_ZH` trips, which are unchanged.
 | `PUT /api/sessions/{sid}/fields/{fid}` | `{ "current_text": "…" }` | `Field` — autosave. Resets `played_coverage` + drops `flag` off `done` if text changed. |
 | `PUT /api/sessions/{sid}/fields/{fid}/localization` | `{ "script": "Hans\|Hant\|zhuyin\|en", "text": "…" }` | `Field` — **`_ZH` only.** Autosave one script of the 4-script block. `422` if the script isn't editable on that field (e.g. `zhuyin` on the description). Drops `flag` off `done` when the value changes. No audio side-effects (Chinese audio is A/B). |
 | `POST /api/sessions/{sid}/version` | `{ "version": "v2"\|"v3" }` | `Session` — **`_ZH` only.** Set the trip's preferred ElevenLabs A/B version. `422` on an unknown version. |
-| `POST /api/sessions/{sid}/fields/{fid}/regenerate` | `{ "mode": "segment"|"whole"|"highlight", "range": {"start":int,"end":int}? }` | `Field` with `audio.candidate` set **ASAP**. `segment` diffs current vs original; `highlight` uses `range`; `whole` re-voices the whole field. Non-Latin / numeral-dense / Gemini-fallback → `flag:"edit_required"` and no candidate (whole-regen advised). |
+| `POST /api/sessions/{sid}/fields/{fid}/regenerate` | `{ "mode": "segment"|"whole"|"highlight", "range": {"start":int,"end":int}? }` | `Field` with `audio.candidate` set **ASAP**. `segment` diffs current vs original; `highlight` uses `range`; `whole` re-voices the whole field. Non-Latin (English engine) / numeral-dense / Gemini-fallback → `flag:"edit_required"` and no candidate (whole-regen advised). **CJK (`_ZH` hanzi / `_JP` kana) SceneDesc:** `segment` attempts a surgical char-level splice via the isolated forced aligner; when it can't cut cleanly it whole-regenerates the narration and returns `"cjk_fallback": true` on the Field (transient — a UI hint that the whole clip changed, not persisted). `_ZH`/`_JP` ignore `range` (no selection-based ops). |
 | `POST /api/sessions/{sid}/fields/{fid}/combine` | — | `Field` — splices candidate into working (SceneDesc) or replaces (whole/Q&A); archives prior take to `versions`; sets `splice_confidence`; may auto-set `flag:"edit_required"`. |
 | `POST /api/sessions/{sid}/fields/{fid}/fallback` | `{ "extent": "sentence"|"scene"|"custom", "text": "…"?, "description": "…" }` | `Field` — generates a **standalone ElevenLabs** clip (`audio.fallback`), sets `flag:"edit_required"`, stores the description for the admin. |
 | `POST /api/sessions/{sid}/fields/{fid}/import-mp3` | multipart `file=<mp3>` | `Field` — **admin** replaces working `{i}.mp3` with a hand-edited file; archives prior take. |

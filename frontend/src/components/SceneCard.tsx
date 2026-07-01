@@ -20,7 +20,18 @@ interface SceneCardProps {
   /** `_ZH` A/B-audition mode (review-app-chinese-review.md): renders the 4-script
    * editable block + V2/V3 players instead of the splice/regenerate flow. */
   isZh?: boolean;
+  /** Narration language ("English"/"Mandarin"/"Japanese"). Japanese SceneDesc voices the
+   * last (kana) line and can't use the English selection ops, so those are gated off. */
+  language?: string;
 }
+
+/** The line ElevenLabs actually voices for a Japanese SceneDesc: the last non-empty line
+ * (the kana under the kanji). Editing only the kanji line therefore changes nothing in the
+ * audio — the "Generate from edit" gate keys off this so it doesn't light up spuriously. */
+const spokenLine = (text: string): string => {
+  const ls = text.split('\n').map((s) => s.trim()).filter(Boolean);
+  return ls.length ? ls[ls.length - 1] : text;
+};
 
 const optionIndex = (fieldPath: string): number | null => {
   const m = fieldPath.match(/^questionOption\[(\d+)\]$/);
@@ -54,7 +65,8 @@ const SceneMedia = ({ scene }: { scene: Scene }) => {
   );
 };
 
-const SceneCard = ({ scene, fields, sid, onFieldUpdate, readOnly = false, isZh = false }: SceneCardProps) => {
+const SceneCard = ({ scene, fields, sid, onFieldUpdate, readOnly = false, isZh = false, language }: SceneCardProps) => {
+  const isJp = language === 'Japanese';
   const sceneDesc = fields.find((f) => f.field_path === 'SceneDesc');
   const titleKey = fields.find((f) => f.field_path === 'titleKey');
   const questionKey = fields.find((f) => f.field_path === 'questionKey');
@@ -137,6 +149,12 @@ const SceneCard = ({ scene, fields, sid, onFieldUpdate, readOnly = false, isZh =
                     rows={4}
                   />
                 </div>
+                {isJp && (
+                  <p className="text-xs text-gray-500">
+                    Audio is voiced from the <span className="text-gray-300">last line (kana)</span>. Edit
+                    that line to change the narration — editing only the kanji won’t alter the audio.
+                  </p>
+                )}
                 {sceneDesc.has_audio && (
                   <>
                     <AudioReview field={sceneDesc} sid={sid} onFieldUpdate={onFieldUpdate} />
@@ -145,8 +163,18 @@ const SceneCard = ({ scene, fields, sid, onFieldUpdate, readOnly = false, isZh =
                         field={sceneDesc}
                         sid={sid}
                         onFieldUpdate={onFieldUpdate}
-                        hasTextChange={descLive !== sceneDesc.original_text}
+                        // JP: only a change to the voiced (kana) line should enable "Generate
+                        // from edit"; English keys off the whole field as before.
+                        hasTextChange={
+                          isJp
+                            ? spokenLine(descLive) !== spokenLine(sceneDesc.original_text)
+                            : descLive !== sceneDesc.original_text
+                        }
                         getSelectionRange={getSelectionRange}
+                        // JP SceneDesc goes through the CJK backend branch, which ignores the
+                        // selection range (highlight/alt/trim-noise/insert-pause all rely on
+                        // English Whisper token→char mapping). Hide them so they can't mislead.
+                        hasSelection={!isJp}
                         onBeforeRegenerate={async () => {
                           await descFlushRef.current?.();
                         }}

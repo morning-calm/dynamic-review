@@ -66,17 +66,27 @@ to refresh (commits+pushes this repo's manifest).
   **`Audio Generation/Sent to KP/MP3/<trip>/`** (Japan `_EN`) → shallow nested search.
 - **Level speed** (`audio_core.speed_for_trip`, honoured by `eleven_multilingual_v2`):
   **A12=0.7, B1=0.85, B2+/native=1.0**. Applied at seed/regenerate/fallback. *Japanese uses
-  the v3 API where speed is always 1.0; HSK Mandarin is TBD* — branch by language/model
-  there when those get backend support.
-- **Splice engine** `audio_splice.py` (SceneDesc only; Q&A + "whole" = full regen). The
-  hard-won correctness points (DON'T regress — two red-teams): cut times from **raw Whisper
-  `word.start/end`** via SequenceMatcher (NOT `subtitles.token_timeline`); **anchor-verify
-  → `edit_required`** on mismatch; **non-Latin / Gemini-fallback → `edit_required`**;
-  **pause-aligned anchors + seam gate**; **level-match the candidate to the kept context
-  before the cut**; **boundary cuts are NOT energy-refined** (they'd truncate the new
-  audio); splice in **mp3-PCM, peak-limit only the insert**; the human listen is
-  load-bearing. `done` only unlocks after ≥95% genuine playback (seek-proof) and resets when
-  the audio/text changes.
+  the v3 API where speed is always 1.0; HSK3 Mandarin = v2 @ 0.85 (HSK1-2 TBD)* — branch by
+  language/model there when those get backend support.
+- **Splice engine (English)** `audio_splice.py` (SceneDesc only; Q&A + "whole" = full regen).
+  The hard-won correctness points (DON'T regress — two red-teams): cut times from **raw Whisper
+  `word.start/end`** via SequenceMatcher (NOT `subtitles.token_timeline`); **non-Latin /
+  Gemini-fallback → `edit_required`**; **pause-aligned cuts anchored in REAL silence at plan
+  time** (edit_required if no pause within cap); **level-match the candidate to the kept context
+  before the cut**; **boundary cuts are NOT energy-refined** (they'd truncate the new audio);
+  splice in **mp3-PCM, peak-limit only the insert**; the human listen is load-bearing. Every
+  live plan is `span_only` → `_splice_span_only`; the older anchor-word + combine-time seam-gate
+  branch of `do_splice` is currently UNUSED (marked). `done` only unlocks after ≥95% genuine
+  playback (seek-proof) and resets when the audio/text changes.
+- **Splice engine (CJK)** `cjk_splice.py` (`_ZH` hanzi / `_JP` kana SceneDesc) — ADDITIVE, kept
+  ISOLATED from the English engine (which can't align spaceless CJK). Char-diffs OLD→NEW, expands
+  to the enclosing clause, reads cut times from an **MMS forced aligner** in a torch subprocess
+  (`cjk_align.py` client → `research/cjk-aligner/align_service.py`, its own py3.12 venv), gates on
+  real silence + anchor confidence + global mean char-score, then REUSES `audio_splice.do_splice`
+  (span_only) to assemble. Any uncertainty → whole-regen (returns `cjk_fallback`). OLD text =
+  `localization.working_hans` (re-baselined at each combine) for ZH / the last (kana) line for JP.
+  In-place working-take editors (trim-noise/silence, insert-pause) clear a pending candidate so a
+  later combine can't splice at stale cut times.
 - **Versioning:** canonical `<i>.mp3`; superseded takes archived `versions/<i>v<n>.mp3`.
 - **Submit** writes changed **text** to staging Trip + TripGroup (desc + re-derived
   `tripCategories`) and leaves the corrected `<i>.mp3` masters in place — **Stage 9**
@@ -106,8 +116,9 @@ to refresh (commits+pushes this repo's manifest).
 constants) · `db.py` (SQLite/WAL) · `staging.py` (Firebase read + targeted submit) ·
 `sessions.py` (seed/resume, field ops, splice orchestration, submit, `resolve_audio_dir`,
 R2-upload hooks) · `audio_core.py` (EL TTS + Gemini clean + `speed_for_trip` + VOICES) ·
-`audio_splice.py` (the splice engine) · `audio_io.py` (ffmpeg/numpy DSP) · `thumbs.py` ·
-`review_audio.py` · `routes_sessions.py` / `routes_audio.py`.
+`audio_splice.py` (English splice engine) · `cjk_splice.py` (`_ZH`/`_JP` surgical splice) ·
+`cjk_align.py` (client for the isolated MMS forced-aligner subprocess) · `audio_io.py`
+(ffmpeg/numpy DSP) · `thumbs.py` · `review_audio.py` · `routes_sessions.py` / `routes_audio.py`.
 
 ## Remote review / deployment
 For letting a reviewer work **off-machine**. The audio *bytes* are public at
@@ -121,10 +132,13 @@ And the running app still *serves* audio through the **local backend `/audio`** 
 submit) runs the **splice engine on the backend** (ElevenLabs + Whisper + ffmpeg + the master
 audio). So the **backend must be reachable** — public audio removes only one blocker.
 
-**Path A — tunnel (near-term, ~hours):** run `cloudflared`/`ngrok` over the locally-running
-app; the reviewer gets a URL, the backend stays here with all its files/GPU. Requires only:
-(1) a **strong `REVIEW_APP_TOKEN`** (not `dev-token` — an open tunnel exposes `/regenerate`
-[credit burn] and `/submit` [staging write]); (2) this machine stays on, both servers up.
+**Path A — tunnel (near-term, SHIPPED):** run `cloudflared` (tunnel `review-app`) over the
+locally-running app; the reviewer gets a URL, the backend stays here with all its files/GPU.
+Auth is now **DB-backed users + opaque Bearer tokens** (`auth.py`, provisioned via
+`backend/manage.py`) — the old shared `REVIEW_APP_TOKEN` is gone. Serve the built SPA from the
+backend so one hostname fronts UI+API+media: env `REVIEW_APP_SERVE_FRONTEND=1` +
+`REVIEW_APP_COOKIE_SECURE=1`, rebuild `frontend/dist`, `cloudflared tunnel run`. Requires this
+machine stays on with uvicorn up.
 
 **Path B — deploy (proper, the real lift):**
 1. **Frontend** → Vercel (mirrors library-app). Easy.
@@ -133,8 +147,8 @@ app; the reviewer gets a URL, the backend stays here with all its files/GPU. Req
    secrets**, and the **source audio**. *Audio-on-R2 helps:* change the backend to **fetch
    originals from `review-audio`** instead of needing local masters — removes the biggest
    local-file dependency.
-3. **Real auth** — the reviewer/admin login (stage-2 role split); a public backend can't run
-   on a shared token.
+3. **Real auth** — DONE: DB-backed users + Bearer tokens + admin/reviewer role split (`auth.py`),
+   language-scoped. (A hosted deploy still needs the secrets/data below.)
 4. *(Optional)* point the player at the **R2 audio domain** to offload audio serving — but
    in-progress candidates (pre-combine) still come from the backend.
 
@@ -144,4 +158,10 @@ app; the reviewer gets a URL, the backend stays here with all its files/GPU. Req
 - **Voice/voice_settings** are a best-effort guess (per-trip `voice_overrides.json` >
   `staging_choices.json` > country default) — the human listen is the backstop.
 - Stale-on-resume: a long-paused session diffs against its seed snapshot (no "staging changed"
-  notice yet); submit re-fetches live so it won't clobber.
+  notice yet); submit re-fetches live so it won't clobber. (Approve now HARD-BLOCKS if a live
+  scene the review edits has since disappeared, instead of silently dropping the write.)
+- **CJK editing caveats:** JP narration is voiced from the **last (kana) line** of SceneDesc —
+  editing only the kanji line is a no-op (the UI hints this). The forced aligner needs its
+  py3.12 venv at `research/cjk-aligner/venv` (torch/torchaudio/uroman); without it CJK SceneDesc
+  edits silently fall back to whole-regen. Live ZH demo audio is limited to `sess_5bc56203b40a`
+  (masters gone from disk — a fresh `_ZH` seed needs sources restored).

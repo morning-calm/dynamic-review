@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import os
+import queue
 import subprocess
 import threading
 from pathlib import Path
@@ -26,12 +27,40 @@ _DEF_PY = _REPO / "research" / "cjk-aligner" / "venv" / "Scripts" / "python.exe"
 ALIGNER_PYTHON = os.environ.get("CJK_ALIGNER_PYTHON", str(_DEF_PY))
 ALIGNER_SCRIPT = os.environ.get("CJK_ALIGNER_SCRIPT", str(_DEF_SCRIPT))
 
+# Wall-clock caps so a hung child can never block a request thread (and the _lock) forever.
+# READY is generous: the FIRST spawn may download the MMS weights to the torch hub cache.
+_READY_TIMEOUT = float(os.environ.get("CJK_ALIGNER_READY_TIMEOUT", "180"))
+_ALIGN_TIMEOUT = float(os.environ.get("CJK_ALIGNER_ALIGN_TIMEOUT", "120"))
+
 _proc: subprocess.Popen | None = None
 _lock = threading.Lock()
 
 
 class AlignerError(RuntimeError):
     """The aligner subprocess failed to start, crashed, or returned an error."""
+
+
+def _readline_timeout(pipe, timeout: float) -> str | None:
+    """``pipe.readline()`` with a wall-clock timeout — Windows anonymous pipes have no
+    selectable timeout, so read on a daemon thread and wait on a queue. Returns the line,
+    ``""`` on EOF, or ``None`` if it didn't arrive in time (the caller then kills the
+    process, which unblocks the orphaned reader)."""
+    q: "queue.Queue" = queue.Queue()
+
+    def _rd():
+        try:
+            q.put(pipe.readline())
+        except Exception as e:  # noqa: BLE001 — surfaced to the caller below
+            q.put(e)
+
+    threading.Thread(target=_rd, daemon=True).start()
+    try:
+        r = q.get(timeout=timeout)
+    except queue.Empty:
+        return None
+    if isinstance(r, BaseException):
+        raise r
+    return r
 
 
 def available() -> bool:
@@ -47,10 +76,11 @@ def _spawn() -> subprocess.Popen:
     p = subprocess.Popen([ALIGNER_PYTHON, ALIGNER_SCRIPT],
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                          text=True, encoding="utf-8", env=env, bufsize=1)
-    ready = p.stdout.readline() if p.stdout else ""
-    if '"ready"' not in ready:
+    ready = _readline_timeout(p.stdout, _READY_TIMEOUT) if p.stdout else ""
+    if not ready or '"ready"' not in ready:
         p.kill()
-        raise AlignerError(f"aligner did not report ready: {ready!r}")
+        raise AlignerError(
+            f"aligner did not report ready within {_READY_TIMEOUT:.0f}s: {ready!r}")
     return p
 
 
@@ -71,10 +101,13 @@ def align(audio_path: str | Path, text: str) -> list[dict]:
         try:
             p.stdin.write(req)
             p.stdin.flush()
-            line = p.stdout.readline()
+            line = _readline_timeout(p.stdout, _ALIGN_TIMEOUT)
         except (BrokenPipeError, OSError) as e:
             _shutdown_locked()
             raise AlignerError(f"aligner pipe broke: {e}")
+        if line is None:            # timed out — kill so the next call respawns a clean proc
+            _shutdown_locked()
+            raise AlignerError(f"aligner timed out after {_ALIGN_TIMEOUT:.0f}s")
     if not line:
         raise AlignerError("aligner returned no output (crashed?)")
     res = json.loads(line)

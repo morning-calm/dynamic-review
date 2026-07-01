@@ -14,6 +14,10 @@ interface RegenerateControlsProps {
   getSelectionRange?: () => { start: number; end: number } | null;
   /** Q&A fields are short → whole-regenerate only. */
   wholeOnly?: boolean;
+  /** False for `_ZH` SceneDesc: the hanzi is edited in the 4-script block, not a single
+   * narration textarea, so the selection-based ops (highlight / alt-in-place / trim-noise /
+   * insert-pause) don't apply — but "Generate from edit" (whole-text diff) still does. */
+  hasSelection?: boolean;
   /** Flushes a pending text save before regenerating so the server diffs the saved text (S3). */
   onBeforeRegenerate?: () => Promise<void> | void;
 }
@@ -40,6 +44,7 @@ const RegenerateControls = ({
   hasTextChange,
   getSelectionRange,
   wholeOnly = false,
+  hasSelection = true,
   onBeforeRegenerate,
 }: RegenerateControlsProps) => {
   const [busy, setBusy] = useState(false);
@@ -58,6 +63,9 @@ const RegenerateControls = ({
     onFieldUpdate(updated);
     if (!updated.audio.candidate && updated.flag === 'edit_required') {
       toast.info('Could not splice automatically — flagged edit-required. Try whole-regenerate or send to Create new.');
+    } else if (updated.cjk_fallback) {
+      // Surgical CJK splice bailed → the whole narration was regenerated, not just the edit.
+      toast.info('Couldn’t splice just the edit cleanly — regenerated the whole narration. Re-listen to the full clip.');
     }
   };
 
@@ -290,42 +298,48 @@ const RegenerateControls = ({
           >
             Generate from edit
           </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onHighlight}
-            title="Select text in the narration, then click"
-            className={`${btn} border-gray-600 text-gray-200`}
-          >
-            Regenerate highlighted
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onAltText}
-            title="Select text in the narration, then supply alternate/phonetic text to speak"
-            className={`${btn} border-gray-600 text-gray-200`}
-          >
-            …with alt text
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onTrimNoise}
-            title="Backstop: highlight the space where unwanted noise/a leftover sliver is heard, then click to trim it from the working take"
-            className={`${btn} border-gray-600 text-gray-200`}
-          >
-            Trim highlighted noise
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onInsertSilence}
-            title="Click in the narration where a pause should go (usually after a full stop), then click to insert a 1s silence there"
-            className={`${btn} border-gray-600 text-gray-200`}
-          >
-            Insert 1s pause at cursor
-          </button>
+          {/* Selection-based ops need a single narration textarea → hidden for _ZH (hanzi is
+              edited in the 4-script block); "Generate from edit" above still works there. */}
+          {hasSelection && (
+            <>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onHighlight}
+                title="Select text in the narration, then click"
+                className={`${btn} border-gray-600 text-gray-200`}
+              >
+                Regenerate highlighted
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onAltText}
+                title="Select text in the narration, then supply alternate/phonetic text to speak"
+                className={`${btn} border-gray-600 text-gray-200`}
+              >
+                …with alt text
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onTrimNoise}
+                title="Backstop: highlight the space where unwanted noise/a leftover sliver is heard, then click to trim it from the working take"
+                className={`${btn} border-gray-600 text-gray-200`}
+              >
+                Trim highlighted noise
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onInsertSilence}
+                title="Click in the narration where a pause should go (usually after a full stop), then click to insert a 1s silence there"
+                className={`${btn} border-gray-600 text-gray-200`}
+              >
+                Insert 1s pause at cursor
+              </button>
+            </>
+          )}
           {trimSilenceBtn}
         </>
       )}
