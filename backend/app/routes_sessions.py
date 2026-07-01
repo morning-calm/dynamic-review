@@ -213,3 +213,14 @@ def post_complete(trip_id: str, admin=Depends(auth.require_admin),
 @router.delete("/trips/{trip_id}/complete")
 def delete_complete(trip_id: str, admin=Depends(auth.require_admin)):
     return sessions.uncomplete_trip(admin, trip_id)
+
+
+# --- In-app prioritisation (pin to top) ---
+@router.post("/trips/{trip_id}/pin")
+def post_pin_trip(trip_id: str, admin=Depends(auth.require_admin)):
+    return sessions.pin_trip(admin, trip_id)
+
+
+@router.delete("/trips/{trip_id}/pin")
+def delete_pin_trip(trip_id: str, admin=Depends(auth.require_admin)):
+    return sessions.unpin_trip(admin, trip_id)

@@ -311,6 +311,14 @@ def list_trips(user=None) -> list[dict]:
     if user is not None:
         from . import auth   # lazy (auth imports sessions) — no module-load cycle
         trips = [t for t in trips if auth.language_allowed(user, t["trip_id"])]
+    # In-app pins float to the top (newest pin first); everything else keeps the manifest
+    # = Trello-card order (a stable sort preserves it). `pinned` drives the UI indicator.
+    pins = {r["trip_id"]: r["pinned_at"]
+            for r in db.query("SELECT trip_id, pinned_at FROM trip_priority")}
+    for t in trips:
+        t["pinned"] = t["trip_id"] in pins
+    if pins:
+        trips.sort(key=lambda t: (0, -pins[t["trip_id"]]) if t["pinned"] else (1, 0.0))
     return trips
 
 
@@ -2011,6 +2019,23 @@ def uncomplete_trip(user, trip_id: str) -> dict:
     """ADMIN un-complete: delete the completed_trips row so the trip returns to the main
     list and becomes openable again. Idempotent (no-op if not completed)."""
     db.execute("DELETE FROM completed_trips WHERE trip_id=?", (trip_id,))
+    return {"ok": True}
+
+
+def pin_trip(user, trip_id: str) -> dict:
+    """ADMIN: pin a trip to the top of the reviewer list (above the Trello base order).
+    Idempotent; re-pinning refreshes pinned_at, moving it back to the top."""
+    db.execute(
+        "INSERT INTO trip_priority(trip_id,pinned_by,pinned_at) VALUES(?,?,?) "
+        "ON CONFLICT(trip_id) DO UPDATE SET pinned_by=excluded.pinned_by, "
+        "pinned_at=excluded.pinned_at",
+        (trip_id, getattr(user, "username", None), time.time()))
+    return {"ok": True}
+
+
+def unpin_trip(user, trip_id: str) -> dict:
+    """ADMIN: remove a trip's pin — it returns to the Trello base order."""
+    db.execute("DELETE FROM trip_priority WHERE trip_id=?", (trip_id,))
     return {"ok": True}
 
 

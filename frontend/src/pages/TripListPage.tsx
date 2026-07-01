@@ -98,6 +98,12 @@ const TripListPage = () => {
         setTrips([]);
       });
 
+  const togglePin = (trip: TripListItem) => {
+    (trip.pinned ? api.unpinTrip(trip.trip_id) : api.pinTrip(trip.trip_id))
+      .then(refreshTrips)
+      .catch((e: unknown) => toast.error(`Pin failed: ${e instanceof ApiError ? e.detail : 'network error'}`));
+  };
+
   const openCompleteModal = (trip: TripListItem) => {
     setCompleteNote('');
     setCompleteTarget(trip);
@@ -125,9 +131,12 @@ const TripListPage = () => {
     return c;
   }, [trips]);
 
-  // Filter by lane, then group by family (place) with variants sorted by level.
+  // Filter by lane, then group by family (place). Priority comes from the SERVER order
+  // (pinned trips first, then Trello card order), so groups are ordered by their topmost
+  // server position and pinned variants float to the top within a group.
   const groups = useMemo(() => {
     if (!trips) return [];
+    const serverIndex = new Map(trips.map((t, i) => [t.trip_id, i] as const));
     const filtered = lane === 'all' ? trips : trips.filter((t) => t.lane === lane);
     const byFamily = new Map<string, TripListItem[]>();
     for (const t of filtered) {
@@ -140,10 +149,14 @@ const TripListPage = () => {
       .map(([family, items]) => ({
         family,
         items: [...items].sort(
-          (a, b) => levelRank(a.level) - levelRank(b.level) || a.trip_id.localeCompare(b.trip_id),
+          (a, b) =>
+            Number(b.pinned) - Number(a.pinned) ||
+            levelRank(a.level) - levelRank(b.level) ||
+            a.trip_id.localeCompare(b.trip_id),
         ),
+        rank: Math.min(...items.map((t) => serverIndex.get(t.trip_id) ?? Number.MAX_SAFE_INTEGER)),
       }))
-      .sort((a, b) => a.family.localeCompare(b.family));
+      .sort((a, b) => a.rank - b.rank);
   }, [trips, lane]);
 
   const openTrip = (tripId: string) => {
@@ -213,6 +226,9 @@ const TripListPage = () => {
               {g.items.map((trip) => (
                 <li key={trip.trip_id} className="flex items-center justify-between gap-4 px-4 py-2.5">
                   <div className="flex min-w-0 items-center gap-2">
+                    {trip.pinned && (
+                      <span className="shrink-0 text-amber-400" title="Pinned to top">📌</span>
+                    )}
                     <span className="shrink-0 rounded bg-sky-900/50 px-1.5 py-0.5 text-[11px] font-medium text-sky-300">
                       {trip.level || '—'}
                     </span>
@@ -227,6 +243,20 @@ const TripListPage = () => {
                     )}
                     {!trip.reviewable && <span className="text-[11px] text-amber-400/80">no local audio</span>}
                     <StatusBadge trip={trip} />
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => togglePin(trip)}
+                        className={`rounded border px-2 py-1 text-xs ${
+                          trip.pinned
+                            ? 'border-amber-500 text-amber-300 hover:bg-amber-900/30'
+                            : 'border-gray-600 text-gray-300 hover:bg-gray-700'
+                        }`}
+                        title={trip.pinned ? 'Unpin from top' : 'Pin to top of the reviewer list'}
+                      >
+                        {trip.pinned ? 'Unpin' : 'Pin'}
+                      </button>
+                    )}
                     {isAdmin && (
                       <button
                         type="button"

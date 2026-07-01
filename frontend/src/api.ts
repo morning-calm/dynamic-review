@@ -218,6 +218,8 @@ export interface TripListItem {
   level: string;
   family: string;
   reviewable: boolean;
+  /** Admin pinned this trip to the top of the reviewer list (above Trello order). */
+  pinned: boolean;
 }
 
 export interface PlayedResponse {
@@ -510,6 +512,17 @@ export const api = {
   /** Admin only: un-complete — the trip returns to the main list and is reviewable again. */
   uncompleteTrip: (tripId: string): Promise<{ ok: boolean }> =>
     requestJson<{ ok: boolean }>(`/api/trips/${encodeURIComponent(tripId)}/complete`, {
+      method: 'DELETE',
+      headers: jsonHeaders(),
+    }),
+
+  /** Admin only: pin a trip to the top of the reviewer list (above the Trello base order). */
+  pinTrip: (tripId: string): Promise<{ ok: boolean }> =>
+    postJson(`/api/trips/${encodeURIComponent(tripId)}/pin`),
+
+  /** Admin only: remove a trip's pin — it returns to the Trello base order. */
+  unpinTrip: (tripId: string): Promise<{ ok: boolean }> =>
+    requestJson<{ ok: boolean }>(`/api/trips/${encodeURIComponent(tripId)}/pin`, {
       method: 'DELETE',
       headers: jsonHeaders(),
     }),

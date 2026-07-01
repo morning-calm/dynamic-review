@@ -131,6 +131,14 @@ CREATE TABLE IF NOT EXISTS completed_trips (
     note         TEXT NOT NULL DEFAULT ''
 );
 
+-- In-app prioritisation: an admin "pins" a trip to the top of the reviewer list. The
+-- Trello card order is the base; pinned trips float above it (newest pin first).
+CREATE TABLE IF NOT EXISTS trip_priority (
+    trip_id   TEXT PRIMARY KEY,
+    pinned_by TEXT NOT NULL,
+    pinned_at REAL NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS ix_fields_session ON field_edits(session_id);
 CREATE INDEX IF NOT EXISTS ix_versions_field ON audio_versions(field_id);
 CREATE INDEX IF NOT EXISTS ix_sessions_trip ON sessions(trip_id, status);

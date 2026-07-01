@@ -102,7 +102,7 @@ The atom the UI renders/edits. One per editable thing.
 | `POST /api/login` | `{ "username","password" }` | `{ "token", "user": {"username","role","languages"} }` + `Set-Cookie: review_session`. `401` generic on bad creds. **(unauthenticated)** |
 | `POST /api/logout` | — | `204` — revokes the presented token + clears the cookie. |
 | `GET /api/me` | — | `{ "username","role","languages" }` — the caller's identity (FE bootstraps from this). |
-| `GET /api/trips` | — | `[ { "trip_id","title","folder_name","lane","level","family","has_session","status","edit_required","reviewable" } ]` — **filtered to the caller's language(s)** (admins see all). **Excludes completed trips** (approved or admin-marked — they move to `GET /api/completed`). |
+| `GET /api/trips` | — | `[ { "trip_id","title","folder_name","lane","level","family","has_session","status","edit_required","reviewable","pinned" } ]` — **filtered to the caller's language(s)** (admins see all). **Excludes completed trips** (they move to `GET /api/completed`). **Ordered:** admin-**pinned** trips first (newest pin first), then Trello card order (the manifest's base sort). |
 | `GET /api/voices` | — | `{ "voices": [ {"name","display","gender","language","country","model"} ], "models": ["eleven_multilingual_v2","eleven_v3"] }` — the approved-voice registry for the narration picker. |
 | `POST /api/sessions` | `{ "trip_id": "…" }` | `Session` — **creates or resumes** the trip's session (resumes any `in_review`/`submitted`/`changes_requested` one). **`403`** if the trip's language isn't the caller's. **`409`** if the trip is **completed** (an admin must un-complete it first). `422` if folderName isn't a valid path. |
 | `GET /api/sessions/{sid}` | — | `Session` (full state, for resume) |
@@ -126,6 +126,8 @@ The atom the UI renders/edits. One per editable thing.
 | `GET /api/completed` | — | `[ { "trip_id","title","language","method","completed_by","completed_at","session_id" } ]` — the **completed queue** (approved + admin-marked). **Both roles**; reviewers filtered to their language(s), admins see all. `method` ∈ `approved｜manual`; `session_id` is the approved session (null for `manual`). Sorted newest first. |
 | `POST /api/trips/{trip_id}/complete` | `{ "note"?: "…" }` | `{ "ok": true }` — **admin only.** Manual (bypass) completion for work done in the old system; idempotent upsert (`method="manual"`, no session). **Writes NOTHING to staging or masters** — a workflow marker only. `200` even if the trip has no session. |
 | `DELETE /api/trips/{trip_id}/complete` | — | `{ "ok": true }` — **admin only.** Un-complete: removes the trip from the completed queue so it returns to `GET /api/trips` and is openable again. Idempotent. |
+| `POST /api/trips/{trip_id}/pin` | — | `{ "ok": true }` — **admin only.** Pin a trip to the top of the reviewer list (above the Trello base order). Idempotent; re-pinning moves it back to the top. |
+| `DELETE /api/trips/{trip_id}/pin` | — | `{ "ok": true }` — **admin only.** Un-pin — the trip returns to the Trello base order. |
 
 ## Notes for implementers
 - `fid` is the `field_edits.id`. The frontend never constructs audio paths — it uses the URLs in `Field.audio` / `Field.versions`.
