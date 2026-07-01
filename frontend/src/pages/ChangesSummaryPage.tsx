@@ -8,6 +8,8 @@ import {
   isEditableStatus,
   type ApproveResponse,
   type Field,
+  type LocalizationBlock,
+  type LocalizationScripts,
   type Session,
   type SubmitResponse,
 } from '../api';
@@ -51,6 +53,19 @@ const flatten = (s: Session): FlatField[] => {
 
 const fieldLabel = (ff: FlatField): string =>
   ff.sceneIndex === null ? ff.field.field_path : `Scene ${ff.sceneIndex} · ${ff.field.field_path}`;
+
+// _ZH edits live in the localization block (cur vs orig per script), NOT current_text, so
+// the change list must diff each of the 4 scripts.
+const ZH_SCRIPTS: [keyof LocalizationScripts, string][] = [
+  ['Hant', 'Traditional'],
+  ['Hans', 'Simplified'],
+  ['zhuyin', 'Zhuyin'],
+  ['en', 'English'],
+];
+const zhChangedScripts = (b: LocalizationBlock): [keyof LocalizationScripts, string][] =>
+  ZH_SCRIPTS.filter(([s]) => (b.cur[s] ?? '') !== (b.orig[s] ?? ''));
+const fieldChanged = (f: Field): boolean =>
+  f.localization ? zhChangedScripts(f.localization).length > 0 : f.current_text !== f.original_text;
 
 const ImportMp3 = ({ field, sid, onUpdate }: { field: Field; sid: string; onUpdate: (f: Field) => void }) => {
   const [busy, setBusy] = useState(false);
@@ -120,6 +135,13 @@ const ResultPanel = ({ result }: { result: NonNullable<ResultState> }) => {
       ) : (
         <p className="mt-2 text-xs text-custom-green">No validation issues.</p>
       )}
+      {result.kind === 'approve' && (result.data.zh_warnings?.length ?? 0) > 0 && (
+        <ul className="mt-2 space-y-1 text-xs text-amber-300">
+          {result.data.zh_warnings!.map((w, i) => (
+            <li key={i}>⚠ {w}</li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 };
@@ -160,7 +182,7 @@ const ChangesSummaryPage = () => {
   const onUpdate = (f: Field) => setSession((s) => (s ? replaceField(s, f) : s));
 
   const all = useMemo(() => (session ? flatten(session) : []), [session]);
-  const changed = useMemo(() => all.filter((ff) => ff.field.current_text !== ff.field.original_text), [all]);
+  const changed = useMemo(() => all.filter((ff) => fieldChanged(ff.field)), [all]);
   const editRequired = useMemo(() => all.filter((ff) => ff.field.flag === 'edit_required'), [all]);
   const notDone = useMemo(() => all.filter((ff) => ff.field.flag !== 'done').length, [all]);
   const allDone = all.length > 0 && notDone === 0;
@@ -335,6 +357,12 @@ const ChangesSummaryPage = () => {
         {session.status === 'approved' && session.approved_by && (
           <p className="text-xs text-gray-500">Approved by {session.approved_by}.</p>
         )}
+        {session.preferred_version && (
+          <p className="text-xs text-gray-500">
+            Preferred audio version:{' '}
+            <span className="font-medium uppercase text-gray-300">{session.preferred_version}</span>
+          </p>
+        )}
 
         {result && <ResultPanel result={result} />}
 
@@ -408,7 +436,21 @@ const ChangesSummaryPage = () => {
                     </span>
                   )}
                 </div>
-                <InlineDiff original={ff.field.original_text} current={ff.field.current_text} />
+                {ff.field.localization ? (
+                  <div className="mt-1 space-y-1.5">
+                    {zhChangedScripts(ff.field.localization).map(([s, label]) => (
+                      <div key={s}>
+                        <span className="text-[10px] uppercase tracking-wide text-gray-500">{label}</span>
+                        <InlineDiff
+                          original={ff.field.localization!.orig[s] ?? ''}
+                          current={ff.field.localization!.cur[s] ?? ''}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <InlineDiff original={ff.field.original_text} current={ff.field.current_text} />
+                )}
               </li>
             ))}
           </ul>

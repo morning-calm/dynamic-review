@@ -187,6 +187,11 @@ def init() -> None:
             # which audio_versions.n the working take currently sits on, for undo/redo.
             # NULL = the latest version (no undo applied yet).
             conn.execute("ALTER TABLE field_edits ADD COLUMN version_cursor INTEGER")
+        if "localization_json" not in fcols:
+            # Mandarin (_ZH) 4-script block for this field: JSON
+            # {"cur":{Hans,Hant,zhuyin,en}, "orig":{…}}. NULL for every non-_ZH field
+            # (and for _ZH fields with no TripLocalizations entry, e.g. contentTitleKey).
+            conn.execute("ALTER TABLE field_edits ADD COLUMN localization_json TEXT")
         ccols = {r["name"] for r in conn.execute("PRAGMA table_info(manual_clips)")}
         if "comment" not in ccols:
             conn.execute("ALTER TABLE manual_clips ADD COLUMN "
@@ -199,6 +204,13 @@ def init() -> None:
             conn.execute("ALTER TABLE sessions ADD COLUMN approved_by TEXT")
         if "review_note" not in have:
             conn.execute("ALTER TABLE sessions ADD COLUMN review_note TEXT")
+        # Mandarin (_ZH) 4-script + A/B-audio review mode (additive; 0/NULL for every
+        # existing and every non-_ZH session).
+        if "is_zh" not in have:
+            conn.execute("ALTER TABLE sessions ADD COLUMN is_zh INTEGER NOT NULL DEFAULT 0")
+        if "preferred_version" not in have:
+            # the trip's chosen ElevenLabs A/B version: 'v2' | 'v3' | NULL (undecided).
+            conn.execute("ALTER TABLE sessions ADD COLUMN preferred_version TEXT")
         conn.commit()
         _CONN = conn
 

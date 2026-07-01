@@ -10,6 +10,8 @@ import EditableField from '../components/EditableField';
 import FlagControl from '../components/FlagControl';
 import SceneCard from '../components/SceneCard';
 import NarrationControls from '../components/NarrationControls';
+import ZhFieldBlock from '../components/ZhFieldBlock';
+import PreferredVersionControl from '../components/PreferredVersionControl';
 
 /** Scroll the first not-yet-done field into view (document order, read from the DOM
  * anchors FlagControl renders). Returns true if one was found. */
@@ -131,12 +133,16 @@ const ReviewBody = () => {
   // Locked (read-only) once submitted — the backend 403s edit/regenerate/flag
   // endpoints in that window too, so this just keeps the UI honest about it.
   const editable = isEditableStatus(session.status);
+  // Mandarin A/B-audition mode (review-app-chinese-review.md): 4-script editing +
+  // V2/V3 players instead of the splice/regenerate/coverage flow. Every other
+  // language takes the branches below exactly as before.
+  const isZh = session.is_zh;
 
   return (
     <>
       <NavBar
         title={session.trip_id}
-        subtitle={`${session.folder_name} · voice: ${session.voice_display}`}
+        subtitle={`${session.folder_name} · voice: ${session.voice_display}${isZh ? ' · A/B audition (V2/V3)' : ''}`}
         right={
           <>
             <SaveStatus state={saveState} />
@@ -174,28 +180,54 @@ const ReviewBody = () => {
           </div>
         )}
 
-        <NarrationControls session={session} onUpdate={applySession} />
+        {isZh ? (
+          <PreferredVersionControl session={session} onUpdate={applySession} readOnly={!editable} />
+        ) : (
+          <NarrationControls session={session} onUpdate={applySession} />
+        )}
 
         {/* Trip header */}
         <section className="space-y-4 rounded-lg border border-gray-700 bg-gray-800/60 p-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400">Trip</h2>
           {contentTitleKey && (
-            <div className="space-y-2" inert={!editable}>
-              <EditableField field={contentTitleKey} sid={session.id} onFieldUpdate={updateField} label="Display title (contentTitleKey)" singleLine />
-              <FlagControl field={contentTitleKey} sid={session.id} onFieldUpdate={updateField} />
-            </div>
+            isZh ? (
+              <ZhFieldBlock
+                field={contentTitleKey}
+                sid={session.id}
+                onFieldUpdate={updateField}
+                label="Display title (contentTitleKey)"
+                singleLine
+                readOnly={!editable}
+              />
+            ) : (
+              <div className="space-y-2" inert={!editable}>
+                <EditableField field={contentTitleKey} sid={session.id} onFieldUpdate={updateField} label="Display title (contentTitleKey)" singleLine />
+                <FlagControl field={contentTitleKey} sid={session.id} onFieldUpdate={updateField} />
+              </div>
+            )
           )}
           {tripDescription && (
-            <div className="space-y-2" inert={!editable}>
-              <EditableField
+            isZh ? (
+              <ZhFieldBlock
                 field={tripDescription}
                 sid={session.id}
                 onFieldUpdate={updateField}
                 label="TripGroup description"
                 rows={4}
+                readOnly={!editable}
               />
-              <FlagControl field={tripDescription} sid={session.id} onFieldUpdate={updateField} />
-            </div>
+            ) : (
+              <div className="space-y-2" inert={!editable}>
+                <EditableField
+                  field={tripDescription}
+                  sid={session.id}
+                  onFieldUpdate={updateField}
+                  label="TripGroup description"
+                  rows={4}
+                />
+                <FlagControl field={tripDescription} sid={session.id} onFieldUpdate={updateField} />
+              </div>
+            )
           )}
           <div>
             <p className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-400">Trip categories (read-only)</p>
@@ -219,6 +251,7 @@ const ReviewBody = () => {
             sid={session.id}
             onFieldUpdate={updateField}
             readOnly={!editable}
+            isZh={isZh}
           />
         ))}
 

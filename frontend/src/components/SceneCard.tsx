@@ -6,6 +6,7 @@ import RegenerateControls from './RegenerateControls';
 import FlagControl from './FlagControl';
 import CommentBox from './CommentBox';
 import AudioFieldBlock from './AudioFieldBlock';
+import ZhFieldBlock from './ZhFieldBlock';
 
 interface SceneCardProps {
   scene: Scene;
@@ -16,6 +17,9 @@ interface SceneCardProps {
   /** Session is locked (submitted/approving/approved) — edit controls go
    * `inert`, but audio players stay interactive so the take can still be heard. */
   readOnly?: boolean;
+  /** `_ZH` A/B-audition mode (review-app-chinese-review.md): renders the 4-script
+   * editable block + V2/V3 players instead of the splice/regenerate flow. */
+  isZh?: boolean;
 }
 
 const optionIndex = (fieldPath: string): number | null => {
@@ -50,7 +54,7 @@ const SceneMedia = ({ scene }: { scene: Scene }) => {
   );
 };
 
-const SceneCard = ({ scene, fields, sid, onFieldUpdate, readOnly = false }: SceneCardProps) => {
+const SceneCard = ({ scene, fields, sid, onFieldUpdate, readOnly = false, isZh = false }: SceneCardProps) => {
   const sceneDesc = fields.find((f) => f.field_path === 'SceneDesc');
   const titleKey = fields.find((f) => f.field_path === 'titleKey');
   const questionKey = fields.find((f) => f.field_path === 'questionKey');
@@ -100,45 +104,62 @@ const SceneCard = ({ scene, fields, sid, onFieldUpdate, readOnly = false }: Scen
       <div className="mt-4 space-y-4">
         {titleKey && (
           <FieldShell>
-            <AudioFieldBlock field={titleKey} sid={sid} onFieldUpdate={onFieldUpdate} label="Title" rows={2} readOnly={readOnly} />
+            {isZh ? (
+              <ZhFieldBlock field={titleKey} sid={sid} onFieldUpdate={onFieldUpdate} label="Title" rows={2} readOnly={readOnly} />
+            ) : (
+              <AudioFieldBlock field={titleKey} sid={sid} onFieldUpdate={onFieldUpdate} label="Title" rows={2} readOnly={readOnly} />
+            )}
           </FieldShell>
         )}
 
         {sceneDesc && (
           <FieldShell>
-            <div inert={readOnly}>
-              <EditableField
+            {isZh ? (
+              <ZhFieldBlock
                 field={sceneDesc}
                 sid={sid}
                 onFieldUpdate={onFieldUpdate}
-                onLocalChange={setDescLive}
                 label="Narration (SceneDesc)"
-                textareaRef={descTextareaRef}
-                flushRef={descFlushRef}
                 rows={4}
+                readOnly={readOnly}
               />
-            </div>
-            {sceneDesc.has_audio && (
+            ) : (
               <>
-                <AudioReview field={sceneDesc} sid={sid} onFieldUpdate={onFieldUpdate} />
                 <div inert={readOnly}>
-                  <RegenerateControls
+                  <EditableField
                     field={sceneDesc}
                     sid={sid}
                     onFieldUpdate={onFieldUpdate}
-                    hasTextChange={descLive !== sceneDesc.original_text}
-                    getSelectionRange={getSelectionRange}
-                    onBeforeRegenerate={async () => {
-                      await descFlushRef.current?.();
-                    }}
+                    onLocalChange={setDescLive}
+                    label="Narration (SceneDesc)"
+                    textareaRef={descTextareaRef}
+                    flushRef={descFlushRef}
+                    rows={4}
                   />
+                </div>
+                {sceneDesc.has_audio && (
+                  <>
+                    <AudioReview field={sceneDesc} sid={sid} onFieldUpdate={onFieldUpdate} />
+                    <div inert={readOnly}>
+                      <RegenerateControls
+                        field={sceneDesc}
+                        sid={sid}
+                        onFieldUpdate={onFieldUpdate}
+                        hasTextChange={descLive !== sceneDesc.original_text}
+                        getSelectionRange={getSelectionRange}
+                        onBeforeRegenerate={async () => {
+                          await descFlushRef.current?.();
+                        }}
+                      />
+                    </div>
+                  </>
+                )}
+                <div className="space-y-2" inert={readOnly}>
+                  <FlagControl field={sceneDesc} sid={sid} onFieldUpdate={onFieldUpdate} />
+                  <CommentBox field={sceneDesc} sid={sid} onFieldUpdate={onFieldUpdate} />
                 </div>
               </>
             )}
-            <div className="space-y-2" inert={readOnly}>
-              <FlagControl field={sceneDesc} sid={sid} onFieldUpdate={onFieldUpdate} />
-              <CommentBox field={sceneDesc} sid={sid} onFieldUpdate={onFieldUpdate} />
-            </div>
           </FieldShell>
         )}
 
@@ -146,30 +167,32 @@ const SceneCard = ({ scene, fields, sid, onFieldUpdate, readOnly = false }: Scen
           <FieldShell>
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Question</p>
             {questionKey && (
-              <AudioFieldBlock field={questionKey} sid={sid} onFieldUpdate={onFieldUpdate} label="Prompt" rows={2} readOnly={readOnly} />
+              isZh ? (
+                <ZhFieldBlock field={questionKey} sid={sid} onFieldUpdate={onFieldUpdate} label="Prompt" rows={2} readOnly={readOnly} />
+              ) : (
+                <AudioFieldBlock field={questionKey} sid={sid} onFieldUpdate={onFieldUpdate} label="Prompt" rows={2} readOnly={readOnly} />
+              )
             )}
 
             {options.map((opt) => {
               const k = optionIndex(opt.field_path);
+              const header = (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-400">Option {k}</span>
+                  {k === 0 && (
+                    <span className="rounded bg-custom-green px-2 py-0.5 text-[11px] font-medium text-white">
+                      ✓ Correct answer (option 1)
+                    </span>
+                  )}
+                </div>
+              );
               return (
                 <div key={opt.fid} className="border-t border-gray-800 pt-2">
-                  <AudioFieldBlock
-                    field={opt}
-                    sid={sid}
-                    onFieldUpdate={onFieldUpdate}
-                    rows={3}
-                    readOnly={readOnly}
-                    header={
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-400">Option {k}</span>
-                        {k === 0 && (
-                          <span className="rounded bg-custom-green px-2 py-0.5 text-[11px] font-medium text-white">
-                            ✓ Correct answer (option 1)
-                          </span>
-                        )}
-                      </div>
-                    }
-                  />
+                  {isZh ? (
+                    <ZhFieldBlock field={opt} sid={sid} onFieldUpdate={onFieldUpdate} rows={3} readOnly={readOnly} header={header} />
+                  ) : (
+                    <AudioFieldBlock field={opt} sid={sid} onFieldUpdate={onFieldUpdate} rows={3} readOnly={readOnly} header={header} />
+                  )}
                 </div>
               );
             })}

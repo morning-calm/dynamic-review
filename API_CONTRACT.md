@@ -89,10 +89,34 @@ The atom the UI renders/edits. One per editable thing.
   "model": "eleven_multilingual_v2", // effective EL model (override or by-voice)
   "model_override": null,        // per-session override, null = auto
   "trip_categories": ["UNESCO","Medieval"],   // read-only display
+  "is_zh": false,                // Mandarin 4-script + A/B-audio mode (see below)
+  "preferred_version": null,     // _ZH only: "v2" | "v3" | null (the per-trip audio pick)
   "trip_fields": [ Field(contentTitleKey), Field(tripgroup_description) ],
   "scenes": [ Scene, … ]
 }
 ```
+
+### Mandarin (`_ZH`) additions
+The three prepared HSK3 trips are reviewed in a distinct mode (`Session.is_zh = true`),
+gated on two ElevenLabs A/B audio takes existing on disk. It is **additive** — every field
+below is absent/`false`/`null` for non-`_ZH` trips, which are unchanged.
+- **`Field.localization`** (`_ZH` fields only, else absent) — the editable 4-script block,
+  `cur` = live edited value, `orig` = seed value (for diffing):
+  ```jsonc
+  { "cur":  { "Hans": "…", "Hant": "…", "zhuyin": "…", "en": "…" },
+    "orig": { "Hans": "…", "Hant": "…", "zhuyin": "…", "en": "…" } }
+  ```
+  The trip **description** field carries a 3-key block (`Hans`/`Hant`/`en`, **no** `zhuyin`).
+  Pinyin is **never** shown/edited — it is regenerated from the confirmed `zhuyin` at approve.
+- **`Field.audio.v2` / `.v3`** (`_ZH` only) — the two A/B takes for side-by-side audition.
+  In `_ZH` mode the splice slots (`original`/`working`/`candidate`/`fallback`) are all `null`
+  (Chinese audio is A/B, not spliced) and there is **no coverage gating** (`can_mark_done`
+  is server-`true` once the field exists — the human A/B listen is the backstop).
+- On **approve**, an `_ZH` trip's reviewed text writes back to `TripLocalizations/{id}`
+  (`target.{Hans,Hant,zhuyin}` + `home.en`, regenerated `target.pinyin`, `status:"reviewed"`)
+  and the derived Trip doc `quickTrips[i]` (`SceneDesc`/`questionKey`/`questionOption` =
+  `Hans⏎pinyin`, `titleKey` = `Hans⏎en`). **No mp3 masters are promoted** (audio is
+  finalised later in the HSK pipeline from the chosen version).
 
 ## Endpoints
 
@@ -108,6 +132,8 @@ The atom the UI renders/edits. One per editable thing.
 | `GET /api/sessions/{sid}` | — | `Session` (full state, for resume) |
 | `POST /api/sessions/{sid}/narration` | `{ "voice"?, "speed"?, "model"?, "clear_speed"?, "clear_model"? }` | `Session` — correct the trip's narrator voice/speed/model mid-review. Omit a field to leave it; `clear_*` drops an override back to auto. Any take **regenerated under the old settings** is reset to the master (text edits kept); untouched master audio + coverage are preserved. `422` on unknown voice/model or speed out of `0.5–1.2`. |
 | `PUT /api/sessions/{sid}/fields/{fid}` | `{ "current_text": "…" }` | `Field` — autosave. Resets `played_coverage` + drops `flag` off `done` if text changed. |
+| `PUT /api/sessions/{sid}/fields/{fid}/localization` | `{ "script": "Hans\|Hant\|zhuyin\|en", "text": "…" }` | `Field` — **`_ZH` only.** Autosave one script of the 4-script block. `422` if the script isn't editable on that field (e.g. `zhuyin` on the description). Drops `flag` off `done` when the value changes. No audio side-effects (Chinese audio is A/B). |
+| `POST /api/sessions/{sid}/version` | `{ "version": "v2"\|"v3" }` | `Session` — **`_ZH` only.** Set the trip's preferred ElevenLabs A/B version. `422` on an unknown version. |
 | `POST /api/sessions/{sid}/fields/{fid}/regenerate` | `{ "mode": "segment"|"whole"|"highlight", "range": {"start":int,"end":int}? }` | `Field` with `audio.candidate` set **ASAP**. `segment` diffs current vs original; `highlight` uses `range`; `whole` re-voices the whole field. Non-Latin / numeral-dense / Gemini-fallback → `flag:"edit_required"` and no candidate (whole-regen advised). |
 | `POST /api/sessions/{sid}/fields/{fid}/combine` | — | `Field` — splices candidate into working (SceneDesc) or replaces (whole/Q&A); archives prior take to `versions`; sets `splice_confidence`; may auto-set `flag:"edit_required"`. |
 | `POST /api/sessions/{sid}/fields/{fid}/fallback` | `{ "extent": "sentence"|"scene"|"custom", "text": "…"?, "description": "…" }` | `Field` — generates a **standalone ElevenLabs** clip (`audio.fallback`), sets `flag:"edit_required"`, stores the description for the admin. |
@@ -118,6 +144,7 @@ The atom the UI renders/edits. One per editable thing.
 | `POST /api/sessions/{sid}/fields/{fid}/revert` | — | `Field` — restores `original_text` + `v0` audio. |
 | `GET /audio/{sid}/{fid}/{which}` | — (`which` ∈ `original｜working｜candidate｜fallback`) | `audio/mpeg`, **HTTP Range supported** |
 | `GET /audio/{sid}/{fid}/v/{n}` | — | `audio/mpeg` (archived version n), Range supported |
+| `GET /audio/{sid}/{fid}/ab/{ver}` | — (`ver` ∈ `v2｜v3`) | `audio/mpeg` — **`_ZH` only.** The V2/V3 A/B take, Range supported, cookie-auth + language-scoped like other media. `404` if the take/field is absent. |
 | `GET /api/sessions/{sid}/download` | — | `application/zip` — all originals + every version + current `{i}.mp3` |
 | `POST /api/sessions/{sid}/submit` | — | `{ "ok": bool, "validation": [ {scene_index,field_path,issue} ] }` — reviewer/admin (own language): **validates only, no writes**; on `ok` flips the session to `submitted` (locked read-only, awaiting admin). Hard-fail issues keep it `in_review`. |
 | `POST /api/sessions/{sid}/approve` | — | `{ "ok": bool, "validation": […], "written": [field_path…], "promoted_mp3": [name…], "awaiting_stage9": true }` — **admin only.** Writes changed **text** to staging Trip + TripGroup desc/categories and promotes the corrected `{i}.mp3` masters (archiving prior). `409` if the session isn't `submitted`; if live staging drifted so validation now fails, returns `ok:false` and reverts to `submitted`. **No S3/ogg** (Stage 9). |

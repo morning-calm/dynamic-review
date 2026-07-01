@@ -253,6 +253,171 @@ def resolve_audio_dir(trip_id: str, trip: dict) -> Path:
 
 
 # --------------------------------------------------------------------------- #
+# Mandarin (_ZH) 4-script + A/B-audio review mode.
+#
+# The prepared HSK3 trips carry two ElevenLabs takes per field (V2 base + V3) under
+# Audio Generation/_voice_test/<trip>__* and a TripLocalizations/{id} doc with the
+# Traditional / Simplified / Zhuyin / English of every field. This mode surfaces the 4
+# scripts for editing and both audio takes for side-by-side audition; approval writes the
+# reviewed text back to TripLocalizations (+ the Trip doc). It is PRESENCE-DRIVEN: delete
+# the _voice_test sets and a _ZH trip reverts to the normal single-audio flow, no code
+# change. All _ZH branches are additive — non-_ZH trips are byte-for-byte unaffected.
+# --------------------------------------------------------------------------- #
+_ZH_SCRIPTS = ("Hans", "Hant", "zhuyin", "en")       # scene fields carry phonetics
+_ZH_DESC_SCRIPTS = ("Hans", "Hant", "en")            # description: no phonetics (a blurb)
+_ZH_IS_CACHE: dict[str, bool] = {}                   # sid -> is_zh (immutable after seed)
+
+
+def _is_zh_session(sid: str) -> bool:
+    v = _ZH_IS_CACHE.get(sid)
+    if v is None:
+        row = db.query_one("SELECT is_zh FROM sessions WHERE id=?", (sid,))
+        v = bool(row and _srow_get(row, "is_zh"))
+        _ZH_IS_CACHE[sid] = v
+    return v
+
+
+def _zh_ab_sets(trip_id: str) -> dict[str, Path] | None:
+    """The two ElevenLabs A/B takes for a _ZH trip, or None. V2 = the base folder
+    Audio Generation/_voice_test/<trip>__<Voice>_<Accent>; V3 = the sibling …__V3_1x.
+    Both must resolve WITH scene mp3s to enable A/B (else fall back to single-audio)."""
+    root = config.AUDIO_GENERATION_ROOT / "_voice_test"
+    if not root.is_dir():
+        return None
+    v2 = v3 = None
+    for p in sorted(root.glob(f"{trip_id}__*")):
+        if not p.is_dir():
+            continue
+        if p.name.endswith("__V3_1x"):
+            v3 = v3 or p
+        else:
+            v2 = v2 or p
+    if v2 and v3 and _has_scene_mp3(v2) and _has_scene_mp3(v3):
+        return {"v2": v2, "v3": v3}
+    return None
+
+
+def _zh_voicetest_trip_ids() -> list[str]:
+    """Content-ids of _ZH trips that have BOTH A/B voice-test sets — pre-final Mandarin
+    trips whose audio is still in _voice_test (not the standard location), so the Trello
+    export never surfaces them. list_trips injects these so the Mandarin reviewer sees
+    them; they disappear the moment the _voice_test sets are removed."""
+    root = config.AUDIO_GENERATION_ROOT / "_voice_test"
+    if not root.is_dir():
+        return []
+    ids: set[str] = set()
+    for p in root.iterdir():
+        if p.is_dir() and "__" in p.name:
+            tid = p.name.split("__", 1)[0]
+            if tid.upper().endswith("_ZH") and _zh_ab_sets(tid):
+                ids.add(tid)
+    return sorted(ids)
+
+
+def _ab_dir(sid: str, ver: str) -> Path:
+    d = WORK_ROOT / sid / ver
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _copy_audio_set(src: Path, dst: Path) -> None:
+    """Byte-copy every *.mp3 of an A/B take folder into work/{sid}/{ver} (these are already
+    finished ElevenLabs mp3s — no re-encode needed). Best-effort per file."""
+    dst.mkdir(parents=True, exist_ok=True)
+    for p in sorted(src.glob("*.mp3")):
+        try:
+            audio_io.mp3_to_mp3_copy(p, dst / p.name)
+        except Exception as e:  # noqa: BLE001
+            print(f"[zh-seed] copy skipped {p.name}: {e}")
+
+
+def _fetch_localization(trip_id: str) -> dict | None:
+    """The live TripLocalizations/{id} doc (4-script text), or None if absent/unreadable."""
+    try:
+        snap = fb_db().collection("TripLocalizations").document(trip_id).get()
+        return snap.to_dict() if snap.exists else None
+    except Exception as e:  # noqa: BLE001
+        print(f"[zh] TripLocalizations fetch failed for {trip_id}: {e}")
+        return None
+
+
+def _loc_block(node: dict | None, scripts=_ZH_SCRIPTS) -> dict | None:
+    """Flatten a localization node {target:{Hans,Hant,zhuyin}, home:{en}} into a flat
+    {Hans,Hant,zhuyin,en} (only the requested scripts). None if the node is falsy."""
+    if not node:
+        return None
+    target = node.get("target") or {}
+    home = node.get("home") or {}
+    out: dict = {}
+    for s in scripts:
+        out[s] = (home.get("en") if s == "en" else target.get(s)) or ""
+    return out
+
+
+def _index_localization(loc: dict | None) -> dict:
+    """(scene_index, field_path, option_index) -> {Hans,Hant,zhuyin,en} from a
+    TripLocalizations doc. Trip description keys on (None,'tripgroup_description',None).
+    contentTitleKey is a plain string in the doc (not a 4-script block) → not indexed."""
+    out: dict = {}
+    if not loc:
+        return out
+    for sc in (loc.get("scenes") or []):
+        i = sc.get("index")
+        if i is None:
+            continue
+        for fp in ("titleKey", "SceneDesc", "questionKey"):
+            blk = _loc_block(sc.get(fp))
+            if blk:
+                out[(i, fp, None)] = blk
+        for k, opt in enumerate(sc.get("questionOptionKeys") or []):
+            blk = _loc_block(opt)
+            if blk:
+                out[(i, "questionOption", k)] = blk
+    desc = _loc_block(loc.get("description"), scripts=_ZH_DESC_SCRIPTS)
+    if desc:
+        out[(None, "tripgroup_description", None)] = desc
+    return out
+
+
+def _zh_join2(a: str, b: str) -> str:
+    """Mirror hsk_lib/build_firebase.join2 exactly: '<a>\\n<b>' (both stripped) or just
+    <a>. The Trip doc's line-1 hanzi drives the audio; line-2 is display (pinyin, or
+    English on titleKey)."""
+    a, b = (a or "").strip(), (b or "").strip()
+    return f"{a}\n{b}" if b else a
+
+
+def _zh_regen_pinyin(zhuyin: str, hans: str) -> tuple[str, list[str]]:
+    """Toned pinyin for the display line, from the human-confirmed zhuyin
+    (hsk_lib.zhuyin_to_pinyin). hsk_lib is imported LAZILY (its dir isn't on the default
+    sys.path) and every failure DEGRADES GRACEFULLY — we NEVER write raw bopomofo or other
+    garbage into a pinyin line:
+      * import fails            -> ('', [warn])            caller flags edit_required
+      * conversion has warnings -> deterministic to_pinyin(Hans) fallback + [warn]
+      * conversion is clean      -> (pinyin, [])
+    """
+    try:
+        import sys as _sys
+        hsk_dir = str(config.SCRIPTS_ROOT / "Research and Writing" / "HSK Mandarin" / "stages")
+        if hsk_dir not in _sys.path:
+            _sys.path.insert(0, hsk_dir)
+        import hsk_lib  # noqa: F401  (lazy — only needed at writeback)
+    except Exception as e:  # noqa: BLE001
+        return "", [f"hsk_lib unavailable ({e}) — pinyin not regenerated"]
+    try:
+        py, warns = hsk_lib.zhuyin_to_pinyin(zhuyin or "", hans or "")
+    except Exception as e:  # noqa: BLE001
+        return "", [f"zhuyin_to_pinyin raised {e}"]
+    if warns:
+        try:
+            fb = hsk_lib.to_pinyin(hans or "")
+        except Exception:  # noqa: BLE001
+            fb = ""
+        return fb, [f"zhuyin_to_pinyin warnings {warns}; used to_pinyin(Hans) fallback"]
+    return py, []
+
+
+# --------------------------------------------------------------------------- #
 # Trip listing
 # --------------------------------------------------------------------------- #
 def _trip_meta(trip_id: str) -> dict:
@@ -303,6 +468,27 @@ def list_trips(user=None) -> list[dict]:
             trips = []
     else:
         trips = _list_trips_from_scan()
+    # Presence-driven _ZH inject: pre-final Mandarin trips with A/B voice-test audio aren't
+    # in the manifest (their audio isn't in the standard location yet). Surface them for the
+    # Mandarin reviewer; they vanish once the _voice_test sets are deleted.
+    have = {t["trip_id"] for t in trips}
+    for tid in _zh_voicetest_trip_ids():
+        if tid in have:
+            continue
+        try:
+            trip = get_trip(tid)
+        except SystemExit:
+            trip = None
+        lvl, fam = _level_family(tid)
+        has_session, status, edit_required = _session_meta(tid)
+        trips.append({
+            "trip_id": tid,
+            "title": (trip.get("contentTitleKey") if trip else None) or tid,
+            "folder_name": (trip.get("folderName") or "") if trip else "",
+            "lane": "6", "level": lvl, "family": fam,
+            "has_session": has_session, "status": status,
+            "edit_required": edit_required, "reviewable": True,
+        })
     # Completed trips (approved or admin-marked) leave the active queue entirely — for
     # ALL roles. An admin un-completes to return one to the list.
     done = {r["trip_id"] for r in db.query("SELECT trip_id FROM completed_trips")}
@@ -462,7 +648,19 @@ def create_or_resume(trip_id: str, user) -> dict:
     # Stage-9 COUNTRY_CFG (e.g. 'GreatBritain') still seeds.
     folder_name = (trip.get("folderName") or "").replace("\\", "/").strip("/")
     country = folder_name.split("/")[0] if folder_name else ""
-    mp3_dir = resolve_audio_dir(trip_id, trip)
+
+    # 4-script (permanent) is DECOUPLED from A/B (temporary): TripLocalizations is fetched
+    # for ANY _ZH trip → the 4-script review pane (zh_mode). The two _voice_test sets only
+    # add the V2/V3 audition; a finalised _ZH trip with no sets keeps normal single audio.
+    is_zh_lang = audio_core.language_of(trip_id) == "Mandarin"
+    ab_sets = _zh_ab_sets(trip_id) if is_zh_lang else None
+    localization = _fetch_localization(trip_id) if is_zh_lang else None
+    zh_mode = localization is not None
+    loc_index = _index_localization(localization)
+
+    # Audio source: the A/B V2 take drives the seed for voice-test trips (no Quicktrips
+    # masters); otherwise the normal masters (incl. a finalised _ZH trip with no A/B).
+    mp3_dir = ab_sets["v2"] if ab_sets else resolve_audio_dir(trip_id, trip)
     if not _has_scene_mp3(mp3_dir):
         raise HTTPException(status_code=422, detail={
             "error": "bad_folder",
@@ -484,10 +682,11 @@ def create_or_resume(trip_id: str, user) -> dict:
     db.execute(
         "INSERT INTO sessions(id,trip_id,folder_name,voice,voice_settings_json,"
         "orig_loudness_json,cleaned_orig_json,loaded_trip_json,trip_categories_json,"
-        "status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+        "status,is_zh,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (sid, trip_id, folder_name, voice, json.dumps(voice_settings),
          "{}", "{}", json.dumps(trip, default=str), json.dumps(categories),
-         "in_review", now, now))
+         "in_review", 1 if zh_mode else 0, now, now))
+    _ZH_IS_CACHE[sid] = zh_mode
 
     dirs = work_dirs(sid)
 
@@ -499,10 +698,14 @@ def create_or_resume(trip_id: str, user) -> dict:
         if name:
             master = mp3_dir / name
             if master.exists():
-                audio_io.mp3_to_mp3_copy(master, dirs["orig"] / name)
-                audio_io.mp3_to_mp3_copy(master, dirs["working"] / name)
-                cur_path = str(dirs["working"] / name)
-                whash = _file_hash(dirs["working"] / name)
+                # A/B trips serve audio from the copied v2/v3 sets — do NOT populate the
+                # splice orig/working slots. Every other trip (incl. a non-A/B _ZH) gets the
+                # normal single working take.
+                if not ab_sets:
+                    audio_io.mp3_to_mp3_copy(master, dirs["orig"] / name)
+                    audio_io.mp3_to_mp3_copy(master, dirs["working"] / name)
+                    cur_path = str(dirs["working"] / name)
+                    whash = _file_hash(dirs["working"] / name)
             else:
                 has_audio = False   # no master on disk → text-only, no gate
         # English translation (non-_EN trips carry the *En sibling) — an editable second
@@ -511,15 +714,20 @@ def create_or_resume(trip_id: str, user) -> dict:
         src = source_text or ""
         if src.strip() == (original_text or "").strip():
             src = ""
+        # _ZH: attach the 4-script block (cur seeded == orig, for diffing at writeback).
+        loc_blk = loc_index.get((scene_index, field_path, option_index))
+        loc_json = (json.dumps({"cur": dict(loc_blk), "orig": dict(loc_blk)},
+                               ensure_ascii=False) if loc_blk else None)
         fid = db.execute(
             "INSERT INTO field_edits(session_id,scene_index,field_path,option_index,"
             "has_audio,mp3_name,original_text,current_text,current_mp3_path,"
-            "working_audio_hash,source_text,original_source,working_text,updated_at) "
-            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "working_audio_hash,source_text,original_source,working_text,"
+            "localization_json,updated_at) "
+            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (sid, scene_index, field_path, option_index, 1 if has_audio else 0,
              name if has_audio else None, original_text or "", original_text or "",
-             cur_path, whash, src, src, original_text or "", time.time()))
-        if has_audio and name and (dirs["orig"] / name).exists():
+             cur_path, whash, src, src, original_text or "", loc_json, time.time()))
+        if has_audio and name and not ab_sets and (dirs["orig"] / name).exists():
             stem = name[:-4]
             db.execute(
                 "INSERT INTO audio_versions(session_id,field_id,scene_index,n,kind,"
@@ -549,6 +757,11 @@ def create_or_resume(trip_id: str, user) -> dict:
         for k, opt in enumerate(s.get("questionOptionKeys") or []):
             add_field(i, "questionOption", opt or "", True, option_index=k,
                       source_text=(opts_en[k] if k < len(opts_en) else ""))
+
+    # _ZH A/B: stage both ElevenLabs takes for side-by-side audition (served via /ab/{ver}).
+    if zh_mode:
+        _copy_audio_set(ab_sets["v2"], _ab_dir(sid, "v2"))
+        _copy_audio_set(ab_sets["v3"], _ab_dir(sid, "v3"))
 
     # Best-effort: resolve + upload scene thumbnails to R2 so the read-model below can
     # hand back thumb_url. Never fail the seed if the JSON / JPGs / R2 are unavailable.
@@ -640,6 +853,10 @@ def _coverage_for(sid: str, frow) -> tuple[list[list[float]], bool]:
     the working take OR (untouched field only) of the original."""
     if not frow["has_audio"]:
         return [], True
+    # _ZH is A/B audition, not the splice/coverage flow — done is not playback-gated
+    # (the reviewer picks V2/V3 side by side; the human listen is the backstop).
+    if _is_zh_session(sid):
+        return [], True
     cov = json.loads(frow["played_coverage_json"] or "{}")
     ranges = cov.get("ranges", []) if cov.get("hash") == frow["working_audio_hash"] else []
     dur = _working_duration(frow)
@@ -688,7 +905,7 @@ def serialize_field(sid: str, frow) -> dict:
     can_undo = has_audio and cursor > 0
     can_redo = has_audio and cursor < max_n
 
-    return {
+    result = {
         "fid": fid,
         "scene_index": frow["scene_index"],
         "field_path": field_path_out,
@@ -710,6 +927,26 @@ def serialize_field(sid: str, frow) -> dict:
         "versions": versions,
         "manual_clips": _clips_for(sid, fid) if has_audio else [],
     }
+
+    # _ZH: the editable 4-script block, plus audio. A/B voice-test trips expose the two
+    # V2/V3 takes (splice slots nulled — no splice/coverage flow for Mandarin); a finalised
+    # _ZH trip with no A/B keeps the single working take (a plain player).
+    if _is_zh_session(sid):
+        loc_raw = _srow_get(frow, "localization_json")
+        result["localization"] = json.loads(loc_raw) if loc_raw else None
+        ab = {}
+        if has_audio and frow["mp3_name"]:
+            for ver in ("v2", "v3"):
+                p = WORK_ROOT / sid / ver / frow["mp3_name"]   # no mkdir side effect
+                if p.exists():
+                    vh = (_file_hash(p) or "")[:8]
+                    ab[ver] = f"/audio/{sid}/{fid}/ab/{ver}" + (f"?v={vh}" if vh else "")
+        if ab:
+            for slot in ("original", "working", "candidate", "fallback"):
+                audio[slot] = None
+            audio.update(ab)
+        # else: no A/B sets → keep the normal single working take for playback.
+    return result
 
 
 def get_session(sid: str) -> dict:
@@ -776,6 +1013,8 @@ def get_session(sid: str) -> dict:
         "model": _effective_model(srow),
         "model_override": _srow_get(srow, "model_override"),
         "trip_categories": json.loads(srow["trip_categories_json"] or "[]"),
+        "is_zh": bool(_srow_get(srow, "is_zh")),
+        "preferred_version": _srow_get(srow, "preferred_version"),
         "trip_fields": trip_fields,
         "scenes": scenes_out,
     }
@@ -852,6 +1091,48 @@ def update_source(sid: str, fid: int, text: str) -> dict:
     db.update_fields(fid, source_text=text or "")
     db.touch_session(sid)
     return serialize_field(sid, _field_row(sid, fid))
+
+
+def update_localization(sid: str, fid: int, script: str, text: str) -> dict:
+    """Autosave one script (Hans|Hant|zhuyin|en) of a _ZH field's 4-script block. The
+    reviewer corrects the text directly (never pinyin — pinyin is regenerated from the
+    confirmed zhuyin at writeback). Chinese audio is A/B, not spliced, so this touches no
+    audio; it only drops a stale `done` when the value actually changes."""
+    _session_row(sid)
+    frow = _field_row(sid, fid)
+    loc_raw = _srow_get(frow, "localization_json")
+    if not loc_raw:
+        raise HTTPException(400, detail={
+            "error": "not_localized",
+            "detail": "this field has no 4-script block (not a _ZH localized field)"})
+    loc = json.loads(loc_raw)
+    cur = loc.get("cur") or {}
+    if script not in cur:
+        raise HTTPException(422, detail={
+            "error": "bad_script",
+            "detail": f"{script!r} is not editable on this field "
+                      f"(editable: {sorted(cur.keys())})"})
+    changed = (cur.get(script) or "") != (text or "")
+    cur[script] = text or ""
+    loc["cur"] = cur
+    patch = {"localization_json": json.dumps(loc, ensure_ascii=False)}
+    if changed and frow["flag"] == "done":
+        patch["flag"] = "none"
+    db.update_fields(fid, **patch)
+    db.touch_session(sid)
+    return serialize_field(sid, _field_row(sid, fid))
+
+
+def set_version(sid: str, version: str) -> dict:
+    """Set the trip's preferred ElevenLabs A/B version (v2|v3) — the per-trip audio pick,
+    surfaced to the admin so the speaker→version mapping can be finalised."""
+    _session_row(sid)
+    if version not in ("v2", "v3"):
+        raise HTTPException(422, detail={"error": "bad_version",
+                                         "detail": "version must be 'v2' or 'v3'"})
+    db.execute("UPDATE sessions SET preferred_version=?, updated_at=? WHERE id=?",
+               (version, time.time(), sid))
+    return get_session(sid)
 
 
 def _set_working(sid: str, frow, samples: np.ndarray | None = None,
@@ -1737,6 +2018,178 @@ def validate(sid: str) -> tuple[list[dict], list[dict]]:
     return hard, soft
 
 
+# --------------------------------------------------------------------------- #
+# Mandarin (_ZH) staging writeback — the reviewed 4-script text -> TripLocalizations
+# (+ the derived Trip doc). THE RISKIEST CODE: guarded by dry_run, re-fetches live,
+# writes ONLY changed fields, regenerates pinyin from the confirmed zhuyin.
+# --------------------------------------------------------------------------- #
+def zh_writeback(sid: str, *, dry_run: bool = True) -> dict:
+    """Compute (and, only when ``dry_run`` is False, APPLY) the staging writes for an
+    approved _ZH review:
+
+      * TripLocalizations/{id}: for each CHANGED field, set
+        scenes[i].{field}.target.{Hans,Hant,zhuyin} + home.en, and REGENERATE
+        target.pinyin from the confirmed zhuyin (never authored). description gets
+        target.{Hans,Hant} + home.en (no phonetics). status -> 'reviewed'.
+      * Trip doc quickTrips[i]: SceneDesc/questionKey/questionOption = "Hans⏎pinyin"
+        (line 1 hanzi drives the audio), titleKey = "Hans⏎en", and the *En siblings.
+
+    Only CHANGED fields (localization cur != orig) are written; the live docs are
+    re-fetched first so concurrent edits elsewhere are never clobbered. Returns the plan
+    (always) — when dry_run it APPLIES NOTHING and is safe to call anywhere."""
+    srow = _session_row(sid)
+    trip_id = srow["trip_id"]
+
+    live_loc = _fetch_localization(trip_id)
+    if live_loc is None:
+        raise HTTPException(404, detail={
+            "error": "no_localization",
+            "detail": f"TripLocalizations/{trip_id} not found — cannot write back"})
+    try:
+        trip_live = get_trip(trip_id)
+    except SystemExit as e:
+        raise HTTPException(404, detail=str(e))
+
+    loc_scenes = live_loc.get("scenes") or []
+    loc_by_index = {sc.get("index"): sc
+                    for sc in loc_scenes if sc.get("index") is not None}
+    qt_live = list(trip_live.get("quickTrips") or [])
+
+    frows = db.query(
+        "SELECT * FROM field_edits WHERE session_id=? ORDER BY id", (sid,))
+
+    changed_out: list[dict] = []
+    warnings: list[str] = []
+    written: list[str] = []
+    loc_scene_changed = False
+    loc_desc_changed = False
+
+    for f in frows:
+        loc_raw = _srow_get(f, "localization_json")
+        if not loc_raw:
+            continue
+        loc = json.loads(loc_raw)
+        cur = loc.get("cur") or {}
+        orig = loc.get("orig") or {}
+        if cur == orig:
+            continue   # ONLY changed fields
+
+        si, fp, k = f["scene_index"], f["field_path"], f["option_index"]
+        hans, hant = cur.get("Hans") or "", cur.get("Hant") or ""
+        zh, en = cur.get("zhuyin") or "", cur.get("en") or ""
+        entry: dict = {"scene_index": si, "field_path": fp, "option_index": k,
+                       "cur": dict(cur)}
+
+        # ---- trip description (no phonetics; localization.description only) ----
+        if fp == "tripgroup_description":
+            desc = live_loc.get("description") or {}
+            desc.setdefault("target", {})
+            desc.setdefault("home", {})
+            desc["target"]["Hans"] = hans
+            desc["target"]["Hant"] = hant
+            desc["home"]["en"] = en
+            live_loc["description"] = desc
+            loc_desc_changed = True
+            entry.update({"loc_path": "description",
+                          "target": {"Hans": hans, "Hant": hant}, "home": {"en": en}})
+            written.append("TripLocalizations.description")
+            changed_out.append(entry)
+            continue
+
+        # ---- pinyin regenerated from the confirmed zhuyin (display line) ----
+        pinyin, pw = _zh_regen_pinyin(zh, hans)
+        entry["pinyin"] = pinyin
+        entry["pinyin_warnings"] = pw
+        if pw:
+            warnings.extend([f"scene {si} {fp}"
+                             + (f"[{k}]" if k is not None else "") + f": {w}" for w in pw])
+
+        # ---- TripLocalizations mutation ----
+        sc = loc_by_index.get(si)
+        if sc is not None:
+            node = {"target": {"Hans": hans, "Hant": hant, "zhuyin": zh, "pinyin": pinyin},
+                    "home": {"en": en}}
+            loc_path = None
+            if fp == "questionOption":
+                opts = list(sc.get("questionOptionKeys") or [])
+                if k is not None and k < len(opts):
+                    opts[k] = node
+                    sc["questionOptionKeys"] = opts
+                    loc_path = f"scenes[{si}].questionOptionKeys[{k}]"
+            else:
+                sc[fp] = node
+                loc_path = f"scenes[{si}].{fp}"
+            if loc_path:
+                loc_scene_changed = True
+                written.append("TripLocalizations." + loc_path)
+                entry["loc_path"] = loc_path
+                entry["target"] = node["target"]
+                entry["home"] = node["home"]
+
+        # ---- Trip doc quickTrips mutation ----
+        if si is not None and si < len(qt_live):
+            tsc = qt_live[si]
+            if fp == "SceneDesc":
+                tsc["SceneDesc"] = _zh_join2(hans, pinyin)
+                tsc["SceneDescEn"] = en
+                entry["trip_path"] = f"quickTrips[{si}].SceneDesc"
+                entry["trip_value"] = tsc["SceneDesc"]
+                entry["trip_value_en"] = en
+            elif fp == "titleKey":
+                tsc["titleKey"] = _zh_join2(hans, en)   # line 2 = English on titleKey
+                tsc["titleKeyEn"] = ""
+                entry["trip_path"] = f"quickTrips[{si}].titleKey"
+                entry["trip_value"] = tsc["titleKey"]
+            elif fp == "questionKey":
+                tsc["questionKey"] = _zh_join2(hans, pinyin)
+                tsc["questionKeyEn"] = en
+                entry["trip_path"] = f"quickTrips[{si}].questionKey"
+                entry["trip_value"] = tsc["questionKey"]
+                entry["trip_value_en"] = en
+            elif fp == "questionOption":
+                opts = list(tsc.get("questionOptionKeys") or [])
+                opts_en = list(tsc.get("questionOptionKeysEn") or [])
+                while len(opts_en) <= (k or 0):
+                    opts_en.append("")
+                if k is not None and k < len(opts):
+                    opts[k] = _zh_join2(hans, pinyin)
+                    opts_en[k] = en
+                    tsc["questionOptionKeys"] = opts
+                    tsc["questionOptionKeysEn"] = opts_en
+                    entry["trip_path"] = f"quickTrips[{si}].questionOptionKeys[{k}]"
+                    entry["trip_value"] = opts[k]
+                    entry["trip_value_en"] = en
+            if entry.get("trip_path"):
+                written.append("Trip." + entry["trip_path"])
+
+        changed_out.append(entry)
+
+    plan = {
+        "trip_id": trip_id,
+        "dry_run": dry_run,
+        "localization_status": {"from": live_loc.get("status"), "to": "reviewed"},
+        "changed": changed_out,
+        "warnings": warnings,
+        "written": written,
+    }
+    if dry_run:
+        return plan
+
+    # ---- APPLY (admin approve, _ZH branch) — SAFETY: only reached with dry_run=False ----
+    loc_update: dict = {"status": "reviewed"}
+    if loc_scene_changed:
+        loc_update["scenes"] = loc_scenes
+    if loc_desc_changed:
+        loc_update["description"] = live_loc["description"]
+    fb_db().collection("TripLocalizations").document(trip_id).update(loc_update)
+    # Trip doc: reuse the shared one-.update() helper; rewrite quickTrips only when a
+    # scene field actually changed (a description-only edit doesn't touch the Trip doc).
+    trip_changed = any(e.get("trip_path") for e in changed_out)
+    if trip_changed:
+        update_trip_text(trip_id, qt_live, {})
+    return plan
+
+
 def commit(sid: str, user) -> dict:
     """Perform the STAGING WRITES + master promotion for an approved session. Assumes
     ``validate`` has already passed. Re-fetches the live trip so it writes onto the
@@ -1746,6 +2199,14 @@ def commit(sid: str, user) -> dict:
     (admin approve), NEVER in reviewer submit."""
     srow = _session_row(sid)
     trip_id = srow["trip_id"]
+
+    # _ZH: the reviewed text writes back to TripLocalizations (+ the Trip doc); there are
+    # no in-app master mp3s to promote (the A/B version pick drives audio finalisation in
+    # the HSK pipeline, not here).
+    if _is_zh_session(sid):
+        wb = zh_writeback(sid, dry_run=False)
+        return {"written": wb["written"], "promoted_mp3": [],
+                "zh_warnings": wb.get("warnings") or []}
     try:
         trip_live = get_trip(trip_id)
     except SystemExit as e:
@@ -1923,7 +2384,8 @@ def approve(sid: str, user) -> dict:
             "method='approved', session_id=excluded.session_id",
             (tid, getattr(user, "username", None), now, sid))
         return {"ok": True, "validation": soft, "written": result["written"],
-                "promoted_mp3": result["promoted_mp3"], "awaiting_stage9": True}
+                "promoted_mp3": result["promoted_mp3"], "awaiting_stage9": True,
+                "zh_warnings": result.get("zh_warnings") or []}
     except Exception:
         # Never leave a session stuck in the transient `approving` claim.
         db.execute("UPDATE sessions SET status='submitted', updated_at=? WHERE id=?",
@@ -2064,6 +2526,20 @@ def version_path(sid: str, fid: int, n: int) -> Path:
     if not row:
         raise HTTPException(404, detail={"error": "no_version", "detail": str(n)})
     return Path(row["path"])
+
+
+def ab_audio_path(sid: str, fid: int, ver: str) -> Path:
+    """The copied V2/V3 A/B take for a _ZH field (work/{sid}/{ver}/{mp3_name})."""
+    if ver not in ("v2", "v3"):
+        raise HTTPException(404, detail={"error": "bad_version", "detail": ver})
+    frow = _field_row(sid, fid)
+    name = frow["mp3_name"]
+    if not name:
+        raise HTTPException(404, detail={"error": "no_audio", "detail": "text field"})
+    p = _ab_dir(sid, ver) / name
+    if not p.exists():
+        raise HTTPException(404, detail={"error": "no_audio", "detail": f"{ver}/{name}"})
+    return p
 
 
 def _resolve_overlay_file(trip_id: str, mp3_dir: Path | None, ogg_dir: Path | None,

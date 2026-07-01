@@ -14,7 +14,8 @@ from .auth import scope_sid, scope_sid_editable
 from .models import (CreateSession, TextUpdate, SourceUpdate, Regenerate, Fallback,
                      PlayedRanges, FlagSet, CommentSet, NarrationSet,
                      ClipCreate, ClipRegen, ClipComment, TrimNoise, TrimCandidate,
-                     InsertSilence, RequestChanges, CompleteTrip)
+                     InsertSilence, RequestChanges, CompleteTrip,
+                     LocalizationUpdate, VersionSet)
 
 router = APIRouter(prefix="/api")
 
@@ -63,6 +64,17 @@ def put_field(sid: str, fid: int, body: TextUpdate):
 @router.put("/sessions/{sid}/fields/{fid}/source", dependencies=_EDIT)
 def put_source(sid: str, fid: int, body: SourceUpdate):
     return sessions.update_source(sid, fid, body.text)
+
+
+# --- Mandarin (_ZH) 4-script editing + A/B version pick ---
+@router.put("/sessions/{sid}/fields/{fid}/localization", dependencies=_EDIT)
+def put_localization(sid: str, fid: int, body: LocalizationUpdate):
+    return sessions.update_localization(sid, fid, body.script, body.text)
+
+
+@router.post("/sessions/{sid}/version", dependencies=_EDIT)
+def post_version(sid: str, body: VersionSet):
+    return sessions.set_version(sid, body.version)
 
 
 @router.post("/sessions/{sid}/fields/{fid}/regenerate", dependencies=_EDIT)

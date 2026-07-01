@@ -33,6 +33,19 @@ class SourceUpdate(BaseModel):
     text: str   # the editable English translation (*En) of a non-EN field
 
 
+class LocalizationUpdate(BaseModel):
+    """Autosave one script of a Mandarin (_ZH) field's 4-script block. `script` is the
+    variant being edited; `text` its new value. zhuyin is not accepted on the trip
+    description (it carries no phonetics)."""
+    script: Literal["Hans", "Hant", "zhuyin", "en"]
+    text: str
+
+
+class VersionSet(BaseModel):
+    """Set the trip's preferred ElevenLabs A/B version (per-session)."""
+    version: Literal["v2", "v3"]
+
+
 class RegenRange(BaseModel):
     start: int
     end: int

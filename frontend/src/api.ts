@@ -105,6 +105,11 @@ export interface AudioLinks {
   working: string | null;
   candidate: string | null;
   fallback: string | null;
+  /** `_ZH` A/B audition only (review-app-chinese-review.md Part 3) — set when this
+   * field's take exists under both ElevenLabs versions. Null once A/B mode is
+   * retired for a trip (or always, for non-`_ZH` fields). */
+  v2: string | null;
+  v3: string | null;
 }
 
 export interface AudioVersion {
@@ -122,6 +127,25 @@ export interface ManualClip {
   created_at: number;
 }
 
+/** The 4 scripts reviewed for Mandarin (`_ZH`) trips — NOT pinyin (regenerated
+ * server-side from the confirmed Zhuyin on approve; see review-app-chinese-review.md). */
+export type ZhScript = 'Hant' | 'Hans' | 'zhuyin' | 'en';
+
+export interface LocalizationScripts {
+  Hant: string;
+  Hans: string;
+  /** Null for fields with no phonetic script (e.g. the trip description). */
+  zhuyin: string | null;
+  en: string;
+}
+
+/** Present only on `_ZH` fields seeded from `TripLocalizations`; null for every
+ * other field (which keeps using current_text/original_text/source_text as today). */
+export interface LocalizationBlock {
+  cur: LocalizationScripts;
+  orig: LocalizationScripts;
+}
+
 export interface Field {
   fid: number;
   scene_index: number | null;
@@ -133,6 +157,8 @@ export interface Field {
   source_text: string;
   /** The English at seed — for the original→new diff on the English editor. */
   original_source: string;
+  /** `_ZH` 4-script block (Traditional/Simplified/Zhuyin/English); null elsewhere. */
+  localization: LocalizationBlock | null;
   flag: FlagValue;
   comment: string;
   splice_confidence: number | null;
@@ -162,6 +188,9 @@ export interface Scene {
   fields: Field[];
 }
 
+/** The reviewer's per-trip pick between the two temporary A/B ElevenLabs takes. */
+export type PreferredVersion = 'v2' | 'v3';
+
 export interface Session {
   id: string;
   trip_id: string;
@@ -178,6 +207,12 @@ export interface Session {
   model: string;
   model_override: string | null;
   trip_categories: string[];
+  /** Mandarin (`_ZH`) mode flag (review-app-chinese-review.md): gates the 4-script
+   * editor + V2/V3 audition and hides splice/regenerate/coverage UI. Additive —
+   * every other language renders exactly as before. */
+  is_zh: boolean;
+  /** Reviewer's per-trip V2/V3 pick for the A/B audition; null until chosen. */
+  preferred_version: PreferredVersion | null;
   trip_fields: Field[];
   scenes: Scene[];
 }
@@ -248,6 +283,9 @@ export interface ApproveResponse {
   written: FieldPath[];
   promoted_mp3: FieldPath[];
   awaiting_stage9: boolean;
+  /** _ZH only: pinyin-regeneration warnings from the staging writeback (a field whose
+   * Zhuyin didn't validate fell back to hanzi-derived pinyin). */
+  zh_warnings?: string[];
 }
 
 export interface ApiErrorBody {
@@ -352,6 +390,10 @@ export const api = {
   setNarration: (sid: string, body: NarrationUpdate): Promise<Session> =>
     postJson(`/api/sessions/${encodeURIComponent(sid)}/narration`, body),
 
+  /** `_ZH` A/B audition only: set the trip-wide preferred ElevenLabs version. */
+  setVersion: (sid: string, version: PreferredVersion): Promise<Session> =>
+    postJson(`/api/sessions/${encodeURIComponent(sid)}/version`, { version }),
+
   createOrResumeSession: (tripId: string): Promise<Session> =>
     postJson('/api/sessions', { trip_id: tripId }),
 
@@ -362,6 +404,10 @@ export const api = {
 
   putSource: (sid: string, fid: number, text: string): Promise<Field> =>
     putJson(field(sid, fid, '/source'), { text }),
+
+  /** `_ZH` only: autosave one script of the 4-script block (Hant/Hans/zhuyin/en). */
+  putLocalization: (sid: string, fid: number, script: ZhScript, text: string): Promise<Field> =>
+    putJson(field(sid, fid, '/localization'), { script, text }),
 
   regenerate: (
     sid: string,
@@ -563,6 +609,21 @@ export const flushCommentBeacon = (sid: string, fid: number, text: string): void
       credentials: 'include',
       headers: jsonHeaders(),
       body: JSON.stringify({ text }),
+    });
+  } catch {
+    /* nothing else we can do during unload */
+  }
+};
+
+/** Best-effort flush of a single `_ZH` script on page unload (mirrors flushFieldBeacon). */
+export const flushLocalizationBeacon = (sid: string, fid: number, script: ZhScript, text: string): void => {
+  try {
+    void fetch(field(sid, fid, '/localization'), {
+      method: 'PUT',
+      keepalive: true,
+      credentials: 'include',
+      headers: jsonHeaders(),
+      body: JSON.stringify({ script, text }),
     });
   } catch {
     /* nothing else we can do during unload */
