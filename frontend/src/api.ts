@@ -76,6 +76,21 @@ export interface ReviewQueueItem {
   edit_required: boolean;
 }
 
+/** `approved` = completed via the normal submit→approve flow (has a session);
+ * `manual` = admin bypass for work already done in the old system (no session). */
+export type CompletionMethod = 'approved' | 'manual';
+
+export interface CompletedItem {
+  trip_id: string;
+  title: string;
+  language: string;
+  method: CompletionMethod;
+  completed_by: string;
+  completed_at: number;
+  /** The approved session, when method is `approved`; null for `manual`. */
+  session_id: string | null;
+}
+
 /** field_path values from the contract's field_path table. */
 export type FieldPath =
   | 'contentTitleKey'
@@ -481,6 +496,23 @@ export const api = {
 
   /** Admin only: sessions currently awaiting approval. */
   reviewQueue: (): Promise<ReviewQueueItem[]> => getJson('/api/review-queue'),
+
+  /** Both roles: trips that are done (approved or manually completed). Reviewers
+   * are filtered to their languages server-side; sorted newest first. */
+  completed: (): Promise<CompletedItem[]> => getJson('/api/completed'),
+
+  /** Admin only, bypass: mark a trip complete without a review session (work
+   * already done in the old system). Writes nothing to staging/masters — purely
+   * a workflow marker. Idempotent upsert; 200 even if the trip has no session. */
+  completeTrip: (tripId: string, note?: string): Promise<{ ok: boolean }> =>
+    postJson(`/api/trips/${encodeURIComponent(tripId)}/complete`, note !== undefined ? { note } : undefined),
+
+  /** Admin only: un-complete — the trip returns to the main list and is reviewable again. */
+  uncompleteTrip: (tripId: string): Promise<{ ok: boolean }> =>
+    requestJson<{ ok: boolean }>(`/api/trips/${encodeURIComponent(tripId)}/complete`, {
+      method: 'DELETE',
+      headers: jsonHeaders(),
+    }),
 
   login: (username: string, password: string): Promise<LoginResponse> =>
     postJson('/api/login', { username, password }),

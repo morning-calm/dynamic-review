@@ -119,12 +119,25 @@ CREATE TABLE IF NOT EXISTS approvals (
     written_json TEXT NOT NULL DEFAULT '[]'
 );
 
+-- Completed queue: a finished trip (admin-approved, or admin-marked-complete for work
+-- done in the old system) leaves the active review list and appears here. One row per
+-- trip_id; method='approved' carries the approved session_id, method='manual' has none.
+CREATE TABLE IF NOT EXISTS completed_trips (
+    trip_id      TEXT PRIMARY KEY,
+    completed_by TEXT NOT NULL,
+    completed_at REAL NOT NULL,
+    method       TEXT NOT NULL,             -- approved | manual
+    session_id   TEXT,                      -- approved session id; NULL for manual
+    note         TEXT NOT NULL DEFAULT ''
+);
+
 CREATE INDEX IF NOT EXISTS ix_fields_session ON field_edits(session_id);
 CREATE INDEX IF NOT EXISTS ix_versions_field ON audio_versions(field_id);
 CREATE INDEX IF NOT EXISTS ix_sessions_trip ON sessions(trip_id, status);
 CREATE INDEX IF NOT EXISTS ix_clips_field ON manual_clips(field_id);
 CREATE INDEX IF NOT EXISTS ix_auth_sessions_user ON auth_sessions(user_id);
 CREATE INDEX IF NOT EXISTS ix_auth_sessions_expires ON auth_sessions(expires_at);
+CREATE INDEX IF NOT EXISTS ix_completed_at ON completed_trips(completed_at);
 """
 
 

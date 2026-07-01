@@ -1,14 +1,18 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../authContext';
 
-/** Current user + logout, plus the admin-only "Review queue" link. Reviewers
- * never see the queue link (nav gating from /api/me's role). */
+/** Current user + logout, the "Completed" link (both roles), and the
+ * admin-only "Review queue" link. Reviewers never see the queue link (nav
+ * gating from /api/me's role). */
 const UserMenu = () => {
   const { user, logout } = useAuth();
   if (!user) return null;
 
   return (
     <div className="flex shrink-0 items-center gap-3 text-xs">
+      <Link to="/completed" className="rounded border border-gray-600 px-2 py-1 text-gray-200 hover:bg-gray-700">
+        Completed
+      </Link>
       {user.role === 'admin' && (
         <Link
           to="/queue"

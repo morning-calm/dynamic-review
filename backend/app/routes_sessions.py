@@ -14,7 +14,7 @@ from .auth import scope_sid, scope_sid_editable
 from .models import (CreateSession, TextUpdate, SourceUpdate, Regenerate, Fallback,
                      PlayedRanges, FlagSet, CommentSet, NarrationSet,
                      ClipCreate, ClipRegen, ClipComment, TrimNoise, TrimCandidate,
-                     InsertSilence, RequestChanges)
+                     InsertSilence, RequestChanges, CompleteTrip)
 
 router = APIRouter(prefix="/api")
 
@@ -193,3 +193,23 @@ def post_request_changes(sid: str, body: RequestChanges,
 @router.get("/review-queue")
 def get_review_queue(admin=Depends(auth.require_admin)):
     return sessions.review_queue()
+
+
+# --- Completed queue ---
+@router.get("/completed")
+def get_completed(user=Depends(auth.require_user)):
+    # Both roles; reviewers filtered to their languages (admins see all), newest first.
+    return sessions.completed(user)
+
+
+@router.post("/trips/{trip_id}/complete")
+def post_complete(trip_id: str, admin=Depends(auth.require_admin),
+                  body: CompleteTrip | None = None):
+    # Admin manual (bypass) complete — writes NOTHING to staging/masters. trip_id may
+    # contain spaces/periods; FastAPI URL-decodes the path param. Body is optional.
+    return sessions.complete_trip(admin, trip_id, body.note if body else "")
+
+
+@router.delete("/trips/{trip_id}/complete")
+def delete_complete(trip_id: str, admin=Depends(auth.require_admin)):
+    return sessions.uncomplete_trip(admin, trip_id)

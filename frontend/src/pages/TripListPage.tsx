@@ -1,10 +1,27 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Modal from 'react-modal';
 import { toast } from 'react-toastify';
 import { api, ApiError, type SessionStatus, type TripListItem } from '../api';
+import { useAuth } from '../authContext';
 import UserMenu from '../components/UserMenu';
 
 type LaneFilter = 'all' | '6' | '7';
+
+const MODAL_STYLE: Modal.Styles = {
+  overlay: { backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 50 },
+  content: {
+    inset: '50% auto auto 50%',
+    transform: 'translate(-50%,-50%)',
+    maxWidth: '480px',
+    width: '90%',
+    background: '#111827',
+    border: '1px solid #374151',
+    borderRadius: '0.5rem',
+    padding: '1rem',
+    color: 'white',
+  },
+};
 
 // Variant display order within a family.
 const LEVEL_ORDER = ['EN', 'A12', 'B1', 'B2', 'N5', 'N4', 'HSK1-2', 'HSK3', 'ZH', 'JP', ''];
@@ -40,10 +57,17 @@ const StatusBadge = ({ trip }: { trip: TripListItem }) => {
 
 const TripListPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [trips, setTrips] = useState<TripListItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
   const [lane, setLane] = useState<LaneFilter>('all');
+
+  // Mark-complete modal (admin only): the trip pending confirmation + its optional note.
+  const [completeTarget, setCompleteTarget] = useState<TripListItem | null>(null);
+  const [completeNote, setCompleteNote] = useState('');
+  const [completing, setCompleting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,6 +86,38 @@ const TripListPage = () => {
       cancelled = true;
     };
   }, []);
+
+  // Manual refresh after a mark-complete action (no unmount-cancellation needed — one-shot).
+  const refreshTrips = () =>
+    api
+      .listTrips()
+      .then((t) => setTrips(t))
+      .catch((e: unknown) => {
+        const msg = e instanceof ApiError ? e.detail || e.code : 'Failed to load trips';
+        setError(msg);
+        setTrips([]);
+      });
+
+  const openCompleteModal = (trip: TripListItem) => {
+    setCompleteNote('');
+    setCompleteTarget(trip);
+  };
+
+  const confirmComplete = () => {
+    if (!completeTarget) return;
+    const target = completeTarget;
+    setCompleting(true);
+    api
+      .completeTrip(target.trip_id, completeNote.trim() || undefined)
+      .then(() => {
+        toast.success(`Marked "${target.title || target.trip_id}" complete.`);
+        setCompleteTarget(null);
+        setCompleteNote('');
+        return refreshTrips();
+      })
+      .catch((e: unknown) => toast.error(`Mark complete failed: ${e instanceof ApiError ? e.detail : 'network error'}`))
+      .finally(() => setCompleting(false));
+  };
 
   const laneCounts = useMemo(() => {
     const c = { '6': 0, '7': 0 };
@@ -171,6 +227,15 @@ const TripListPage = () => {
                     )}
                     {!trip.reviewable && <span className="text-[11px] text-amber-400/80">no local audio</span>}
                     <StatusBadge trip={trip} />
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => openCompleteModal(trip)}
+                        className="rounded border border-gray-600 px-2 py-1 text-xs text-gray-300 hover:bg-gray-700"
+                      >
+                        Mark complete
+                      </button>
+                    )}
                     <button
                       type="button"
                       disabled={opening === trip.trip_id || !trip.reviewable}
@@ -187,6 +252,46 @@ const TripListPage = () => {
           </li>
         ))}
       </ul>
+
+      <Modal
+        isOpen={completeTarget !== null}
+        onRequestClose={() => !completing && setCompleteTarget(null)}
+        style={MODAL_STYLE}
+        contentLabel="Mark trip complete"
+      >
+        <h2 className="mb-2 text-sm font-semibold">Mark complete</h2>
+        <p className="mb-3 text-xs text-gray-400">
+          Marks <span className="text-gray-200">{completeTarget?.title || completeTarget?.trip_id}</span> complete
+          without a review session — for work already finished in the old system. It leaves the main list; an admin
+          can un-complete it later from the Completed page. This does not write staging or promote audio.
+        </p>
+        <textarea
+          value={completeNote}
+          onChange={(e) => setCompleteNote(e.target.value)}
+          placeholder="Optional note (visible to admins)"
+          rows={3}
+          autoFocus
+          className="mb-3 w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm"
+        />
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            disabled={completing}
+            onClick={() => setCompleteTarget(null)}
+            className="rounded border border-gray-600 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={completing}
+            onClick={confirmComplete}
+            className="rounded bg-custom-green px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+          >
+            {completing ? 'Marking…' : 'Mark complete'}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 };

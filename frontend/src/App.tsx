@@ -8,6 +8,7 @@ import TripListPage from './pages/TripListPage';
 import ReviewPage from './pages/ReviewPage';
 import ChangesSummaryPage from './pages/ChangesSummaryPage';
 import ReviewQueuePage from './pages/ReviewQueuePage';
+import CompletedPage from './pages/CompletedPage';
 
 const App = () => (
   <BrowserRouter>
@@ -20,6 +21,7 @@ const App = () => (
             <Route path="/" element={<TripListPage />} />
             <Route path="/review/:sid" element={<ReviewPage />} />
             <Route path="/admin/:sid" element={<ChangesSummaryPage />} />
+            <Route path="/completed" element={<CompletedPage />} />
             <Route element={<RequireAdmin />}>
               <Route path="/queue" element={<ReviewQueuePage />} />
             </Route>

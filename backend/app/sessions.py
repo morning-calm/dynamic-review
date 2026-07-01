@@ -303,6 +303,11 @@ def list_trips(user=None) -> list[dict]:
             trips = []
     else:
         trips = _list_trips_from_scan()
+    # Completed trips (approved or admin-marked) leave the active queue entirely — for
+    # ALL roles. An admin un-completes to return one to the list.
+    done = {r["trip_id"] for r in db.query("SELECT trip_id FROM completed_trips")}
+    if done:
+        trips = [t for t in trips if t["trip_id"] not in done]
     if user is not None:
         from . import auth   # lazy (auth imports sessions) — no module-load cycle
         trips = [t for t in trips if auth.language_allowed(user, t["trip_id"])]
@@ -424,6 +429,12 @@ def create_or_resume(trip_id: str, user) -> dict:
         raise HTTPException(403, detail={
             "error": "forbidden",
             "detail": "this trip's narration language is not assigned to you"})
+    # Completed trips are view-only — an admin must un-complete before it can be reviewed
+    # again (checked before resume/seed so a leftover session can't reopen a done trip).
+    if db.query_one("SELECT 1 FROM completed_trips WHERE trip_id=?", (trip_id,)):
+        raise HTTPException(409, detail={
+            "error": "completed",
+            "detail": "trip is completed — un-complete it to review"})
     # Resume the newest non-terminal session (in_review / submitted / changes_requested);
     # `approved` is terminal, so a fresh open re-seeds from the now-promoted masters.
     existing = db.query_one(
@@ -1887,11 +1898,22 @@ def approve(sid: str, user) -> dict:
         db.execute(
             "UPDATE sessions SET status='approved', approved_by=?, updated_at=? WHERE id=?",
             (getattr(user, "username", None), now, sid))
+        tid = trip_id_for_session(sid)
         db.execute(
             "INSERT INTO approvals(session_id,trip_id,approved_by,approved_at,written_json)"
             " VALUES(?,?,?,?,?)",
-            (sid, trip_id_for_session(sid), getattr(user, "username", None), now,
+            (sid, tid, getattr(user, "username", None), now,
              json.dumps(result["written"])))
+        # Approving a trip also COMPLETES it (leaves the active queue). Upsert so a
+        # re-approve (e.g. after un-complete + re-review) refreshes the row.
+        db.execute(
+            "INSERT INTO completed_trips"
+            "(trip_id,completed_by,completed_at,method,session_id,note) "
+            "VALUES(?,?,?,'approved',?,'') "
+            "ON CONFLICT(trip_id) DO UPDATE SET "
+            "completed_by=excluded.completed_by, completed_at=excluded.completed_at, "
+            "method='approved', session_id=excluded.session_id",
+            (tid, getattr(user, "username", None), now, sid))
         return {"ok": True, "validation": soft, "written": result["written"],
                 "promoted_mp3": result["promoted_mp3"], "awaiting_stage9": True}
     except Exception:
@@ -1937,6 +1959,59 @@ def review_queue() -> list[dict]:
             "edit_required": er is not None,
         })
     return out
+
+
+# --------------------------------------------------------------------------- #
+# Completed queue
+# --------------------------------------------------------------------------- #
+def completed(user) -> list[dict]:
+    """The completed queue (approved + admin-marked-complete). BOTH roles; reviewers are
+    filtered to their languages (admins see all). Newest first. View-only — an admin
+    un-completes to return a trip to the active list."""
+    from . import auth   # lazy (auth imports sessions) — no module-load cycle
+    rows = db.query(
+        "SELECT trip_id, completed_by, completed_at, method, session_id "
+        "FROM completed_trips ORDER BY completed_at DESC")
+    out: list[dict] = []
+    for r in rows:
+        tid = r["trip_id"]
+        if not auth.language_allowed(user, tid):
+            continue
+        meta = _trip_meta(tid)
+        out.append({
+            "trip_id": tid,
+            "title": meta.get("title") or tid,
+            "language": audio_core.language_of(tid),
+            "method": r["method"],
+            "completed_by": r["completed_by"],
+            "completed_at": r["completed_at"],
+            "session_id": r["session_id"],
+        })
+    return out
+
+
+def complete_trip(user, trip_id: str, note: str = "") -> dict:
+    """ADMIN manual complete (bypass): upsert a completed_trips row (method='manual',
+    session_id=NULL). NO session / mark-done / submit / approve required and it writes
+    NOTHING to staging or masters — it's purely a workflow marker (work done elsewhere).
+    Idempotent; 200 even when the trip has no session."""
+    now = time.time()
+    db.execute(
+        "INSERT INTO completed_trips"
+        "(trip_id,completed_by,completed_at,method,session_id,note) "
+        "VALUES(?,?,?,'manual',NULL,?) "
+        "ON CONFLICT(trip_id) DO UPDATE SET "
+        "completed_by=excluded.completed_by, completed_at=excluded.completed_at, "
+        "method='manual', session_id=NULL, note=excluded.note",
+        (trip_id, getattr(user, "username", None), now, note or ""))
+    return {"ok": True}
+
+
+def uncomplete_trip(user, trip_id: str) -> dict:
+    """ADMIN un-complete: delete the completed_trips row so the trip returns to the main
+    list and becomes openable again. Idempotent (no-op if not completed)."""
+    db.execute("DELETE FROM completed_trips WHERE trip_id=?", (trip_id,))
+    return {"ok": True}
 
 
 # --------------------------------------------------------------------------- #

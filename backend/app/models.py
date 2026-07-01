@@ -17,6 +17,10 @@ class RequestChanges(BaseModel):
     note: str = ""
 
 
+class CompleteTrip(BaseModel):
+    note: str = ""   # optional admin note for a manual (old-system) completion
+
+
 class CreateSession(BaseModel):
     trip_id: str
 
