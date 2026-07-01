@@ -20,11 +20,12 @@ from __future__ import annotations
 from . import config  # noqa: F401  (side effects: sys.path + .env) — keep first
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from . import auth, db, routes_audio, routes_sessions
-from .config import CORS_ORIGINS, HOST, PORT
+from .config import CORS_ORIGINS, FRONTEND_DIST, HOST, PORT, SERVE_FRONTEND
 
 app = FastAPI(title="review-app backend", version="1.0",
               docs_url=None, redoc_url=None, openapi_url=None)
@@ -46,6 +47,12 @@ async def require_auth(request: Request, call_next):
     if request.method == "OPTIONS":               # CORS preflight
         return await call_next(request)
     if (request.method, request.url.path) in _AUTH_EXEMPT:
+        return await call_next(request)
+    # Single-origin deploy: the built SPA (login page + JS/CSS) must load BEFORE the
+    # user has a token, so any non-API GET is public. /api, /audio, /overlays still
+    # require auth (audio/overlays authenticate via the review_session cookie).
+    if (SERVE_FRONTEND and request.method in ("GET", "HEAD")
+            and not request.url.path.startswith(("/api/", "/audio/", "/overlays/"))):
         return await call_next(request)
     # Header for writes; cookie also accepted for GET/HEAD (see auth.extract_token).
     user = auth.resolve_user(auth.extract_token(request))
@@ -86,6 +93,22 @@ def health():
 app.include_router(auth.router)
 app.include_router(routes_sessions.router)
 app.include_router(routes_audio.router)
+
+
+# --- Single-origin deploy: serve the built frontend (frontend/dist) so one hostname
+# fronts the UI + API + media (phase-1 tunnel). Off unless REVIEW_APP_SERVE_FRONTEND=1.
+if SERVE_FRONTEND and FRONTEND_DIST.is_dir():
+    app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIST / "assets")), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    def spa(full_path: str):
+        # Never hijack API/media paths; everything else falls back to the SPA index.
+        if full_path.startswith(("api/", "audio/", "overlays/")):
+            return Response(status_code=404)
+        f = FRONTEND_DIST / full_path
+        if full_path and f.is_file():
+            return FileResponse(str(f))
+        return FileResponse(str(FRONTEND_DIST / "index.html"))
 
 
 if __name__ == "__main__":

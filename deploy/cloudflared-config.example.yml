@@ -1,0 +1,12 @@
+# Cloudflare Tunnel config for the review app (single-origin).
+# Copy to %USERPROFILE%\.cloudflared\config.yml and fill in <UUID> + your hostname.
+
+tunnel: review-app
+credentials-file: C:\Users\david\.cloudflared\<UUID>.json
+
+ingress:
+  # Your chosen subdomain -> the single-origin backend (serves UI + /api + /audio + /overlays)
+  - hostname: review.dynamiclanguages.org
+    service: http://localhost:8000
+  # Everything else 404s
+  - service: http_status:404

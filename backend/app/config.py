@@ -91,6 +91,13 @@ CORS_ORIGINS = [
 HOST = "127.0.0.1"
 PORT = int(os.environ.get("REVIEW_APP_PORT", "8000"))
 
+# Single-origin deploy (phase-1 tunnel): serve the built frontend (frontend/dist) from
+# this app so ONE hostname fronts the UI + /api + /audio + /overlays. Off by default
+# (dev uses the Vite server on :5173); set REVIEW_APP_SERVE_FRONTEND=1 for the tunnel.
+SERVE_FRONTEND = os.environ.get("REVIEW_APP_SERVE_FRONTEND", "0").strip().lower() in (
+    "1", "true", "yes", "on")
+FRONTEND_DIST = REVIEW_APP_ROOT / "frontend" / "dist"
+
 # --- Audio / DSP constants --------------------------------------------------
 ANALYSIS_SR = 44100          # masters are mp3/44100/mono; we analyse at source rate
 ENERGY_MIN_WINDOW = 0.120    # ±120 ms snap-to-energy-minimum for cut refinement
