@@ -916,9 +916,9 @@ def serialize_field(sid: str, frow) -> dict:
         "has_audio": has_audio,
         "original_text": frow["original_text"],
         "current_text": frow["current_text"],
-        # What the WORKING take says (set at combine; null before the first combine) — the
-        # FE compares the JP kana line against THIS, not the seed, to gate "Generate from
-        # edit" (the localization block's working_hans is the _ZH sibling).
+        # What the WORKING take says (seeded to original_text; re-set at each combine) —
+        # the FE compares the JP kana line against THIS, not the seed, to gate "Generate
+        # from edit" (the localization block's working_hans is the _ZH sibling).
         "working_text": frow["working_text"],
         "source_text": frow["source_text"] or "",
         "original_source": frow["original_source"] or "",

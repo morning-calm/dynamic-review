@@ -31,10 +31,10 @@ The atom the UI renders/edits. One per editable thing.
   "has_audio": true,                  // SceneDesc / questionKey / questionOption[k]
   "original_text": "…",               // immutable (the take's text at seed)
   "current_text": "…",                // edited value (autosaved)
-  "working_text": null,               // what the WORKING take says (set at each combine;
-                                      // null before the first). JP gates "Generate from
-                                      // edit" on the kana line vs THIS, not the seed
-                                      // (the _ZH sibling is localization.working_hans).
+  "working_text": "…",                // what the WORKING take says (seeded to
+                                      // original_text; re-set at each combine). JP gates
+                                      // "Generate from edit" on the kana line vs THIS,
+                                      // not the seed (_ZH sibling: working_hans).
   "flag": "none",                     // "none" | "done" | "edit_required"
   "comment": "",
   "splice_confidence": null,          // 0..1 after a combine, else null

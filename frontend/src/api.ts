@@ -202,8 +202,8 @@ export interface Field {
   has_audio: boolean;
   original_text: string;
   current_text: string;
-  /** What the WORKING take says (set at each combine; null before the first). The JP
-   * "Generate from edit" gate compares the kana line against THIS, not the seed —
+  /** What the WORKING take says (seeded to original_text; re-set at each combine). The
+   * JP "Generate from edit" gate compares the kana line against THIS, not the seed —
    * the `_ZH` sibling is `localization.working_hans`. */
   working_text: string | null;
   /** Editable English translation for non-_EN trips (empty when N/A / same as target). */

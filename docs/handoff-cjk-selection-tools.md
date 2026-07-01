@@ -1,5 +1,10 @@
 # Handoff prompt — add the English selection tools to Japanese & Mandarin
 
+> **DONE (2026-07-02).** Shipped on `feat/cjk-selection-tools` (`a45592f`) with a 5th tool
+> (Remove 1s pause, all languages), wrong-line guards, the in-app help (?) button, and
+> updated user guides. Seam listen passed (4/4, no notes). Current state for the next
+> session: see `docs/handoff-app-testing.md`. Kept for reference only.
+
 Copy the block below into a fresh Claude Code session started in `D:\Projects\WebApp\review-app`.
 It is written to be self-contained for a cold start.
 

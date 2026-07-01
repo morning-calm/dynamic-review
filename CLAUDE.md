@@ -128,7 +128,10 @@ R2-upload hooks) · `audio_core.py` (EL TTS + Gemini clean + `speed_for_trip` + 
 `audio_splice.py` (English splice engine) · `cjk_splice.py` (`_ZH`/`_JP` surgical splice) ·
 `cjk_align.py` (client for the isolated MMS forced-aligner subprocess) · `audio_io.py`
 (ffmpeg/numpy DSP) · `thumbs.py` · `review_audio.py` · `bug_reports.py` (in-app problem reports +
-audio/text snapshot + reply thread) · `routes_sessions.py` / `routes_audio.py` / `routes_bugs.py`.
+audio/text snapshot + reply thread) · `routes_sessions.py` / `routes_audio.py` / `routes_bugs.py`
+· `routes_help.py` (top-bar **?** button: serves `docs/user-guides/` at `/help/quick|guide|
+guide-native` — markdown rendered live per request, cookie-auth, guide picked by role/language;
+editing the guide .md files updates the app with no rebuild).
 
 ## Bug reports
 Reviewers/admins flag a problem on any audio field from its control row, in any language (the
@@ -184,8 +187,10 @@ machine stays on with uvicorn up.
   `research/cjk-aligner/venv` (torch/torchaudio/uroman); without it CJK text edits fall back to
   whole-regen and the selection/pause tools 409 (`aligner_unavailable`). Live ZH demo audio is
   limited to `sess_5bc56203b40a` (masters gone from disk — a fresh `_ZH` seed needs sources
-  restored); its **V2 pick has been made** (2026-07-02, e2e) so it renders the collapsed
-  single-take UI, with dave's 你好 hanzi edit still pending on scene 1.
+  restored); its **V2 pick has been made** (2026-07-02) so it renders the collapsed
+  single-take UI. Both CJK demo sessions were **reset to a pristine no-edits state**
+  (2026-07-02, pre-thorough-testing): text=seed, no flags/comments/coverage/candidates,
+  versions = v0 only, working = pristine take; the test bug report was purged.
 - **Mandarin voices:** `annasu` is **female**; `yu` and `jason` are **male** — a splice/regen must use
   a voice matching the master, or the seam is a *voice* mismatch, not a splice defect. The demo session
   `sess_5bc56203b40a` was mis-stored as `yu` and has since been corrected to `annasu`; real trips resolve
