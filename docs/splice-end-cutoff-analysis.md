@@ -40,6 +40,18 @@
 > completion* of an audibly truncated word from sentence context — it transcribed
 > "Shogunate." on a clip that audibly ends at "shoguna" (only a cut ~0.2 s earlier
 > made it say "Shogun"). Don't reach for transcription to detect truncation.
+>
+> **CJK audit (same day):** all of the above flows to `_JP`/`_ZH` automatically (shared
+> `sessions.regenerate` / `generate_with_timestamps` / `trim_trailing_breath`), and they
+> NEED it — Japanese 〜です/〜ます endings are DEVOICED (very quiet, exactly the clipped
+> "shogunate" shape) and Mandarin neutral-tone finals (了/吧/呢) sit similarly low.
+> Validated live: JP eleven_v3 emits a sane `letter_end` (kana/hanzi/ー/digits are
+> `isalnum`, CJK punctuation isn't; a spaceless phrase is ONE cand_word whose letter_end
+> = last spoken char); on a real ZH v2 take the FLOOR did the work (energy trim wanted
+> 2.08 s, floor held 2.208 s, audible content ended 1.990 s). The ZH v2+context path also
+> gets the leak retry + front-trim; JP v3 sends no context so it has no leak path. The
+> `_FWD` widening is deliberately English-only — the CJK engine's `gap_cut` reads the MMS
+> aligner (no Whisper absorption blind spot) and bails to whole-regen rather than guess.
 
 Two field reports from English review (Tokyo_08_ImperialPalace_EN), both on
 SceneDesc highlight/alt regenerates:
