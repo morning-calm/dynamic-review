@@ -313,7 +313,7 @@ const RegenerateControls = ({
       type="button"
       disabled={busy}
       onClick={onTrimNoise}
-      title="Backstop: highlight the space where unwanted noise/a leftover sliver is heard, then click to trim it from the working take"
+      title={`Highlight the spot in ${surfaceLabel} where an unwanted noise or leftover sound is heard, then click to clean it from the working audio`}
       className={`${btn} border-gray-600 text-gray-200`}
     >
       Trim highlighted noise
@@ -341,7 +341,13 @@ const RegenerateControls = ({
         ↷ Redo
       </button>
 
-      <button type="button" disabled={busy} onClick={() => regen('whole')} className={`${btn} border-gray-600 text-gray-200`}>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => regen('whole')}
+        title="Re-record this entire block from its current text — audition the result, then Combine to keep it"
+        className={`${btn} border-gray-600 text-gray-200`}
+      >
         Regenerate whole block
       </button>
 
@@ -350,7 +356,7 @@ const RegenerateControls = ({
           type="button"
           disabled={busy}
           onClick={onAltTextWhole}
-          title="Voice replacement/phonetic text as the whole block"
+          title="Type replacement/phonetic text and re-record this whole block from it (fixes a pronunciation; the on-screen text is unchanged)"
           className={`${btn} border-gray-600 text-gray-200`}
         >
           …with alt text
@@ -366,7 +372,11 @@ const RegenerateControls = ({
             type="button"
             disabled={busy || !hasTextChange}
             onClick={() => regen('segment')}
-            title={hasTextChange ? 'Regenerate just the edited span' : 'Edit the text first'}
+            title={
+              hasTextChange
+                ? 'Re-record just the words you edited and splice them into the existing audio'
+                : `Edit ${surfaceLabel} first`
+            }
             className={`${btn} border-gray-600 text-gray-200`}
           >
             Generate from edit
@@ -380,7 +390,7 @@ const RegenerateControls = ({
                 type="button"
                 disabled={busy}
                 onClick={onHighlight}
-                title="Select text in the narration, then click"
+                title={`Select the phrase in ${surfaceLabel}, then click to re-record just that phrase (the text is unchanged)`}
                 className={`${btn} border-gray-600 text-gray-200`}
               >
                 Regenerate highlighted
@@ -389,7 +399,7 @@ const RegenerateControls = ({
                 type="button"
                 disabled={busy}
                 onClick={onAltText}
-                title="Select text in the narration, then supply alternate/phonetic text to speak"
+                title={`Select the phrase in ${surfaceLabel}, then type replacement/phonetic text to speak there (fixes a pronunciation; the on-screen text is unchanged)`}
                 className={`${btn} border-gray-600 text-gray-200`}
               >
                 …with alt text
@@ -399,7 +409,7 @@ const RegenerateControls = ({
                 type="button"
                 disabled={busy}
                 onClick={() => void onInsertSilence(1)}
-                title="Click in the narration where a pause should go (usually after a full stop), then click to insert a 1s silence there"
+                title={`Click at a pause in ${surfaceLabel} (usually right after a full stop), then click to lengthen that pause by 1s — it never splits a word`}
                 className={`${btn} border-gray-600 text-gray-200`}
               >
                 Insert 1s
@@ -408,7 +418,7 @@ const RegenerateControls = ({
                 type="button"
                 disabled={busy}
                 onClick={() => void onInsertSilence(0.5)}
-                title="Click in the narration where a pause should go, then click to insert a 0.5s silence there (lighter touch for non-beginner audio)"
+                title={`Click at a pause in ${surfaceLabel}, then click to lengthen that pause by 0.5s (the lighter touch for non-beginner audio)`}
                 className={`${btn} border-gray-600 text-gray-200`}
               >
                 Insert 0.5s
@@ -417,7 +427,7 @@ const RegenerateControls = ({
                 type="button"
                 disabled={busy}
                 onClick={() => void onRemoveSilence(1)}
-                title="Click in the narration where a pause is too long, then click to remove up to 1s of it (a natural pause is always kept — it never cuts speech)"
+                title={`Click at an over-long pause in ${surfaceLabel}, then click to remove up to 1s of it (a natural pause is always kept — it never cuts speech)`}
                 className={`${btn} border-gray-600 text-gray-200`}
               >
                 Remove 1s
@@ -426,7 +436,7 @@ const RegenerateControls = ({
                 type="button"
                 disabled={busy}
                 onClick={() => void onRemoveSilence(0.5)}
-                title="Click in the narration where a pause is slightly too long, then click to remove up to 0.5s of it (a natural pause is always kept — it never cuts speech)"
+                title={`Click at a slightly-long pause in ${surfaceLabel}, then click to remove up to 0.5s of it (a natural pause is always kept — it never cuts speech)`}
                 className={`${btn} border-gray-600 text-gray-200`}
               >
                 Remove 0.5s
@@ -439,7 +449,13 @@ const RegenerateControls = ({
 
       {field.audio.candidate && (
         <>
-          <button type="button" disabled={busy} onClick={doCombine} className={`${btn} border-custom-green text-custom-green`}>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={doCombine}
+            title="Keep the new take you just auditioned — it replaces that part of the working audio (undoable)"
+            className={`${btn} border-custom-green text-custom-green`}
+          >
             Combine
           </button>
           <button
@@ -535,7 +551,7 @@ const RegenerateControls = ({
             Cancel
           </button>
           <button type="button" disabled={busy} onClick={submitAlt} className={`${btn} border-custom-green text-custom-green`}>
-            {altWhole ? 'Generate' : 'Generate & splice'}
+            Generate
           </button>
         </div>
       </Modal>
