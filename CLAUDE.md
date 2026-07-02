@@ -109,19 +109,21 @@ drafts that sit on NO lane-6/7 card, so a stale block can't hide trips silently 
   is also on Q&A/option audio fields, all languages (highlight in that field's own textarea /
   Hans box; `trim_noise`/`_trim_noise_cjk` were already field-generic — the FE just never wired
   a selection surface for `wholeOnly` fields).
-- **Candidate end-cutoff / previous_text-leak — FIXED (2026-07-02)**: `trim_trailing_breath`
-  now absorbs the quiet word tail after the last sustained run (final syllables/stop bursts sit
-  26–40 dB below peak — LOW-bar peak−40 dB chained within 150 ms; breaths after a real pause
-  still trim); `sessions.regenerate` front-trims a leaked/oversized candidate lead past
-  `cand_words[0].start` (shifting cand_words; `trim_candidate` re-applies `cand_front_trim_s`
-  from the pristine copy); `generate_with_timestamps` retries ONCE without `previous_text` when
-  the first word starts > 0.4 s in (the v2 context leak). Validated on synthetic DSP set + 3
-  real EL takes (Whisper-verified "gate"/"shogunate" survive, tails still trimmed). Follow-up:
-  the "extra words before the phrase" was mostly plan-time LEFT-EXPANSION — Whisper stretched
-  "and" over 630 ms of the preceding pause and `_silence_cut`'s forward reach (`_FWD` 0.22)
-  missed the pause start by 6 ms → `_FWD` now 0.45, symmetric with `_LOOK` (nearest-run
-  preference keeps genuine backward pauses winning). Analysis + the two still-open proposals
-  (combine-side end margin, Whisper candidate verify): `docs/splice-end-cutoff-analysis.md`.
+- **Candidate end-cutoff / previous_text-leak — FIXED (2026-07-02, three rounds)**:
+  `trim_trailing_breath` absorbs the quiet word tail after the last sustained run (contiguous
+  ≤30 ms gaps any length, burst-sized ≤160 ms runs within 250 ms, at a peak−50 dB bar —
+  word-final tails sit 26–56 dB below peak; breaths/bleed after a real pause still trim), AND
+  the trim is FLOORED at the EL alignment's `letter_end` of the last word + 0.13 s
+  (`_chars_to_words` emits per-word `letter_end` = last ALPHANUMERIC char end; the final '.'
+  absorbs trailing silence so its `end` ≈ clip end, useless). `sessions.regenerate` front-trims
+  a leaked/oversized lead past `cand_words[0].start` (shifting cand_words incl. letter_end;
+  `trim_candidate` re-applies `cand_front_trim_s`); `generate_with_timestamps` retries ONCE
+  without `previous_text` when word0 starts > 0.4 s (the v2 context leak). `_FWD` 0.22→0.45
+  (Whisper stretched "and" over 630 ms of pause → left cut missed the pause by 6 ms → span
+  expanded 4 words leftward). ⚠️ **ASR verification REJECTED**: whisper hallucinates the
+  completion of a truncated word from context ("Shogunate." heard on audio ending "shoguna")
+  — never use transcription to detect truncation. Full history:
+  `docs/splice-end-cutoff-analysis.md`.
 - **Versioning:** canonical `<i>.mp3`; superseded takes archived `versions/<i>v<n>.mp3`.
 - **Submit** writes changed **text** to staging Trip + TripGroup (desc + re-derived
   `tripCategories`) and leaves the corrected `<i>.mp3` masters in place — **Stage 9**

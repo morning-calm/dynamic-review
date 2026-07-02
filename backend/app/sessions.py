@@ -1458,6 +1458,13 @@ _CAND_LEAD_MAX_S = 0.25
 _CAND_LEAD_KEEP_S = 0.10
 
 
+# The trailing trim's hard floor beyond the last word's aligned LETTER end: covers the
+# ~50 ms alignment slack plus a natural release. (ASR verification was tried and
+# REJECTED: Whisper hallucinates the completion of an audibly truncated word from
+# context — it transcribed "Shogunate." on a clip that ends at "shoguna".)
+_CAND_TAIL_FLOOR_PAD_S = 0.13
+
+
 def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
                alt_text: str | None = None) -> dict:
     srow = _session_row(sid)
@@ -1609,11 +1616,28 @@ def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
         if lead > _CAND_LEAD_MAX_S:
             front_s = lead - _CAND_LEAD_KEEP_S
             cand_samples = cand_samples[int(round(front_s * audio_io.SR)):]
-            plan.meta["cand_words"] = [
-                {**w, "start": max(0.0, float(w["start"]) - front_s),
-                 "end": max(0.0, float(w["end"]) - front_s)} for w in cw]
+
+            def _shift(w: dict) -> dict:
+                out = {**w, "start": max(0.0, float(w["start"]) - front_s),
+                       "end": max(0.0, float(w["end"]) - front_s)}
+                if w.get("letter_end") is not None:
+                    out["letter_end"] = max(0.0, float(w["letter_end"]) - front_s)
+                return out
+
+            cw = [_shift(w) for w in cw]
+            plan.meta["cand_words"] = cw
     plan.meta["cand_front_trim_s"] = round(front_s, 3)
     trimmed = audio_io.trim_trailing_breath(cand_samples, audio_io.SR)
+    # The trim's energy heuristics are take-dependent (every threshold so far met a
+    # take that beat it — docs/splice-end-cutoff-analysis.md), so FLOOR the cut at the
+    # last word's aligned LETTER end (+pad). The final punctuation char's `end` absorbs
+    # the clip's trailing silence (useless), but the last letter's end lands within
+    # ~50 ms of the audible word end — the trim must never cut before it.
+    if cw and cw[-1].get("letter_end"):
+        floor_n = int(round((float(cw[-1]["letter_end"]) + _CAND_TAIL_FLOOR_PAD_S)
+                            * audio_io.SR))
+        if len(trimmed) < floor_n:
+            trimmed = cand_samples[:min(len(cand_samples), floor_n)]
     if front_s > 0.0 or len(trimmed) < len(cand_samples):
         audio_io.samples_to_mp3(trimmed, cand_path)
     plan.meta["cand_trim_ms"] = round(

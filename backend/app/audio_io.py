@@ -343,20 +343,28 @@ def first_silence_after(samples: np.ndarray, sr: int, t0: float, t1: float,
 
 def trim_trailing_breath(samples: np.ndarray, sr: int = SR, rel_db: float = 26.0,
                          min_speech_ms: float = 80.0, release_ms: float = 90.0,
-                         tail_db: float = 40.0, tail_gap_ms: float = 150.0) -> np.ndarray:
+                         tail_db: float = 50.0, cont_gap_ms: float = 30.0,
+                         burst_gap_ms: float = 250.0, burst_max_ms: float = 160.0
+                         ) -> np.ndarray:
     """Drop a trailing breath / next-sound bleed that TTS leaves AFTER the last word.
+
     Finds the end of the last sustained voiced run (above peak − ``rel_db`` for ≥
-    ``min_speech_ms``), then extends that end over any content above a LOW bar
-    (peak − ``tail_db``) that follows within ``tail_gap_ms`` of it, chained. Word
-    endings are routinely far quieter than the ``rel_db`` bar — an unstressed final
-    syllable ("shogun-ATE") sits 26–40 dB below peak, and a word-final stop ("gate")
-    is closure-silence + a brief burst — and cutting at the sustained run alone
-    chopped them off (docs/splice-end-cutoff-analysis.md). A quiet word tail is
-    (near-)contiguous with its vowel, whereas a breath / next-sound bleed only comes
-    after a genuine pause (> ``tail_gap_ms``), so those are still trimmed. Keeps a
-    ``release_ms`` tail so the natural word release is intact, and cuts everything
-    after it. Never cuts into sustained speech; returns the samples unchanged when
-    the tail beyond the last word is negligible (< 40 ms)."""
+    ``min_speech_ms``), then extends that end over the word's QUIET TAIL — runs above
+    a low bar (peak − ``tail_db``) absorbed by two rules, chained:
+
+      * gap ≤ ``cont_gap_ms``      → absorb any run (the same sound continuing — an
+        unstressed final syllable like "shogun-ATE" sits 26–50 dB below peak);
+      * gap ≤ ``burst_gap_ms`` AND run ≤ ``burst_max_ms`` → absorb (a word-final stop
+        is closure-SILENCE of ~50–150 ms then a SHORT burst — "gate", the /t/ of
+        "-ate"; a real take showed a 144 ms silent closure before a 140 ms burst
+        40–56 dB down, see docs/splice-end-cutoff-analysis.md).
+
+    A breath / the next sound's bleed is LONG (> ``burst_max_ms``) after a genuine
+    pause, so it still gets trimmed. Keeps a ``release_ms`` tail so the natural word
+    release is intact, and cuts everything after it. Never cuts into sustained
+    speech; returns the samples unchanged when the tail beyond the last word is
+    negligible (< 40 ms). Heuristic — sessions.regenerate Whisper-verifies the result
+    on English candidates and drops the trim when the final word went missing."""
     n = len(samples)
     if n < int(0.05 * sr):
         return samples
@@ -381,12 +389,24 @@ def trim_trailing_breath(samples: np.ndarray, sr: int = SR, rel_db: float = 26.0
     if end_idx is None:
         return samples
     tail = rms >= peak_abs * (10.0 ** (-tail_db / 20.0))
-    gap = max(1, int(tail_gap_ms / 1000.0 / 0.005))      # frames (5 ms hop)
+    cont = max(1, int(cont_gap_ms / 5.0))                # frames (5 ms hop)
+    bgap = max(1, int(burst_gap_ms / 5.0))
+    bmax = max(1, int(burst_max_ms / 5.0))
     j = end_idx + 1
-    while j < m and (j - end_idx) <= gap:                # quiet word-tail absorption
-        if tail[j]:
-            end_idx = j
-        j += 1
+    while j < m:                                         # quiet word-tail absorption
+        if not tail[j]:
+            if (j - end_idx) > bgap:
+                break                                    # true pause → stop chaining
+            j += 1
+            continue
+        r0 = j                                           # a tail run starts — measure it
+        while j < m and tail[j]:
+            j += 1
+        gap_f, run_f = r0 - end_idx - 1, j - r0
+        if gap_f <= cont or run_f <= bmax:
+            end_idx = j - 1                              # continuation / stop burst
+        else:
+            break                                        # long run after a pause = breath/bleed
     cut = int(round((float(times[end_idx]) + release_ms / 1000.0) * sr))
     if cut >= n - int(0.04 * sr):                        # negligible tail → no-op
         return samples

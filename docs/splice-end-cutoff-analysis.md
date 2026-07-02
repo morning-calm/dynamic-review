@@ -23,6 +23,23 @@
 > nearest run, so genuine backward pauses keep winning). Verified on the live session
 > audio: the highlight now plans exactly "and the headquarters of the shogunate."
 > (tL inside the real pause), and the Seimon sentence plan is unchanged.
+>
+> **Follow-up 2 (same day):** a fresh take beat the low-bar chain too — its "-ate"
+> tail is a **144 ms fully-silent closure then a 140 ms burst 40–56 dB below peak**;
+> the 150 ms chain gap missed it by 9 ms. Every energy threshold is take-dependent,
+> so two structural changes shipped:
+> 1. `trim_trailing_breath` now absorbs a tail run EITHER when it is (near-)contiguous
+>    (≤30 ms gap, any length) OR when it is burst-SIZED (≤160 ms) within a 250 ms gap
+>    at a peak−50 dB bar — a breath/bleed is long after a real pause, so still trimmed.
+> 2. **Hard floor from the EL alignment**: `_chars_to_words` now emits per-word
+>    `letter_end` (end of the last ALPHANUMERIC char). The final '.' char absorbs the
+>    clip's trailing silence (its `end` ≈ clip end — useless), but the last letter's
+>    end lands within ~50 ms of the audible word end. `sessions.regenerate` clamps the
+>    trailing trim to `letter_end + 0.13 s` (front-trim shifts letter_end too).
+> **ASR verification was tried and REJECTED**: faster-whisper *hallucinates the
+> completion* of an audibly truncated word from sentence context — it transcribed
+> "Shogunate." on a clip that audibly ends at "shoguna" (only a cut ~0.2 s earlier
+> made it say "Shogun"). Don't reach for transcription to detect truncation.
 
 Two field reports from English review (Tokyo_08_ImperialPalace_EN), both on
 SceneDesc highlight/alt regenerates:

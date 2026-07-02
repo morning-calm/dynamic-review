@@ -336,20 +336,33 @@ def _generate_with_timestamps(text: str, voice_id: str, voice_settings: dict,
 
 
 def _chars_to_words(chars: list[str], starts: list[float], ends: list[float]) -> list[dict]:
+    """Per-char alignment → word list. Each word also carries ``letter_end`` — the end
+    of its last ALPHANUMERIC char (kana/hanzi count). The trailing punctuation char
+    absorbs the clip's trailing silence (a final '.' routinely "ends" at the very end
+    of the clip), so ``end`` is useless as a word boundary there; ``letter_end`` lands
+    within ~50 ms of the audible word end and is the floor the candidate trailing trim
+    must never cut before."""
     words: list[dict] = []
-    cur, cur_start, cur_end = "", None, None
+    cur, cur_start, cur_end, cur_letter_end = "", None, None, None
+
+    def _flush():
+        nonlocal cur, cur_start, cur_end, cur_letter_end
+        if cur:
+            words.append({"word": cur, "start": cur_start, "end": cur_end,
+                          "letter_end": cur_letter_end})
+        cur, cur_start, cur_end, cur_letter_end = "", None, None, None
+
     for ch, st, en in zip(chars, starts, ends):
         if ch.isspace():
-            if cur:
-                words.append({"word": cur, "start": cur_start, "end": cur_end})
-                cur, cur_start, cur_end = "", None, None
+            _flush()
             continue
         if not cur:
             cur_start = st
         cur += ch
         cur_end = en
-    if cur:
-        words.append({"word": cur, "start": cur_start, "end": cur_end})
+        if ch.isalnum():
+            cur_letter_end = en
+    _flush()
     return words
 
 
