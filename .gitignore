@@ -13,6 +13,8 @@ venv/
 *.db-shm
 backend/work/
 backend/thumb_upload_cache.json
+backend/notifier_state.json
+scripts/notifier_config.json
 .env
 .env.*
 *.log

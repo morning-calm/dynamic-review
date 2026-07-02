@@ -1,0 +1,9 @@
+{
+  "_comment": "Copy to scripts/notifier_config.json (gitignored) and fill in. MailWizz v2 auth = the single X-Api-Key header. base_url is the MailWizz API root (…/api/index.php).",
+  "base_url": "https://YOUR-MAILWIZZ-HOST/api/index.php",
+  "X-Api-Key": "YOUR_MAILWIZZ_V2_API_KEY",
+  "from_email": "review-app@dynamiclanguages.org",
+  "from_name": "Review App",
+  "to_email": "dave@dynamiclanguages.org",
+  "to_name": "Dave"
+}
