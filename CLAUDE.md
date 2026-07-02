@@ -149,6 +149,12 @@ drafts that sit on NO lane-6/7 card, so a stale block can't hide trips silently 
   combine/import/fallback the review app uploads the corrected take + `<i>v<n>.mp3` +
   `<i>_fallback.mp3`. Uploads are **best-effort** (never break a review op). Creds =
   `Cloudfare_*` in the Scripts `.env`. The backend needs **no AWS write** (S3 is Stage 9's).
+- **review.db backup:** `scripts/backup_review_db.py` WAL-safe hot-backs the DB (the ONLY copy
+  of review state — not in git) to `review-audio/_db-backups/` (timestamped + `review-latest.db`;
+  `--work` also zips `work/`). A daily Task Scheduler job **`ReviewAppDbBackup`** (wrapper
+  `scripts/run_daily_backup.cmd`, logs to `backend/backup.log`) runs it at 03:00. R2 is a backup
+  TARGET only — recovery = `… restore` back to a local file. **Full runbook + how to re-register
+  the task / migrate machines: `docs/backup-and-restore.md`.**
 
 ## Pipeline scripts (live in `D:\Dynamic Languages\Scripts`, repo `dynamic-content`)
 - `Trello\export_review_trips.py` — Trello 6/7 → this repo's `trips_to_review.json` (+commit/push).
