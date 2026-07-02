@@ -280,31 +280,31 @@ def _is_zh_session(sid: str) -> bool:
     return v
 
 
-def _zh_ab_sets(trip_id: str) -> dict[str, Path] | None:
-    """The two ElevenLabs A/B takes for a _ZH trip, or None. V2 = the base folder
-    Audio Generation/_voice_test/<trip>__<Voice>_<Accent>; V3 = the sibling …__V3_1x.
-    Both must resolve WITH scene mp3s to enable A/B (else fall back to single-audio)."""
+def _zh_v3_set(trip_id: str) -> Path | None:
+    """The ElevenLabs V3 take for a pre-final _ZH trip, or None. Mandarin is V3-only
+    (dave/Ted 2026-07-02) — the old V2/V3 side-by-side audition is retired. Prefers the
+    …__V3_1x set under Audio Generation/_voice_test/<trip>__*; if the trip carries a
+    single unmarked set (V3-only generation), use that. Must hold scene mp3s to count."""
     root = config.AUDIO_GENERATION_ROOT / "_voice_test"
     if not root.is_dir():
         return None
-    v2 = v3 = None
+    v3 = other = None
     for p in sorted(root.glob(f"{trip_id}__*")):
         if not p.is_dir():
             continue
         if p.name.endswith("__V3_1x"):
             v3 = v3 or p
         else:
-            v2 = v2 or p
-    if v2 and v3 and _has_scene_mp3(v2) and _has_scene_mp3(v3):
-        return {"v2": v2, "v3": v3}
-    return None
+            other = other or p
+    chosen = v3 or other
+    return chosen if chosen and _has_scene_mp3(chosen) else None
 
 
 def _zh_voicetest_trip_ids() -> list[str]:
-    """Content-ids of _ZH trips that have BOTH A/B voice-test sets — pre-final Mandarin
-    trips whose audio is still in _voice_test (not the standard location), so the Trello
-    export never surfaces them. list_trips injects these so the Mandarin reviewer sees
-    them; they disappear the moment the _voice_test sets are removed."""
+    """Content-ids of _ZH trips that have a V3 voice-test set — pre-final Mandarin trips
+    whose audio is still in _voice_test (not the standard location), so the Trello export
+    never surfaces them. list_trips injects these so the Mandarin reviewer sees them; they
+    disappear the moment the _voice_test set is removed."""
     root = config.AUDIO_GENERATION_ROOT / "_voice_test"
     if not root.is_dir():
         return []
@@ -312,7 +312,7 @@ def _zh_voicetest_trip_ids() -> list[str]:
     for p in root.iterdir():
         if p.is_dir() and "__" in p.name:
             tid = p.name.split("__", 1)[0]
-            if tid.upper().endswith("_ZH") and _zh_ab_sets(tid):
+            if tid.upper().endswith("_ZH") and _zh_v3_set(tid):
                 ids.add(tid)
     return sorted(ids)
 
@@ -653,18 +653,19 @@ def create_or_resume(trip_id: str, user) -> dict:
     folder_name = (trip.get("folderName") or "").replace("\\", "/").strip("/")
     country = folder_name.split("/")[0] if folder_name else ""
 
-    # 4-script (permanent) is DECOUPLED from A/B (temporary): TripLocalizations is fetched
-    # for ANY _ZH trip → the 4-script review pane (zh_mode). The two _voice_test sets only
-    # add the V2/V3 audition; a finalised _ZH trip with no sets keeps normal single audio.
+    # 4-script (permanent) is DECOUPLED from the audio source: TripLocalizations is fetched
+    # for ANY _ZH trip → the 4-script review pane (zh_mode). Mandarin is V3-only — a
+    # pre-final _ZH trip's _voice_test V3 set seeds as the normal single working take (no
+    # V2/V3 audition); a finalised _ZH trip with no set keeps its normal masters.
     is_zh_lang = audio_core.language_of(trip_id) == "Mandarin"
-    ab_sets = _zh_ab_sets(trip_id) if is_zh_lang else None
+    v3_set = _zh_v3_set(trip_id) if is_zh_lang else None
     localization = _fetch_localization(trip_id) if is_zh_lang else None
     zh_mode = localization is not None
     loc_index = _index_localization(localization)
 
-    # Audio source: the A/B V2 take drives the seed for voice-test trips (no Quicktrips
-    # masters); otherwise the normal masters (incl. a finalised _ZH trip with no A/B).
-    mp3_dir = ab_sets["v2"] if ab_sets else resolve_audio_dir(trip_id, trip)
+    # Audio source: the V3 voice-test take drives the seed for pre-final Mandarin trips (no
+    # Quicktrips masters); otherwise the normal masters (incl. a finalised _ZH trip).
+    mp3_dir = v3_set if v3_set else resolve_audio_dir(trip_id, trip)
     if not _has_scene_mp3(mp3_dir):
         raise HTTPException(status_code=422, detail={
             "error": "bad_folder",
@@ -702,14 +703,11 @@ def create_or_resume(trip_id: str, user) -> dict:
         if name:
             master = mp3_dir / name
             if master.exists():
-                # A/B trips serve audio from the copied v2/v3 sets — do NOT populate the
-                # splice orig/working slots. Every other trip (incl. a non-A/B _ZH) gets the
-                # normal single working take.
-                if not ab_sets:
-                    audio_io.mp3_to_mp3_copy(master, dirs["orig"] / name)
-                    audio_io.mp3_to_mp3_copy(master, dirs["working"] / name)
-                    cur_path = str(dirs["working"] / name)
-                    whash = _file_hash(dirs["working"] / name)
+                # Every trip (incl. a V3-only _ZH) gets the normal single working take.
+                audio_io.mp3_to_mp3_copy(master, dirs["orig"] / name)
+                audio_io.mp3_to_mp3_copy(master, dirs["working"] / name)
+                cur_path = str(dirs["working"] / name)
+                whash = _file_hash(dirs["working"] / name)
             else:
                 has_audio = False   # no master on disk → text-only, no gate
         # English translation (non-_EN trips carry the *En sibling) — an editable second
@@ -731,7 +729,7 @@ def create_or_resume(trip_id: str, user) -> dict:
             (sid, scene_index, field_path, option_index, 1 if has_audio else 0,
              name if has_audio else None, original_text or "", original_text or "",
              cur_path, whash, src, src, original_text or "", loc_json, time.time()))
-        if has_audio and name and not ab_sets and (dirs["orig"] / name).exists():
+        if has_audio and name and (dirs["orig"] / name).exists():
             stem = name[:-4]
             db.execute(
                 "INSERT INTO audio_versions(session_id,field_id,scene_index,n,kind,"
@@ -762,12 +760,11 @@ def create_or_resume(trip_id: str, user) -> dict:
             add_field(i, "questionOption", opt or "", True, option_index=k,
                       source_text=(opts_en[k] if k < len(opts_en) else ""))
 
-    # _ZH A/B: stage both ElevenLabs takes for side-by-side audition (served via /ab/{ver}).
-    # Guard on ab_sets (not zh_mode): a finalised _ZH trip has localization → zh_mode True
-    # but no _voice_test sets → ab_sets None, and must keep its normal single working take.
-    if ab_sets:
-        _copy_audio_set(ab_sets["v2"], _ab_dir(sid, "v2"))
-        _copy_audio_set(ab_sets["v3"], _ab_dir(sid, "v3"))
+    # Mandarin is V3-only: pin the session to eleven_v3 @ speed 1.0 and record the version
+    # so regenerate/combine match the seeded take (no V2/V3 audition or pick step).
+    if v3_set:
+        db.execute("UPDATE sessions SET preferred_version='v3', model_override='eleven_v3', "
+                   "speed_override=1.0, updated_at=? WHERE id=?", (time.time(), sid))
 
     # Best-effort: resolve + upload scene thumbnails to R2 so the read-model below can
     # hand back thumb_url. Never fail the seed if the JSON / JPGs / R2 are unavailable.
@@ -939,27 +936,11 @@ def serialize_field(sid: str, frow) -> dict:
         "manual_clips": _clips_for(sid, fid) if has_audio else [],
     }
 
-    # _ZH: the editable 4-script block, plus audio. A/B voice-test trips expose the two
-    # V2/V3 takes (splice slots nulled — no splice/coverage flow for Mandarin); a finalised
-    # _ZH trip with no A/B keeps the single working take (a plain player).
+    # _ZH: attach the editable 4-script block. Mandarin is V3-only — the single working
+    # take (built above) plays like any other language; no V2/V3 side-by-side audition.
     if _is_zh_session(sid):
         loc_raw = _srow_get(frow, "localization_json")
         result["localization"] = json.loads(loc_raw) if loc_raw else None
-        # Expose the V2/V3 audition ONLY before a pick (current_mp3_path NULL). After the
-        # pick the chosen set is promoted into orig/working → the normal single take (built
-        # above) is served and the side-by-side collapses to one player.
-        ab = {}
-        if has_audio and frow["mp3_name"] and not frow["current_mp3_path"]:
-            for ver in ("v2", "v3"):
-                p = WORK_ROOT / sid / ver / frow["mp3_name"]   # no mkdir side effect
-                if p.exists():
-                    vh = (_file_hash(p) or "")[:8]
-                    ab[ver] = f"/audio/{sid}/{fid}/ab/{ver}" + (f"?v={vh}" if vh else "")
-        if ab:
-            for slot in ("original", "working", "candidate", "fallback"):
-                audio[slot] = None
-            audio.update(ab)
-        # else: no A/B sets → keep the normal single working take for playback.
     return result
 
 
@@ -1141,64 +1122,19 @@ def update_localization(sid: str, fid: int, script: str, text: str) -> dict:
     return serialize_field(sid, _field_row(sid, fid))
 
 
-def _clear_version_pick(sid: str, srow) -> dict:
-    """Un-pick the A/B version: return the _ZH session to the V2/V3 side-by-side
-    audition (an accidental pick collapses the players and there was previously no way
-    back). Drops the audio edit state built on the picked take (versions/candidate/
-    fallback/coverage/done + the working_hans re-baseline); the 4-script text edits live
-    on the field rows and are preserved. 409 when the A/B sets aren't staged (a
-    finalised single-audio _ZH trip has nothing to re-audition)."""
-    if not ((WORK_ROOT / sid / "v2").is_dir() or (WORK_ROOT / sid / "v3").is_dir()):
-        raise HTTPException(409, detail={
-            "error": "no_ab_sets",
-            "detail": "This trip has no V2/V3 audition takes staged — the pick can't "
-                      "be cleared."})
-    for frow in db.query("SELECT * FROM field_edits WHERE session_id=?", (sid,)):
-        if not frow["has_audio"] or not frow["mp3_name"]:
-            continue
-        db.execute("DELETE FROM audio_versions WHERE field_id=?", (frow["id"],))
-        patch = {
-            "current_mp3_path": None,          # NULL → serialize_field re-exposes A/B
-            "working_audio_hash": None,
-            "candidate_mp3_path": None,
-            "fallback_mp3_path": None,
-            "splice_confidence": None,
-            "played_coverage_json": "{}",
-            "original_coverage_json": "{}",
-            "version_cursor": None,
-            "working_text": frow["original_text"],
-        }
-        if frow["flag"] == "done":
-            patch["flag"] = "none"
-        loc_raw = _srow_get(frow, "localization_json")
-        if loc_raw:                            # drop the ZH working-take re-baseline
-            try:
-                loc = json.loads(loc_raw)
-                if loc.pop("working_hans", None) is not None:
-                    patch["localization_json"] = json.dumps(loc, ensure_ascii=False)
-            except (ValueError, TypeError):
-                pass
-        db.update_fields(frow["id"], **patch)
-    db.execute("UPDATE sessions SET preferred_version=NULL, model_override=NULL, "
-               "speed_override=NULL, updated_at=? WHERE id=?", (time.time(), sid))
-    db.touch_session(sid)
-    return get_session(sid)
-
-
 def set_version(sid: str, version: str | None) -> dict:
-    """Pick the trip's ElevenLabs A/B version (v2|v3) and COLLAPSE to a single editable
-    take: promote work/{sid}/{version} into the orig/working splice slots so the _ZH
-    session becomes a normal single-version session (regenerate/combine/trim/import/
-    fallback all apply, and Done becomes playback-gated). Switching version re-promotes
-    and RESETS audio edit state (versions/candidate/fallback/coverage/done); the 4-script
-    text edits live on the field row and are preserved. ``None`` clears the pick back to
-    the side-by-side audition (see _clear_version_pick)."""
+    """Collapse a _ZH session onto its single ElevenLabs take by promoting
+    work/{sid}/v3 into the orig/working splice slots (regenerate/combine/trim/import/
+    fallback all apply, and Done becomes playback-gated). Mandarin is V3-only
+    (dave/Ted 2026-07-02), so V2 and the revert-to-audition path are retired — only
+    'v3' is accepted. New sessions already seed collapsed to V3; this remains to migrate
+    any legacy un-picked session. Re-picking v3 when already collapsed is a no-op (keeps
+    in-progress audio edits). 4-script text edits live on the field row and always survive."""
     srow = _session_row(sid)
-    if version is None:
-        return _clear_version_pick(sid, srow)
-    if version not in ("v2", "v3"):
-        raise HTTPException(422, detail={"error": "bad_version",
-                                         "detail": "version must be 'v2' or 'v3'"})
+    if version != "v3":
+        raise HTTPException(409, detail={
+            "error": "v3_only",
+            "detail": "Mandarin uses ElevenLabs V3 only — the V2/V3 audition is retired."})
     src_root = WORK_ROOT / sid / version
     prev = _srow_get(srow, "preferred_version")
     # A/B is V2 (eleven_multilingual_v2, honours the HSK speed) vs V3 (eleven_v3, speed

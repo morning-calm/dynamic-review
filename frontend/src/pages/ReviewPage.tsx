@@ -11,7 +11,6 @@ import FlagControl from '../components/FlagControl';
 import SceneCard from '../components/SceneCard';
 import NarrationControls from '../components/NarrationControls';
 import ZhFieldBlock from '../components/ZhFieldBlock';
-import PreferredVersionControl from '../components/PreferredVersionControl';
 
 /** Scroll the first not-yet-done field into view (document order, read from the DOM
  * anchors FlagControl renders). Returns true if one was found. */
@@ -143,7 +142,7 @@ const ReviewBody = () => {
       <NavBar
         title={session.trip_id}
         subtitle={`${session.folder_name} · voice: ${session.voice_display}${
-          isZh ? (session.preferred_version ? ` · ${session.preferred_version.toUpperCase()} audio` : ' · A/B audition (V2/V3)') : ''
+          isZh ? ' · V3 audio' : ''
         }`}
         right={
           <>
@@ -182,11 +181,7 @@ const ReviewBody = () => {
           </div>
         )}
 
-        {isZh ? (
-          <PreferredVersionControl session={session} onUpdate={applySession} readOnly={!editable} />
-        ) : (
-          <NarrationControls session={session} onUpdate={applySession} />
-        )}
+        {!isZh && <NarrationControls session={session} onUpdate={applySession} />}
 
         {/* Trip header */}
         <section className="space-y-4 rounded-lg border border-gray-700 bg-gray-800/60 p-4">

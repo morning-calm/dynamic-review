@@ -450,12 +450,6 @@ export const api = {
   setNarration: (sid: string, body: NarrationUpdate): Promise<Session> =>
     postJson(`/api/sessions/${encodeURIComponent(sid)}/narration`, body),
 
-  /** `_ZH` A/B audition only: set the trip-wide preferred ElevenLabs version.
-   * `null` clears the pick — back to the V2/V3 side-by-side audition (audio edits on
-   * the picked take are dropped; text/script edits are kept). */
-  setVersion: (sid: string, version: PreferredVersion | null): Promise<Session> =>
-    postJson(`/api/sessions/${encodeURIComponent(sid)}/version`, { version }),
-
   createOrResumeSession: (tripId: string): Promise<Session> =>
     postJson('/api/sessions', { trip_id: tripId }),
 

@@ -2,7 +2,6 @@ import { useRef, type ReactNode } from 'react';
 import type { Field } from '../api';
 import EditableField from './EditableField';
 import LocalizationEditor from './LocalizationEditor';
-import ZhAudioAB from './ZhAudioAB';
 import AudioReview from './AudioReview';
 import RegenerateControls from './RegenerateControls';
 import FlagControl from './FlagControl';
@@ -42,10 +41,6 @@ const ZhFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine, ro
     if (!el) return null;
     return { start: el.selectionStart, end: el.selectionEnd };
   };
-  // Before a version pick the backend serves the V2/V3 audition (audio.v2/v3) and no
-  // working take; after the pick it collapses to a single working take (audio.working, no
-  // v2/v3) that regenerates/combines like any other language. Presence drives which UI.
-  const auditioning = Boolean(field.audio.v2 || field.audio.v3);
   // SceneDesc supports the surgical CJK splice ("Generate from edit", mode=segment): the
   // backend re-voices just the edited hanzi clause and falls back to whole-regen when
   // uncertain. Enabled once the Simplified hanzi differs from the seed. Q&A fields stay
@@ -84,32 +79,29 @@ const ZhFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine, ro
           the Hans field.
         </p>
       )}
-      {field.has_audio &&
-        (auditioning ? (
-          <ZhAudioAB v2={field.audio.v2} v3={field.audio.v3} />
-        ) : (
-          <>
-            <AudioReview field={field} sid={sid} onFieldUpdate={onFieldUpdate} />
-            <div inert={readOnly}>
-              <RegenerateControls
-                field={field}
-                sid={sid}
-                onFieldUpdate={onFieldUpdate}
-                hasTextChange={isSceneDesc && hanziChanged}
-                wholeOnly={!isSceneDesc}
-                hasSelection={isSceneDesc && Boolean(field.localization)}
-                // Only offer the selection-reading tools when a Hans surface exists —
-                // a non-localized field would route char offsets into the wrong text.
-                getSelectionRange={field.localization ? getSelectionRange : undefined}
-                selectionSourceText={field.localization?.cur.Hans ?? undefined}
-                surfaceLabel="the Simplified (Hans) field"
-                onBeforeRegenerate={async () => {
-                  await flushRef.current?.();
-                }}
-              />
-            </div>
-          </>
-        ))}
+      {field.has_audio && (
+        <>
+          <AudioReview field={field} sid={sid} onFieldUpdate={onFieldUpdate} />
+          <div inert={readOnly}>
+            <RegenerateControls
+              field={field}
+              sid={sid}
+              onFieldUpdate={onFieldUpdate}
+              hasTextChange={isSceneDesc && hanziChanged}
+              wholeOnly={!isSceneDesc}
+              hasSelection={isSceneDesc && Boolean(field.localization)}
+              // Only offer the selection-reading tools when a Hans surface exists —
+              // a non-localized field would route char offsets into the wrong text.
+              getSelectionRange={field.localization ? getSelectionRange : undefined}
+              selectionSourceText={field.localization?.cur.Hans ?? undefined}
+              surfaceLabel="the Simplified (Hans) field"
+              onBeforeRegenerate={async () => {
+                await flushRef.current?.();
+              }}
+            />
+          </div>
+        </>
+      )}
       <div className="space-y-2" inert={readOnly}>
         <FlagControl field={field} sid={sid} onFieldUpdate={onFieldUpdate} />
         <CommentBox field={field} sid={sid} onFieldUpdate={onFieldUpdate} />

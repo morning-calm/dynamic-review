@@ -84,9 +84,9 @@ un-complete by `sessions.export_completed_trips`; rebuild any time with
   (`stage9.common.paths_for`) → `Audio Generation/<trip>/` (England A12/B1) →
   **`Audio Generation/Sent to KP/MP3/<trip>/`** (Japan `_EN`) → shallow nested search.
 - **Level speed** (`audio_core.speed_for_trip`, honoured by `eleven_multilingual_v2`):
-  **A12=0.7, B1=0.85, B2+/native=1.0**. Applied at seed/regenerate/fallback. *Japanese uses
-  the v3 API where speed is always 1.0; HSK3 Mandarin = v2 @ 0.85 (HSK1-2 TBD)* — branch by
-  language/model there when those get backend support.
+  **A12=0.7, B1=0.85, B2+/native=1.0**. Applied at seed/regenerate/fallback. *Japanese AND
+  Mandarin use the v3 API where speed is always 1.0 (Mandarin went **V3-only** 2026-07-02 —
+  the old HSK3 v2 @ 0.85 is retired); only CEFR English (v2) branches on level.*
 - **Splice engine (English)** `audio_splice.py` (SceneDesc only; Q&A + "whole" = full regen).
   The hard-won correctness points (DON'T regress — two red-teams): cut times from **raw Whisper
   `word.start/end`** via SequenceMatcher (NOT `subtitles.token_timeline`); **non-Latin /
@@ -248,14 +248,15 @@ the tunnel — uvicorn-only means they're locked out.
   `research/cjk-aligner/venv` (torch/torchaudio/uroman); without it CJK text edits fall back to
   whole-regen and the selection/pause tools 409 (`aligner_unavailable`). Live ZH demo audio is
   limited to `sess_5bc56203b40a` (masters gone from disk — a fresh `_ZH` seed needs sources
-  restored). That session was **fully reset to pristine + UN-picked** (2026-07-02 evening, at
-  dave's request) so **Ted makes the real V2/V3 pick**: text/localization=seed, no flags/
-  comments/coverage/candidates/clips, audio_versions purged, `preferred_version=NULL`
-  (A/B audition renders again; the v2/v3 sets under `work/{sid}/` are intact — do not delete).
-- **V2/V3 pick is now reversible:** `POST /version {version:null}` (`_clear_version_pick`)
-  returns a `_ZH` session to the side-by-side audition; the FE offers "Clear pick" + a
-  confirm() warning when switching/clearing would drop audio edits (`can_undo` on any field).
-  Text/script edits always survive a switch/clear.
+  restored).
+- **Mandarin is V3-only (decided 2026-07-02, Ted; shipped same day).** The V2/V3 side-by-side
+  audition + per-trip pick are **retired**. A `_ZH` trip's `_voice_test` **V3** set
+  (`_zh_v3_set`) seeds directly as the normal single working take; the session is pinned to
+  `preferred_version='v3'`, `model_override='eleven_v3'`, `speed_override=1.0` at seed. Mandarin
+  registry voices (`yu`/`annasu`/`jason`) are now `eleven_v3`. `set_version` accepts only `'v3'`
+  (409 otherwise) — `_clear_version_pick` and the FE `ZhAudioAB`/`PreferredVersionControl` were
+  removed. Legacy sessions were migrated (Taipei101 auto-picked v3). *Inert leftovers, prunable
+  later:* the `/audio/{sid}/{fid}/ab/{ver}` route + `ab_audio_path`/`_ab_dir`/`_copy_audio_set`.
 - **Mandarin voices:** `annasu` is **female**; `yu` and `jason` are **male** — a splice/regen must use
   a voice matching the master, or the seam is a *voice* mismatch, not a splice defect. The demo session
   `sess_5bc56203b40a` was mis-stored as `yu` and has since been corrected to `annasu`; real trips resolve
