@@ -60,10 +60,13 @@ buttons under the audio player:
   reading). The text on screen doesn't change — only the sound.
 - **Trim highlighted noise** — highlight where an unwanted noise or leftover sound is, and
   the app cleans it out.
-- **Insert 1s pause at cursor** — click just after a 。 and the pause there gets 1 second
-  longer.
-- **Remove 1s pause at cursor** — the opposite: click at a pause that is too long and it is
-  shortened (a natural pause is always kept — it never cuts into words).
+- **Insert 1s / Insert 0.5s** — click just after a 。 and the pause there gets 1 second
+  (or half a second) longer.
+- **Remove 1s / Remove 0.5s** — the opposite: click at a pause that is too long and it is
+  shortened by up to that amount (a natural pause is always kept — it never cuts into words).
+
+**Trim highlighted noise** also works on **question and answer audio** — highlight the spot
+in that field's own text box (the kana part).
 
 Then **listen**, and **Combine** if it used a new recording. Highlighting in the **kanji**
 line doesn't work — the app will ask you to highlight in the kana line instead. If it can't

@@ -552,6 +552,7 @@ def _list_trips_from_manifest() -> list[dict]:
 _LEVEL_SUFFIXES = [
     ("_A12_EN", "A12"), ("_B1_EN", "B1"), ("_B2_EN", "B2"),
     ("_Beg_N5_JP", "N5"), ("_Beg_N4_JP", "N4"), ("_N5_JP", "N5"), ("_N4_JP", "N4"),
+    ("_Beg_JP", "N5"),   # real N5 ids use _Beg_JP (e.g. Tokyo_07_Olympic_Beg_JP)
     ("_HSK12_ZH", "HSK1-2"), ("_HSK3_ZH", "HSK3"),
     ("_EN", "EN"), ("_ZH", "ZH"), ("_JP", "JP"),
 ]
@@ -994,7 +995,7 @@ def get_session(sid: str) -> dict:
         # never a URL that 404s.
         image_url = None
         if s.get("isStaticImage") and _resolve_overlay_file(
-                trip_id, mp3_dir, ogg_dir, f"{i}.jpg"):
+                trip_id, mp3_dir, ogg_dir, f"{i}.jpg", srow["folder_name"] or ""):
             image_url = f"/overlays/{sid}/{i}.jpg"
         scenes_out.append({
             "index": i,
@@ -1138,14 +1139,61 @@ def update_localization(sid: str, fid: int, script: str, text: str) -> dict:
     return serialize_field(sid, _field_row(sid, fid))
 
 
-def set_version(sid: str, version: str) -> dict:
+def _clear_version_pick(sid: str, srow) -> dict:
+    """Un-pick the A/B version: return the _ZH session to the V2/V3 side-by-side
+    audition (an accidental pick collapses the players and there was previously no way
+    back). Drops the audio edit state built on the picked take (versions/candidate/
+    fallback/coverage/done + the working_hans re-baseline); the 4-script text edits live
+    on the field rows and are preserved. 409 when the A/B sets aren't staged (a
+    finalised single-audio _ZH trip has nothing to re-audition)."""
+    if not ((WORK_ROOT / sid / "v2").is_dir() or (WORK_ROOT / sid / "v3").is_dir()):
+        raise HTTPException(409, detail={
+            "error": "no_ab_sets",
+            "detail": "This trip has no V2/V3 audition takes staged — the pick can't "
+                      "be cleared."})
+    for frow in db.query("SELECT * FROM field_edits WHERE session_id=?", (sid,)):
+        if not frow["has_audio"] or not frow["mp3_name"]:
+            continue
+        db.execute("DELETE FROM audio_versions WHERE field_id=?", (frow["id"],))
+        patch = {
+            "current_mp3_path": None,          # NULL → serialize_field re-exposes A/B
+            "working_audio_hash": None,
+            "candidate_mp3_path": None,
+            "fallback_mp3_path": None,
+            "splice_confidence": None,
+            "played_coverage_json": "{}",
+            "original_coverage_json": "{}",
+            "version_cursor": None,
+            "working_text": frow["original_text"],
+        }
+        if frow["flag"] == "done":
+            patch["flag"] = "none"
+        loc_raw = _srow_get(frow, "localization_json")
+        if loc_raw:                            # drop the ZH working-take re-baseline
+            try:
+                loc = json.loads(loc_raw)
+                if loc.pop("working_hans", None) is not None:
+                    patch["localization_json"] = json.dumps(loc, ensure_ascii=False)
+            except (ValueError, TypeError):
+                pass
+        db.update_fields(frow["id"], **patch)
+    db.execute("UPDATE sessions SET preferred_version=NULL, model_override=NULL, "
+               "speed_override=NULL, updated_at=? WHERE id=?", (time.time(), sid))
+    db.touch_session(sid)
+    return get_session(sid)
+
+
+def set_version(sid: str, version: str | None) -> dict:
     """Pick the trip's ElevenLabs A/B version (v2|v3) and COLLAPSE to a single editable
     take: promote work/{sid}/{version} into the orig/working splice slots so the _ZH
     session becomes a normal single-version session (regenerate/combine/trim/import/
     fallback all apply, and Done becomes playback-gated). Switching version re-promotes
     and RESETS audio edit state (versions/candidate/fallback/coverage/done); the 4-script
-    text edits live on the field row and are preserved."""
+    text edits live on the field row and are preserved. ``None`` clears the pick back to
+    the side-by-side audition (see _clear_version_pick)."""
     srow = _session_row(sid)
+    if version is None:
+        return _clear_version_pick(sid, srow)
     if version not in ("v2", "v3"):
         raise HTTPException(422, detail={"error": "bad_version",
                                          "detail": "version must be 'v2' or 'v3'"})
@@ -2159,6 +2207,12 @@ def remove_silence(sid: str, fid: int, pos: int, seconds: float = 1.0) -> dict:
             "error": "no_pause",
             "detail": "No pause at the cursor to shorten — put the caret right after a "
                       "full stop (or other gap)."})
+    # Re-measure the run's TRUE extent from its midpoint: the ±0.4s discovery window
+    # above clips a long pause (e.g. one just extended by insert_silence to 1.4s reads
+    # as ~1.1s), which made remove take LESS than insert added. 12s covers any pause
+    # the insert tool can create (its cap is 10s).
+    mid = (run[0] + run[1]) / 2.0
+    run = audio_io.silence_run_nearest(base, sr, mid, 12.0, 12.0) or run
     run_len = run[1] - run[0]
     remove = min(seconds, run_len - _REMOVE_PAUSE_KEEP)
     if remove < 0.05:
@@ -3072,12 +3126,40 @@ def ab_audio_path(sid: str, fid: int, ver: str) -> Path:
     return p
 
 
+# Leveled/target-language trip id → the BASE trip ids whose display images it shares.
+# KaohsiungLotusPond_HSK3_ZH → KaohsiungLotusPond_EN; Tokyo_03_Beg_N4_JP → Tokyo_03_Beg_JP
+# (the N5 sibling, whose Day Series OGG folder holds the {i}.jpg stills) then Tokyo_03_EN.
+# Display-only heuristics — never used to resolve audio or write targets.
+_IMAGE_BASE_RES = [
+    (re.compile(r"^(?P<b>.+)_HSK\d+_ZH$"), ("{b}_EN",)),
+    (re.compile(r"^(?P<b>.+)_Beg_N4_JP$"), ("{b}_Beg_JP", "{b}_EN")),
+    (re.compile(r"^(?P<b>.+)_Beg_N5_JP$"), ("{b}_Beg_JP", "{b}_EN")),
+    (re.compile(r"^(?P<b>.+)_Beg_JP$"), ("{b}_EN",)),
+    (re.compile(r"^(?P<b>.+)_(?:A12|B1|B2)_EN$"), ("{b}_EN",)),
+]
+
+
+def _image_base_ids(trip_id: str) -> list[str]:
+    ids = [trip_id]
+    for rx, outs in _IMAGE_BASE_RES:
+        m = rx.match(trip_id)
+        if m:
+            ids += [o.format(b=m.group("b")) for o in outs]
+            break
+    return ids
+
+
 def _resolve_overlay_file(trip_id: str, mp3_dir: Path | None, ogg_dir: Path | None,
-                          filename: str) -> Path | None:
+                          filename: str, folder_name: str = "") -> Path | None:
     """Pure resolver (no DB) for an overlay / static-360 image, display only. Static-360
     stills ({i}.jpg) live in the OGG folder; flat overlays live under the trip's data
-    cache. Returns None if nothing is found (caller nulls the URL)."""
-    from .config import OVERLAY_SEARCH_DIRS
+    cache — for leveled/target-language trips both live under the BASE trip's folders
+    (Audio Generation/ogg/<base>/, the Day Series OGG tree, or the base's
+    data/<base>/static_images/). Returns None if nothing is found (caller nulls the
+    URL). ``folder_name`` (e.g. "Japan/Tokyo/Tokyo_03_Beg_N4_JP") supplies the location
+    segment the Day Series tree is split by."""
+    from .config import (AUDIO_GENERATION_OGG, EXTRA_IMAGE_OGG_ROOTS,
+                         OVERLAY_SEARCH_DIRS, RW_DATA_ROOTS)
     safe = Path(filename).name
     candidates = [
         OVERLAY_SEARCH_DIRS[0] / trip_id / "static_images" / safe,
@@ -3087,6 +3169,16 @@ def _resolve_overlay_file(trip_id: str, mp3_dir: Path | None, ogg_dir: Path | No
         candidates.append(ogg_dir / safe)
     if mp3_dir is not None:
         candidates.append(mp3_dir / safe)
+    parts = (folder_name or "").replace("\\", "/").strip("/").split("/")
+    location = parts[1] if len(parts) > 2 else ""
+    for bid in _image_base_ids(trip_id):
+        candidates.append(AUDIO_GENERATION_OGG / bid / safe)
+        for root in RW_DATA_ROOTS:
+            candidates.append(root / bid / "static_images" / safe)
+        for root in EXTRA_IMAGE_OGG_ROOTS:
+            if location:
+                candidates.append(root / location / bid / safe)
+            candidates.append(root / bid / safe)
     candidates += [d / safe for d in OVERLAY_SEARCH_DIRS]
     for c in candidates:
         if c.exists():
@@ -3103,4 +3195,5 @@ def overlay_path(sid: str, filename: str) -> Path | None:
         mp3_dir, ogg_dir = _p["mp3_dir"], _p["ogg_dir"]
     except SystemExit:
         mp3_dir = ogg_dir = None
-    return _resolve_overlay_file(trip_id, mp3_dir, ogg_dir, filename)
+    return _resolve_overlay_file(trip_id, mp3_dir, ogg_dir, filename,
+                                 srow["folder_name"] or "")

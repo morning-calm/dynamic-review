@@ -22,6 +22,10 @@ interface RegenerateControlsProps {
   /** The text `getSelectionRange` offsets index into, for the alt-modal prefill. Defaults
    * to `field.current_text`; `_ZH` passes the Hans script (the voiced text). */
   selectionSourceText?: string;
+  /** How the toasts name the text surface the selection tools read from — e.g.
+   * "the narration Simplified (Hans) field" for `_ZH`, "the narration kana line" for JP,
+   * "the text above" for Q&A fields. Defaults to "the narration". */
+  surfaceLabel?: string;
   /** Flushes a pending text save before regenerating so the server diffs the saved text (S3). */
   onBeforeRegenerate?: () => Promise<void> | void;
 }
@@ -50,6 +54,7 @@ const RegenerateControls = ({
   wholeOnly = false,
   hasSelection = true,
   selectionSourceText,
+  surfaceLabel = 'the narration',
   onBeforeRegenerate,
 }: RegenerateControlsProps) => {
   const [busy, setBusy] = useState(false);
@@ -115,7 +120,7 @@ const RegenerateControls = ({
   const onHighlight = () => {
     const range = getSelectionRange?.() ?? null;
     if (!range || range.start === range.end) {
-      toast.warn('Select the phrase to regenerate in the narration first.');
+      toast.warn(`Select the phrase to regenerate in ${surfaceLabel} first.`);
       return;
     }
     regen('highlight', range);
@@ -126,7 +131,7 @@ const RegenerateControls = ({
   const onTrimNoise = async () => {
     const range = getSelectionRange?.() ?? null;
     if (!range || range.start === range.end) {
-      toast.warn('Highlight the space where the unwanted noise/sliver is, then click.');
+      toast.warn(`Highlight the space in ${surfaceLabel} where the unwanted noise/sliver is, then click.`);
       return;
     }
     setBusy(true);
@@ -146,7 +151,7 @@ const RegenerateControls = ({
   const onAltText = () => {
     const range = getSelectionRange?.() ?? null;
     if (!range || range.start === range.end) {
-      toast.warn('Select the phrase to replace in the narration first.');
+      toast.warn(`Select the phrase to replace in ${surfaceLabel} first.`);
       return;
     }
     setAltWhole(false);
@@ -176,20 +181,21 @@ const RegenerateControls = ({
     setAltOpen(false);
   };
 
-  // Insert a 1s pause at the TEXT caret (normally after a full stop). The caret char
+  // Insert a pause at the TEXT caret (normally after a full stop). The caret char
   // offset is mapped to an audio time on the backend via the clip's word timing.
-  const onInsertSilence = async () => {
+  // 1s suits beginner trips; 0.5s is the lighter touch for non-beginner audio.
+  const onInsertSilence = async (seconds: number) => {
     const range = getSelectionRange?.() ?? null;
     if (!range) {
-      toast.warn('Click in the narration where the pause should go (usually after a full stop), then click.');
+      toast.warn(`Click in ${surfaceLabel} where the pause should go (usually after a full stop), then click.`);
       return;
     }
     setBusy(true);
     try {
       await onBeforeRegenerate?.(); // align the caret offset with the saved text
-      const updated = await api.insertSilence(sid, field.fid, range.start, 1);
+      const updated = await api.insertSilence(sid, field.fid, range.start, seconds);
       onFieldUpdate(updated);
-      toast.success('Extended the pause by 1s at the cursor — re-listen to confirm.');
+      toast.success(`Extended the pause by ${seconds}s at the cursor — re-listen to confirm.`);
     } catch (e: unknown) {
       if (e instanceof ApiError && e.status === 409) toast.warn(e.detail); // no pause to extend
       else toast.error(`Insert failed: ${e instanceof ApiError ? e.detail : 'network error'}`);
@@ -198,19 +204,19 @@ const RegenerateControls = ({
     }
   };
 
-  // The inverse of insert: shorten an overlong pause at the caret by up to 1s. The
-  // backend removes from the middle of the genuine silence run and always keeps a
+  // The inverse of insert: shorten an overlong pause at the caret by up to `seconds`.
+  // The backend removes from the middle of the genuine silence run and always keeps a
   // minimum natural pause — it refuses (409) rather than touch voiced audio.
-  const onRemoveSilence = async () => {
+  const onRemoveSilence = async (seconds: number) => {
     const range = getSelectionRange?.() ?? null;
     if (!range) {
-      toast.warn('Click in the narration where the too-long pause is (usually after a full stop), then click.');
+      toast.warn(`Click in ${surfaceLabel} where the too-long pause is (usually after a full stop), then click.`);
       return;
     }
     setBusy(true);
     try {
       await onBeforeRegenerate?.(); // align the caret offset with the saved text
-      const updated = await api.removeSilence(sid, field.fid, range.start, 1);
+      const updated = await api.removeSilence(sid, field.fid, range.start, seconds);
       onFieldUpdate(updated);
       toast.success('Shortened the pause at the cursor — re-listen to confirm.');
     } catch (e: unknown) {
@@ -300,6 +306,20 @@ const RegenerateControls = ({
     </button>
   );
 
+  // Also rendered for Q&A/option fields (wholeOnly) — artefact removal is useful on any
+  // audio field, not just the narration; the selection comes from the field's own textarea.
+  const trimNoiseBtn = (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={onTrimNoise}
+      title="Backstop: highlight the space where unwanted noise/a leftover sliver is heard, then click to trim it from the working take"
+      className={`${btn} border-gray-600 text-gray-200`}
+    >
+      Trim highlighted noise
+    </button>
+  );
+
   return (
     <div className="flex flex-wrap items-center gap-2">
       <button
@@ -337,6 +357,7 @@ const RegenerateControls = ({
         </button>
       )}
 
+      {wholeOnly && getSelectionRange && trimNoiseBtn}
       {wholeOnly && trimSilenceBtn}
 
       {!wholeOnly && (
@@ -373,32 +394,42 @@ const RegenerateControls = ({
               >
                 …with alt text
               </button>
+              {trimNoiseBtn}
               <button
                 type="button"
                 disabled={busy}
-                onClick={onTrimNoise}
-                title="Backstop: highlight the space where unwanted noise/a leftover sliver is heard, then click to trim it from the working take"
-                className={`${btn} border-gray-600 text-gray-200`}
-              >
-                Trim highlighted noise
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onInsertSilence}
+                onClick={() => void onInsertSilence(1)}
                 title="Click in the narration where a pause should go (usually after a full stop), then click to insert a 1s silence there"
                 className={`${btn} border-gray-600 text-gray-200`}
               >
-                Insert 1s pause at cursor
+                Insert 1s
               </button>
               <button
                 type="button"
                 disabled={busy}
-                onClick={onRemoveSilence}
+                onClick={() => void onInsertSilence(0.5)}
+                title="Click in the narration where a pause should go, then click to insert a 0.5s silence there (lighter touch for non-beginner audio)"
+                className={`${btn} border-gray-600 text-gray-200`}
+              >
+                Insert 0.5s
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void onRemoveSilence(1)}
                 title="Click in the narration where a pause is too long, then click to remove up to 1s of it (a natural pause is always kept — it never cuts speech)"
                 className={`${btn} border-gray-600 text-gray-200`}
               >
-                Remove 1s pause at cursor
+                Remove 1s
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void onRemoveSilence(0.5)}
+                title="Click in the narration where a pause is slightly too long, then click to remove up to 0.5s of it (a natural pause is always kept — it never cuts speech)"
+                className={`${btn} border-gray-600 text-gray-200`}
+              >
+                Remove 0.5s
               </button>
             </>
           )}

@@ -42,8 +42,10 @@ class LocalizationUpdate(BaseModel):
 
 
 class VersionSet(BaseModel):
-    """Set the trip's preferred ElevenLabs A/B version (per-session)."""
-    version: Literal["v2", "v3"]
+    """Set the trip's preferred ElevenLabs A/B version (per-session). ``null`` clears
+    the pick and returns the session to the V2/V3 side-by-side audition (audio edit
+    state on the picked take is dropped; text/script edits are kept)."""
+    version: Optional[Literal["v2", "v3"]] = None
 
 
 class RegenRange(BaseModel):

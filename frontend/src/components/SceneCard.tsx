@@ -177,6 +177,7 @@ const SceneCard = ({ scene, fields, sid, onFieldUpdate, readOnly = false, isZh =
                         getSelectionRange={getSelectionRange}
                         // The selection ops work for JP too now (the CJK backend maps the kana
                         // selection via the MMS aligner; a kanji-line selection gets a 409 hint).
+                        surfaceLabel={isJp ? 'the narration kana line' : 'the narration'}
                         onBeforeRegenerate={async () => {
                           await descFlushRef.current?.();
                         }}

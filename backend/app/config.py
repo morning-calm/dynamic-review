@@ -114,6 +114,16 @@ OVERLAY_SEARCH_DIRS = [
     SCRIPTS_ROOT / "Research and Writing" / "data" / "0 Flat images",
 ]
 
+# Where a trip's display images (flat overlays + the {i}.jpg static-360 stills) actually
+# live for the KP-era / leveled trips, searched per BASE trip id (a leveled
+# Taichung_HSK3_ZH shows Taichung_EN's images — see sessions._image_base_ids):
+#   Audio Generation/ogg/<base_id>/           (Japan Tokyo_06-10 EN, all Taiwan EN, A12/B1)
+#   Japanese/Trips/Day Series/Ogg/<loc>/<id>  (Japan Day Series N5/EN: Tokyo_01-05, Shikoku…)
+AUDIO_GENERATION_OGG = AUDIO_GENERATION_ROOT / "ogg"
+EXTRA_IMAGE_OGG_ROOTS = [
+    Path(r"D:\Dynamic Languages\Japanese\Trips\Day Series\Ogg"),
+]
+
 # Per-trip drafting choices live in <root>/<trip_id>/staging_choices.json. The
 # leveled pipelines keep their data under language-specific roots (NOT the single
 # Research and Writing/data dir), so resolve_voice must search all of them.

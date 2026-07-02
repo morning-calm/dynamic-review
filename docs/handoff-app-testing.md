@@ -28,10 +28,11 @@ deliberately; nothing is mid-flight.
 - **Sessions**: all three (`A._A. Milne…_EN`, `Tokyo_03_Beg_N4_JP`, `KaohsiungLotusPond_HSK3_ZH`)
   have **zero edits** — text = seed, no flags/comments/coverage/candidates/fallbacks,
   version history = v0 only, working audio = the pristine take (hash-verified).
-- **ZH session keeps its V2 pick** (`preferred_version=v2`, model pinned
-  `eleven_multilingual_v2`, voice `annasu`) — the pick is the precondition for the audio
-  tools; switching to V3 re-promotes and is itself testable. Do **NOT delete** the ZH
-  session: its masters are gone from disk, the `work/` copies are the only ZH audio.
+- **ZH session is UN-picked** (2026-07-02 evening, dave's request): `preferred_version`
+  cleared so **Ted makes the real V2/V3 pick**; the A/B side-by-side players render again.
+  Picking/switching/clearing is now fully reversible in-app ("Clear pick" + a warning when
+  audio edits would be dropped). Do **NOT delete** the ZH session: its masters are gone
+  from disk, the `work/` v2/v3 copies are the only ZH audio.
 - **Bug reports**: table + snapshot files purged (the one row was the feature-test report).
 - **R2 (`review-audio`)**: all 18 test `*v<n>.mp3` / `*_fallback.mp3` keys deleted
   (bucket-wide, incl. old Bath/Battle/IyaValley/Bude test residue); canonical takes for the
@@ -42,10 +43,11 @@ deliberately; nothing is mid-flight.
 
 ## What to test (new since last session)
 1. **JP + ZH selection tools** on SceneDesc: *Regenerate highlighted*, *…with alt text*,
-   *Trim highlighted noise*, *Insert 1s pause*, *Remove 1s pause*. JP: highlight/caret in
+   *Trim highlighted noise*, *Insert 1s / 0.5s*, *Remove 1s / 0.5s*. JP: highlight/caret in
    the **kana** (last) line — kanji-line selections get a 409 hint. ZH: highlight in the
    **Simplified (Hans)** box; the buttons under the player read that selection.
-2. **Remove 1s pause** also on **English** trips (new for all languages).
+2. **Remove 1s / 0.5s** also on **English** trips (new for all languages). **Trim
+   highlighted noise** now also on question/option audio fields (all languages).
 3. **Wrong-line guards**: "Generate from edit" with only kanji / a non-Hans script edited →
    clear error naming the voiced line (button should also stay disabled in the UI).
 4. **Help (?) button** in the top bar → Quick reference + user guide(s) in a new tab; the
@@ -61,8 +63,8 @@ deliberately; nothing is mid-flight.
   never voiced as the whole field, never silently dropped).
 - Trim/pause tools **refuse with a message** (409) rather than guess — e.g. no pause at the
   cursor, pause already at natural length, or the aligner venv missing.
-- **Remove 1s pause** on a very long pause may remove slightly under 1 s per click (the
-  silence run is measured within a bounded scan window) — click again for more.
+- ~~Remove-pause under-removing on long pauses~~ FIXED 2026-07-02 evening: the run's true
+  extent is re-measured, so insert-1s → remove-1s round-trips to the original gap.
 - The MMS aligner venv must exist at `research/cjk-aligner/venv` (py3.12). Without it, CJK
   text-edit regens fall back to whole-regen and the selection/pause tools 409.
 

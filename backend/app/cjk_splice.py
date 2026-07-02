@@ -166,6 +166,16 @@ def _cuts_for_old_span(audio_path: str, old_text: str, new_text: str, lang: str,
     """Steps 2–6 of the cut plan, for a target span ``[oa, ob)`` in OLD coordinates —
     shared by the diff entry (``plan_cuts``) and the highlight entry (``plan_span_cuts``).
     ``old_text`` must be what the audio SAYS; ``old2new`` maps the diff's equal runs."""
+    # A whole-sentence highlight naturally INCLUDES the trailing 。/、 — but punctuation IS
+    # the clause boundary, so leaving it inside the span makes the pR search below start
+    # PAST it and re-voice one clause too many (e.g. highlighting "たかさは…あります。"
+    # regenerated on into "この…すうじは、"). Shrink the span to its spoken chars first;
+    # a span that is ONLY punctuation collapses to its left edge (the boundary itself).
+    while ob > oa and old_text[ob - 1] in PUNCT:
+        ob -= 1
+    while oa < ob and old_text[oa] in PUNCT:
+        oa += 1
+
     # 2) expand to the nearest clause/sentence PUNCTUATION on each side (= the pauses).
     pL = next((p for p in range(oa - 1, -1, -1) if old_text[p] in PUNCT), -1)
     pR = next((p for p in range(ob, len(old_text)) if old_text[p] in PUNCT), len(old_text))

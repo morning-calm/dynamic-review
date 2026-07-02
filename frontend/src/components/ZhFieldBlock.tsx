@@ -98,8 +98,11 @@ const ZhFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine, ro
                 hasTextChange={isSceneDesc && hanziChanged}
                 wholeOnly={!isSceneDesc}
                 hasSelection={isSceneDesc && Boolean(field.localization)}
-                getSelectionRange={getSelectionRange}
+                // Only offer the selection-reading tools when a Hans surface exists —
+                // a non-localized field would route char offsets into the wrong text.
+                getSelectionRange={field.localization ? getSelectionRange : undefined}
                 selectionSourceText={field.localization?.cur.Hans ?? undefined}
+                surfaceLabel="the Simplified (Hans) field"
                 onBeforeRegenerate={async () => {
                   await flushRef.current?.();
                 }}

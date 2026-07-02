@@ -28,6 +28,14 @@ interface AudioFieldBlockProps {
  */
 const AudioFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine, rows, readOnly = false }: AudioFieldBlockProps) => {
   const flushRef = useRef<(() => Promise<void>) | null>(null);
+  // The field's own textarea — "Trim highlighted noise" reads the reviewer's highlight
+  // from it (a textarea keeps its selection after blur, so the button click still sees it).
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const getSelectionRange = () => {
+    const el = textareaRef.current;
+    if (!el) return null;
+    return { start: el.selectionStart, end: el.selectionEnd };
+  };
 
   return (
     <div className="space-y-2">
@@ -40,6 +48,7 @@ const AudioFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine,
           label={label}
           singleLine={singleLine}
           rows={rows}
+          textareaRef={textareaRef}
           flushRef={flushRef}
         />
       </div>
@@ -53,6 +62,8 @@ const AudioFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine,
               onFieldUpdate={onFieldUpdate}
               hasTextChange={false}
               wholeOnly
+              getSelectionRange={getSelectionRange}
+              surfaceLabel="the text above"
               onBeforeRegenerate={async () => {
                 await flushRef.current?.();
               }}

@@ -58,7 +58,13 @@ default `dev-token`). uvicorn binds 127.0.0.1 only; the FE Vite proxy forwards `
 and **7** (Human KP Confirm). Each entry has `lane`, `reviewable`, `title`, `card_url`.
 `reviewable` = the trip's mp3 masters resolve locally. Excludes are in the export's
 `EXCLUDE` set (currently `LionDance_EN`). Re-run `py -3.12 Trello/export_review_trips.py`
-to refresh (commits+pushes this repo's manifest).
+to refresh (commits+pushes this repo's manifest). The export reads each card's `[review]`
+block; `review_block.source_en_id_of` now falls back to a **name-derived** source id when a
+draft data dir has no `source.json` (the pre-source.json JP drafting generation — that gap
+hid Tokyo_06-10 + the Hida/Takayama-family N4/N5 from the queue until 2026-07-02; fixed and
+backfilled via `backfill_review_blocks.py --apply`, which now PRESERVES the blocks' `voice=`
+annotations instead of stripping them). Every export also prints an **audit** of audio-ready
+drafts that sit on NO lane-6/7 card, so a stale block can't hide trips silently again.
 
 ## Audio (MP3 end-to-end)
 - **Sources** (`sessions.resolve_audio_dir`): Quicktrips masters
@@ -91,11 +97,22 @@ to refresh (commits+pushes this repo's manifest).
   insert- & remove-pause map the reviewer's selection (JP: the kana line of the narration
   textarea, 409-hinted otherwise; ZH: the **Hans** field of the 4-script block) → aligner char
   times via `cjk_splice.plan_span_cuts`/`plan_cjk_span`/`char_times`. Highlight re-voices the
-  ENCLOSING CLAUSE (works with unchanged text); alt substitutes exactly the selected chars inside
+  ENCLOSING CLAUSE (works with unchanged text); the target span is **shrunk to its spoken chars
+  first** (2026-07-02: a whole-sentence highlight includes the trailing 。 — without the shrink
+  the expansion ran into the NEXT clause); alt substitutes exactly the selected chars inside
   it and NEVER falls back to whole-voicing the alt (bail → `edit_required`). Direct edits
   (trim/pause) never fall back silently — they 409. `segment` with the voiced line unchanged
-  (JP kanji-only / ZH non-Hans edit) → `409 spoken_line_unchanged`. **Remove 1s pause at cursor**
-  exists for ALL languages (mid-run removal, ≥0.25 s natural pause kept).
+  (JP kanji-only / ZH non-Hans edit) → `409 spoken_line_unchanged`. **Insert/Remove pause** (1s
+  AND 0.5s buttons) exist for ALL languages (mid-run removal, ≥0.25 s natural pause kept;
+  `remove_silence` re-measures the run's TRUE extent — the ±0.4s discovery window used to
+  under-remove long pauses, so insert-1s→remove-1s wasn't symmetric). **Trim highlighted noise**
+  is also on Q&A/option audio fields, all languages (highlight in that field's own textarea /
+  Hans box; `trim_noise`/`_trim_noise_cjk` were already field-generic — the FE just never wired
+  a selection surface for `wholeOnly` fields).
+- **Candidate end-cutoff / previous_text-leak** (EN reports 2026-07-02: final /t/ of "gate."/
+  "shogunate." clipped — `trim_trailing_breath` cuts after the last SUSTAINED voiced run and
+  drops the stop burst; EL v2 sometimes voices part of `previous_text` before the phrase):
+  analysis + ranked fixes in `docs/splice-end-cutoff-analysis.md` — **not implemented yet**.
 - **Versioning:** canonical `<i>.mp3`; superseded takes archived `versions/<i>v<n>.mp3`.
 - **Submit** writes changed **text** to staging Trip + TripGroup (desc + re-derived
   `tripCategories`) and leaves the corrected `<i>.mp3` masters in place — **Stage 9**
@@ -106,6 +123,15 @@ to refresh (commits+pushes this repo's manifest).
   entry's `url`) → regional `…VID-PIC Thumbnails\**\Vid ….jpg` → bucket
   `dynamic-languages-thumbs` key `scene-thumbs/<stem>.jpg`, served at
   `https://thumbs.dynamiclanguages.org/`.
+- **Flat overlays + static-360 stills** (served locally at `/overlays/{sid}/{fn}`, cookie-auth):
+  `sessions._resolve_overlay_file` searches per **BASE trip id** (`_image_base_ids`:
+  `X_HSK3_ZH`→`X_EN`; `X_Beg_N4_JP`→`X_Beg_JP`,`X_EN`; `X_A12/B1/B2_EN`→`X_EN`) across
+  **`Audio Generation/ogg/<base>/`** (Taiwan EN, Tokyo_06-10 EN, leveled EN — holds BOTH the
+  `{i}.jpg` 360 stills and the flat overlays like `a.jpg`/`suncake.jpg`), the
+  **`Japanese\Trips\Day Series\Ogg\<location>\<id>`** tree (Tokyo_01-05/Takao/…), and the RW
+  data roots' `<base>/static_images/`. Display-only best-effort. (JP/Taiwan trips have no
+  stage-9 COUNTRY_CFG, so `paths_for` ogg/mp3 candidates are always None for them — the
+  base-id search is what actually resolves; before 2026-07-02 these images 404'd.)
 - **Review audio:** `review_audio.py` (+ `Scripts\upload_review_audio_r2.py` for bulk, +
   the stage-5c hook in `run_levels.py`) push mp3s to bucket **`review-audio`** key
   `<contentID>/<file>.mp3`, served at **`https://reviewaudio.dynamiclanguages.org/`**. On
@@ -187,10 +213,14 @@ machine stays on with uvicorn up.
   `research/cjk-aligner/venv` (torch/torchaudio/uroman); without it CJK text edits fall back to
   whole-regen and the selection/pause tools 409 (`aligner_unavailable`). Live ZH demo audio is
   limited to `sess_5bc56203b40a` (masters gone from disk — a fresh `_ZH` seed needs sources
-  restored); its **V2 pick has been made** (2026-07-02) so it renders the collapsed
-  single-take UI. Both CJK demo sessions were **reset to a pristine no-edits state**
-  (2026-07-02, pre-thorough-testing): text=seed, no flags/comments/coverage/candidates,
-  versions = v0 only, working = pristine take; the test bug report was purged.
+  restored). That session was **fully reset to pristine + UN-picked** (2026-07-02 evening, at
+  dave's request) so **Ted makes the real V2/V3 pick**: text/localization=seed, no flags/
+  comments/coverage/candidates/clips, audio_versions purged, `preferred_version=NULL`
+  (A/B audition renders again; the v2/v3 sets under `work/{sid}/` are intact — do not delete).
+- **V2/V3 pick is now reversible:** `POST /version {version:null}` (`_clear_version_pick`)
+  returns a `_ZH` session to the side-by-side audition; the FE offers "Clear pick" + a
+  confirm() warning when switching/clearing would drop audio edits (`can_undo` on any field).
+  Text/script edits always survive a switch/clear.
 - **Mandarin voices:** `annasu` is **female**; `yu` and `jason` are **male** — a splice/regen must use
   a voice matching the master, or the seam is a *voice* mismatch, not a splice defect. The demo session
   `sess_5bc56203b40a` was mis-stored as `yu` and has since been corrected to `annasu`; real trips resolve

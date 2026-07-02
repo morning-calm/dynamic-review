@@ -22,8 +22,11 @@ separate reviewer — you review and approve them in one pass.
     them (alt text lets you spell a tricky pronunciation phonetically; on screen the text is
     unchanged).
   - **Trim highlighted noise** — highlight where an unwanted blip/breath is and trim it.
-  - **Insert 1s pause at cursor** — lengthen a pause after a full stop.
-  - **Remove 1s pause at cursor** — shorten an over-long pause (≥0.25 s of natural pause is
+    Also available on **question and answer-option audio** (highlight in that field's own
+    text box), in every language.
+  - **Insert 1s / Insert 0.5s** — lengthen a pause after a full stop by 1 s or 0.5 s
+    (0.5 s is the lighter touch for non-beginner audio).
+  - **Remove 1s / Remove 0.5s** — shorten an over-long pause (≥0.25 s of natural pause is
     always kept; it never cuts speech).
   - **Trim end silence** — normalise the trailing pause for the level.
 - **Where to highlight per language:** English — the narration textarea; **Japanese** — the
@@ -35,7 +38,9 @@ separate reviewer — you review and approve them in one pass.
   *…with alt text* instead flags the part **edit-required** (the alt is never silently voiced
   as the whole field); the trim/pause tools refuse with a clear message rather than guess.
 - **Mandarin (`_ZH`)** trips start with the 4-script block + V2/V3 voice pick (see Ted's
-  guide); the audio tools appear after the pick collapses to a single take.
+  guide); the audio tools appear after the pick collapses to a single take. The pick can be
+  **cleared** ("Clear pick" next to the V2/V3 buttons) to re-audition both versions —
+  audio edits made on the picked take are dropped (with a warning); text edits survive.
 - **Japanese (`_JP`)** trips use the kanji/kana narration; the voice speaks the kana line
   (see Toshifumi's guide).
 

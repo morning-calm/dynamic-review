@@ -86,6 +86,7 @@ const FlagControl = ({ field, sid, onFieldUpdate }: FlagControlProps) => {
         onClick={() =>
           run(() => api.revert(sid, field.fid), 'Reverted to original text + audio.')
         }
+        title="Change text and working audio file back to original"
         className="ml-auto text-xs text-gray-500 underline enabled:hover:text-gray-300 disabled:opacity-40"
       >
         Revert to original

@@ -20,7 +20,10 @@ Mandarin text, fix the audio, listen, mark each part done, and submit. David the
 ## 3. Choose the voice (once per trip)
 - A Mandarin trip opens with **two audio versions, V2 and V3**, side by side.
 - Listen to both and pick the one that sounds best. The whole trip then uses that voice.
-- You only do this once, at the start.
+- Picked by accident, or want to hear both again? Click **Clear pick (listen to both again)**
+  next to the V2/V3 buttons. If you already made audio changes on the picked version, the
+  app warns you first — switching or clearing deletes those audio changes (your text edits
+  are always kept).
 
 ## 4. Review each part, from top to bottom
 A trip has, in order: the **trip Title**, the **trip Description**, then the **Scenes**. Each
@@ -61,10 +64,13 @@ use the buttons under the audio player:
   clearer way). The text on screen doesn't change — only the sound.
 - **Trim highlighted noise** — highlight where an unwanted noise or leftover sound is, and
   the app cleans it out.
-- **Insert 1s pause at cursor** — click just after a full stop, and the pause there gets 1
-  second longer.
-- **Remove 1s pause at cursor** — the opposite: click at a pause that is too long and it is
-  shortened (a natural pause is always kept — it never cuts into words).
+- **Insert 1s / Insert 0.5s** — click just after a full stop, and the pause there gets 1
+  second (or half a second) longer.
+- **Remove 1s / Remove 0.5s** — the opposite: click at a pause that is too long and it is
+  shortened by up to that amount (a natural pause is always kept — it never cuts into words).
+
+**Trim highlighted noise** also works on **question and answer audio** — highlight the spot
+in that field's own Simplified box.
 
 Then **listen**, and **Combine** if it used a new recording. If the app can't do it safely at
 that exact spot it will say so — nothing is changed silently.
