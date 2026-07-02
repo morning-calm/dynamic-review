@@ -20,9 +20,11 @@ deliberately; nothing is mid-flight.
   REVIEW_APP_SERVE_FRONTEND=1 REVIEW_APP_COOKIE_SECURE=1 py -3.12 -m uvicorn \
     --app-dir backend app.main:app --host 127.0.0.1 --port 8000
   ```
-  then open http://127.0.0.1:8000 (the SPA is served by the backend). `cloudflared tunnel
-  run review-app` only if remote access is needed. Restart uvicorn via the Bash tool after
-  backend edits (no --reload; PowerShell background launches die).
+  then open http://127.0.0.1:8000 (the SPA is served by the backend). **Also start the
+  tunnel** — reviewers only reach the app through it: `cloudflared tunnel run review-app`
+  (exe at `C:\Program Files (x86)\cloudflared\`; wait for "Registered tunnel connection").
+  Restart uvicorn via the Bash tool after backend edits (no --reload; PowerShell background
+  launches die). Restarting uvicorn does NOT restart the tunnel — check both are up.
 
 ## Clean state guarantees (done 2026-07-02)
 - **Sessions**: all three (`A._A. Milne…_EN`, `Tokyo_03_Beg_N4_JP`, `KaohsiungLotusPond_HSK3_ZH`)

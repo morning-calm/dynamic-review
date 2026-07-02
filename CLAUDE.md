@@ -194,7 +194,12 @@ Auth is now **DB-backed users + opaque Bearer tokens** (`auth.py`, provisioned v
 `backend/manage.py`) — the old shared `REVIEW_APP_TOKEN` is gone. Serve the built SPA from the
 backend so one hostname fronts UI+API+media: env `REVIEW_APP_SERVE_FRONTEND=1` +
 `REVIEW_APP_COOKIE_SECURE=1`, rebuild `frontend/dist`, `cloudflared tunnel run`. Requires this
-machine stays on with uvicorn up.
+machine stays on with uvicorn up. ⚠️ **"App is up" = uvicorn AND cloudflared, BOTH** —
+restarting the backend after code changes does NOT bring the tunnel back; check
+`Get-Process cloudflared` and if absent start
+`"C:\Program Files (x86)\cloudflared\cloudflared.exe" tunnel run review-app` (background,
+look for "Registered tunnel connection" in its log). Reviewers only reach the app through
+the tunnel — uvicorn-only means they're locked out.
 
 **Path B — deploy (proper, the real lift):**
 1. **Frontend** → Vercel (mirrors library-app). Easy.
