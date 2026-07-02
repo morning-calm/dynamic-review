@@ -281,10 +281,36 @@ def generate_audio(text: str, voice_id: str, voice_settings: dict,
     return r.content
 
 
+# A faithful alignment that places the FIRST word this deep into the clip means the
+# model voiced something before the requested text — the eleven_multilingual_v2
+# previous_text leak (docs/splice-end-cutoff-analysis.md; heard in the field as the
+# prior sentence's tail playing before the candidate). Normal TTS lead silence is
+# well under this.
+_LEAK_RETRY_LEAD_S = 0.4
+
+
 def generate_with_timestamps(text: str, voice_id: str, voice_settings: dict,
                              previous_text: str | None = None,
                              next_text: str | None = None,
                              model_id: str = EL_MODEL) -> tuple[bytes, list[dict]]:
+    """TTS with character alignment → (mp3 bytes, word list) — see
+    ``_generate_with_timestamps``. When ``previous_text`` was sent and the first
+    aligned word starts suspiciously late (the v2 context-leak: the model voiced a
+    tail of the context before the phrase), re-request ONCE without ``previous_text``
+    — a clause-length phrase has acceptable standalone prosody (the JP/v3 path omits
+    context entirely), and clean audio beats a leaky lead."""
+    mp3, words = _generate_with_timestamps(text, voice_id, voice_settings,
+                                           previous_text, next_text, model_id)
+    if previous_text and words and float(words[0]["start"] or 0.0) > _LEAK_RETRY_LEAD_S:
+        mp3, words = _generate_with_timestamps(text, voice_id, voice_settings,
+                                               None, next_text, model_id)
+    return mp3, words
+
+
+def _generate_with_timestamps(text: str, voice_id: str, voice_settings: dict,
+                              previous_text: str | None = None,
+                              next_text: str | None = None,
+                              model_id: str = EL_MODEL) -> tuple[bytes, list[dict]]:
     """TTS with character alignment → (mp3 bytes, word list).
 
     Words are aggregated from the per-character alignment by splitting on spaces;

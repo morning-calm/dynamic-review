@@ -1451,6 +1451,13 @@ def _commit_working_edit(sid: str, srow, frow, samples: np.ndarray, kind: str) -
     return serialize_field(sid, _field_row(sid, frow["id"]))
 
 
+# Candidate lead handling: a lead longer than _CAND_LEAD_MAX_S before the first aligned
+# word is a previous_text leak / dead air — front-trim it down to _CAND_LEAD_KEEP_S of
+# lead-in (enough attack for the first word; the span splice cuts inside it anyway).
+_CAND_LEAD_MAX_S = 0.25
+_CAND_LEAD_KEEP_S = 0.10
+
+
 def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
                alt_text: str | None = None) -> dict:
     srow = _session_row(sid)
@@ -1581,15 +1588,33 @@ def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
 
     # Candidate available (segment splice plan, or a whole regen that may be S2-flagged).
     # Keep a pristine copy, then auto-trim a trailing breath / next-sound bleed off the END
-    # so the audition (and the splice) don't carry it. Trailing-only → candidate word
-    # timings (cand_words, indexed from the start) stay valid for the span splice. The
-    # reviewer can fine-tune via /trim-candidate, re-derived from this pristine copy.
+    # so the audition (and the splice) don't carry it. The reviewer can fine-tune via
+    # /trim-candidate, re-derived from the pristine copy.
     cand_path.write_bytes(plan.candidate_mp3)
     pristine = dirs["candidate"] / f"{fid}.orig.mp3"
     pristine.write_bytes(plan.candidate_mp3)
     cand_samples = audio_io.mp3_to_samples(cand_path)
+    # Front-trim a previous_text leak / oversized lead: EL v2 occasionally voices a tail
+    # of the prosody context BEFORE the phrase (docs/splice-end-cutoff-analysis.md; the
+    # retry in generate_with_timestamps catches the blatant case — this catches what's
+    # left). The char alignment places the phrase's first word AFTER the leak, so audio
+    # before cand_words[0].start (minus a lead-in margin) is not the requested phrase —
+    # drop it and SHIFT cand_words to match, so the span splice's candidate-side times
+    # stay valid on the trimmed file. trim_candidate re-applies this same front cut when
+    # it re-derives from the pristine copy.
+    cw = plan.meta.get("cand_words") or []
+    front_s = 0.0
+    if cw and cw[0].get("start") is not None:
+        lead = float(cw[0]["start"])
+        if lead > _CAND_LEAD_MAX_S:
+            front_s = lead - _CAND_LEAD_KEEP_S
+            cand_samples = cand_samples[int(round(front_s * audio_io.SR)):]
+            plan.meta["cand_words"] = [
+                {**w, "start": max(0.0, float(w["start"]) - front_s),
+                 "end": max(0.0, float(w["end"]) - front_s)} for w in cw]
+    plan.meta["cand_front_trim_s"] = round(front_s, 3)
     trimmed = audio_io.trim_trailing_breath(cand_samples, audio_io.SR)
-    if len(trimmed) < len(cand_samples):
+    if front_s > 0.0 or len(trimmed) < len(cand_samples):
         audio_io.samples_to_mp3(trimmed, cand_path)
     plan.meta["cand_trim_ms"] = round(
         (len(cand_samples) - len(trimmed)) / audio_io.SR * 1000.0, 1)
@@ -1678,6 +1703,12 @@ def trim_candidate(sid: str, fid: int, delta_ms: float) -> dict:
     meta = json.loads(frow["splice_meta_json"] or "{}")
     samples = audio_io.mp3_to_samples(pristine)
     sr = audio_io.SR
+    # Re-apply the front cut regenerate made (previous_text-leak / lead removal): the
+    # pristine copy still carries the leak, and cand_words were shifted to the
+    # front-trimmed timeline — rebuilding without it would put the leak back.
+    front = float(meta.get("cand_front_trim_s") or 0.0)
+    if front > 0.0:
+        samples = samples[int(round(front * sr)):]
     n = len(samples)
     max_trim_ms = max(0.0, (n / sr - 0.15) * 1000.0)        # always keep ≥150 ms
     new_trim = min(max(0.0, float(meta.get("cand_trim_ms", 0.0)) + float(delta_ms)),

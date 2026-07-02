@@ -1,4 +1,18 @@
-# Candidate end-cutoff & previous-text leak — analysis + proposed fixes (2026-07-02)
+# Candidate end-cutoff & previous-text leak — analysis + fixes (2026-07-02)
+
+> **STATUS: fixes 1–3 below are IMPLEMENTED (same day).** Fix 1 shipped in a refined
+> form: while implementing, the real "shogunate" clip showed the whole unstressed
+> final syllable ("-ate", ~0.7 s) sits 26–40 dB below peak — invisible to the −26 dB
+> voiced bar, not just a short burst — so `trim_trailing_breath` now extends the end
+> over any content above a LOW bar (peak−40 dB) that follows within 150 ms chained
+> (a quiet word tail is contiguous with its vowel; a breath comes after a real pause,
+> so it is still trimmed). Validated: synthetic burst/breath/quiet-tail set + 3 real
+> EL takes Whisper-verified ("gate"/"shogunate" intact post-trim, tails still cut).
+> Fix 2 = `_CAND_LEAD_MAX_S`/`_CAND_LEAD_KEEP_S` in `sessions.regenerate` (cand_words
+> shifted; `trim_candidate` re-applies `cand_front_trim_s` from the pristine copy).
+> Fix 3 = the one-shot no-context retry in `audio_core.generate_with_timestamps`
+> (`_LEAK_RETRY_LEAD_S`). Fixes 4–5 remain open (4's risk is reduced by the EL end
+> times we observed running long, not short).
 
 Two field reports from English review (Tokyo_08_ImperialPalace_EN), both on
 SceneDesc highlight/alt regenerates:

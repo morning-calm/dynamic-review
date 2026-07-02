@@ -109,10 +109,16 @@ drafts that sit on NO lane-6/7 card, so a stale block can't hide trips silently 
   is also on Q&A/option audio fields, all languages (highlight in that field's own textarea /
   Hans box; `trim_noise`/`_trim_noise_cjk` were already field-generic — the FE just never wired
   a selection surface for `wholeOnly` fields).
-- **Candidate end-cutoff / previous_text-leak** (EN reports 2026-07-02: final /t/ of "gate."/
-  "shogunate." clipped — `trim_trailing_breath` cuts after the last SUSTAINED voiced run and
-  drops the stop burst; EL v2 sometimes voices part of `previous_text` before the phrase):
-  analysis + ranked fixes in `docs/splice-end-cutoff-analysis.md` — **not implemented yet**.
+- **Candidate end-cutoff / previous_text-leak — FIXED (2026-07-02)**: `trim_trailing_breath`
+  now absorbs the quiet word tail after the last sustained run (final syllables/stop bursts sit
+  26–40 dB below peak — LOW-bar peak−40 dB chained within 150 ms; breaths after a real pause
+  still trim); `sessions.regenerate` front-trims a leaked/oversized candidate lead past
+  `cand_words[0].start` (shifting cand_words; `trim_candidate` re-applies `cand_front_trim_s`
+  from the pristine copy); `generate_with_timestamps` retries ONCE without `previous_text` when
+  the first word starts > 0.4 s in (the v2 context leak). Validated on synthetic DSP set + 3
+  real EL takes (Whisper-verified "gate"/"shogunate" survive, tails still trimmed). Analysis +
+  the two still-open proposals (combine-side end margin, Whisper candidate verify):
+  `docs/splice-end-cutoff-analysis.md`.
 - **Versioning:** canonical `<i>.mp3`; superseded takes archived `versions/<i>v<n>.mp3`.
 - **Submit** writes changed **text** to staging Trip + TripGroup (desc + re-derived
   `tripCategories`) and leaves the corrected `<i>.mp3` masters in place — **Stage 9**

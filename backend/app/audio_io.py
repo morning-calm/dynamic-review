@@ -342,20 +342,29 @@ def first_silence_after(samples: np.ndarray, sr: int, t0: float, t1: float,
 
 
 def trim_trailing_breath(samples: np.ndarray, sr: int = SR, rel_db: float = 26.0,
-                         min_speech_ms: float = 80.0, release_ms: float = 90.0) -> np.ndarray:
+                         min_speech_ms: float = 80.0, release_ms: float = 90.0,
+                         tail_db: float = 40.0, tail_gap_ms: float = 150.0) -> np.ndarray:
     """Drop a trailing breath / next-sound bleed that TTS leaves AFTER the last word.
     Finds the end of the last sustained voiced run (above peak − ``rel_db`` for ≥
-    ``min_speech_ms``), keeps a ``release_ms`` tail so the natural word release is intact,
-    and cuts everything after it. Never cuts into sustained speech; returns the samples
-    unchanged when the tail beyond the last word is negligible (< 40 ms)."""
+    ``min_speech_ms``), then extends that end over any content above a LOW bar
+    (peak − ``tail_db``) that follows within ``tail_gap_ms`` of it, chained. Word
+    endings are routinely far quieter than the ``rel_db`` bar — an unstressed final
+    syllable ("shogun-ATE") sits 26–40 dB below peak, and a word-final stop ("gate")
+    is closure-silence + a brief burst — and cutting at the sustained run alone
+    chopped them off (docs/splice-end-cutoff-analysis.md). A quiet word tail is
+    (near-)contiguous with its vowel, whereas a breath / next-sound bleed only comes
+    after a genuine pause (> ``tail_gap_ms``), so those are still trimmed. Keeps a
+    ``release_ms`` tail so the natural word release is intact, and cuts everything
+    after it. Never cuts into sustained speech; returns the samples unchanged when
+    the tail beyond the last word is negligible (< 40 ms)."""
     n = len(samples)
     if n < int(0.05 * sr):
         return samples
     times, rms = _frame_rms(samples, sr, frame_ms=10.0, hop_ms=5.0)
     if len(rms) == 0:
         return samples
-    thr = (float(np.max(np.abs(samples))) or 1e-9) * (10.0 ** (-rel_db / 20.0))
-    voiced = rms >= thr
+    peak_abs = float(np.max(np.abs(samples))) or 1e-9
+    voiced = rms >= peak_abs * (10.0 ** (-rel_db / 20.0))
     need = max(1, int(min_speech_ms / 1000.0 / 0.005))
     end_idx = None
     k, m = 0, len(voiced)
@@ -371,6 +380,13 @@ def trim_trailing_breath(samples: np.ndarray, sr: int = SR, rel_db: float = 26.0
             k += 1
     if end_idx is None:
         return samples
+    tail = rms >= peak_abs * (10.0 ** (-tail_db / 20.0))
+    gap = max(1, int(tail_gap_ms / 1000.0 / 0.005))      # frames (5 ms hop)
+    j = end_idx + 1
+    while j < m and (j - end_idx) <= gap:                # quiet word-tail absorption
+        if tail[j]:
+            end_idx = j
+        j += 1
     cut = int(round((float(times[end_idx]) + release_ms / 1000.0) * sr))
     if cut >= n - int(0.04 * sr):                        # negligible tail → no-op
         return samples
