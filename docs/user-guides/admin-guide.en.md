@@ -18,7 +18,7 @@ separate reviewer — you review and approve them in one pass.
   - **Generate from edit** — re-record just the changed words. If the *voiced* line is
     unchanged (JP: kanji-only edit; ZH: a non-Simplified script), the app refuses with a
     message saying which line drives the audio.
-  - **Regenerate highlighted** / **…with alt text** — select words in the narration and re-record
+  - **Regenerate highlighted** / **Fix pronunciation…** — select words in the narration and re-record
     them (alt text lets you spell a tricky pronunciation phonetically; on screen the text is
     unchanged).
   - **Trim highlighted noise** — highlight where an unwanted blip/breath is and trim it.
@@ -35,7 +35,7 @@ separate reviewer — you review and approve them in one pass.
 - **CJK safety behaviour:** the splice engine is deliberately conservative. When it can't cut
   at the exact spot safely, *Regenerate highlighted / Generate from edit* fall back to
   re-recording the whole narration (a toast tells you — re-listen to the full clip);
-  *…with alt text* instead flags the part **edit-required** (the alt is never silently voiced
+  *Fix pronunciation…* instead flags the part **edit-required** (the alt text is never silently voiced
   as the whole field); the trim/pause tools refuse with a clear message rather than guess.
 - **Mandarin (`_ZH`)** trips start with the 4-script block + V2/V3 voice pick (see Ted's
   guide); the audio tools appear after the pick collapses to a single take. The pick can be

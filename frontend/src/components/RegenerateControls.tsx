@@ -74,7 +74,7 @@ const RegenerateControls = ({
   const afterRegen = (updated: Field) => {
     onFieldUpdate(updated);
     if (!updated.audio.candidate && updated.flag === 'edit_required') {
-      toast.info('Could not splice automatically — flagged edit-required. Try whole-regenerate or send to Create new.');
+      toast.info('Could not splice automatically — flagged edit-required. Try Regenerate All or send to Create new.');
     } else if (updated.cjk_fallback) {
       // Surgical CJK splice bailed → the whole narration was regenerated, not just the edit.
       toast.info('Couldn’t splice just the edit cleanly — regenerated the whole narration. Re-listen to the full clip.');
@@ -294,6 +294,10 @@ const RegenerateControls = ({
   // Saved 'Create new' attachments (a note is what commits a take) → highlight the button.
   const savedClips = field.manual_clips.filter((c) => c.comment.trim()).length;
 
+  // Thin vertical rules split the (long) row into scannable groups:
+  // history | re-record | fix-in-place | candidate | attachments.
+  const sep = <span aria-hidden="true" className="h-5 w-px shrink-0 self-center bg-gray-600" />;
+
   const trimSilenceBtn = (
     <button
       type="button"
@@ -341,6 +345,8 @@ const RegenerateControls = ({
         ↷ Redo
       </button>
 
+      {sep}
+
       <button
         type="button"
         disabled={busy}
@@ -348,7 +354,7 @@ const RegenerateControls = ({
         title="Re-record this entire block from its current text — audition the result, then Combine to keep it"
         className={`${btn} border-gray-600 text-gray-200`}
       >
-        Regenerate whole block
+        Regenerate All
       </button>
 
       {wholeOnly && (
@@ -359,10 +365,11 @@ const RegenerateControls = ({
           title="Type replacement/phonetic text and re-record this whole block from it (fixes a pronunciation; the on-screen text is unchanged)"
           className={`${btn} border-gray-600 text-gray-200`}
         >
-          …with alt text
+          Fix pronunciation…
         </button>
       )}
 
+      {wholeOnly && sep}
       {wholeOnly && getSelectionRange && trimNoiseBtn}
       {wholeOnly && trimSilenceBtn}
 
@@ -399,11 +406,12 @@ const RegenerateControls = ({
                 type="button"
                 disabled={busy}
                 onClick={onAltText}
-                title={`Select the phrase in ${surfaceLabel}, then type replacement/phonetic text to speak there (fixes a pronunciation; the on-screen text is unchanged)`}
+                title={`Select the phrase in ${surfaceLabel}, then type replacement/phonetic text to speak there (the on-screen text is unchanged)`}
                 className={`${btn} border-gray-600 text-gray-200`}
               >
-                …with alt text
+                Fix pronunciation…
               </button>
+              {sep}
               {trimNoiseBtn}
               <button
                 type="button"
@@ -449,6 +457,7 @@ const RegenerateControls = ({
 
       {field.audio.candidate && (
         <>
+          {sep}
           <button
             type="button"
             disabled={busy}
@@ -487,6 +496,8 @@ const RegenerateControls = ({
           </button>
         </>
       )}
+
+      {sep}
 
       <button
         type="button"
@@ -528,10 +539,10 @@ const RegenerateControls = ({
         isOpen={altOpen}
         onRequestClose={() => !busy && setAltOpen(false)}
         style={MODAL_STYLE}
-        contentLabel="Regenerate highlighted with alt text"
+        contentLabel="Fix pronunciation"
       >
         <h2 className="mb-2 text-sm font-semibold">
-          {altWhole ? 'Regenerate the whole block with alt text' : 'Replace highlighted audio with alt text'}
+          {altWhole ? 'Fix pronunciation — re-record the whole block' : 'Fix pronunciation — replace the highlighted audio'}
         </h2>
         <p className="mb-3 text-xs text-gray-400">
           ElevenLabs voices this text verbatim (spell it phonetically to fix a tricky pronunciation, e.g.

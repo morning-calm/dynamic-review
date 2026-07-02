@@ -45,7 +45,7 @@ What to do:
 3. **Listen** to the new version.
 4. If it's good, click **"Combine"** to keep it.
 5. If it's not right:
-   - **"Regenerate whole block"** re-records the entire line, or
+   - **"Regenerate All"** re-records the entire line, or
    - **"Create new"** lets you attach a fresh take **with a note** for David.
 
 Notes:
@@ -60,7 +60,7 @@ pause that's too short or too long. **Highlight the spot in the Simplified (简�
 use the buttons under the audio player:
 
 - **Regenerate highlighted** — makes a fresh recording of just the highlighted phrase.
-- **…with alt text** — speaks *different* text at the highlighted spot (e.g. spell a name a
+- **Fix pronunciation…** — speaks *different* text at the highlighted spot (e.g. spell a name a
   clearer way). The text on screen doesn't change — only the sound.
 - **Trim highlighted noise** — highlight where an unwanted noise or leftover sound is, and
   the app cleans it out.

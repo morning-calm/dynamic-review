@@ -41,7 +41,7 @@ Each Japanese narration has **two lines**:
 3. **Listen** to the new version.
 4. If it's good, click **"Combine"** to keep it.
 5. If it's not right:
-   - **"Regenerate whole block"** re-records the entire line, or
+   - **"Regenerate All"** re-records the entire line, or
    - **"Create new"** lets you attach a fresh take **with a note** for David.
 
 Notes:
@@ -56,7 +56,7 @@ pause that's too short or too long. **Highlight the spot in the KANA line**, the
 buttons under the audio player:
 
 - **Regenerate highlighted** — makes a fresh recording of just the highlighted phrase.
-- **…with alt text** — speaks *different* kana at the highlighted spot (e.g. write a clearer
+- **Fix pronunciation…** — speaks *different* kana at the highlighted spot (e.g. write a clearer
   reading). The text on screen doesn't change — only the sound.
 - **Trim highlighted noise** — highlight where an unwanted noise or leftover sound is, and
   the app cleans it out.
