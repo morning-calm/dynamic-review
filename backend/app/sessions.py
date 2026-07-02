@@ -21,9 +21,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import time
 import uuid
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -3030,6 +3032,7 @@ def approve(sid: str, user) -> dict:
             "completed_by=excluded.completed_by, completed_at=excluded.completed_at, "
             "method='approved', session_id=excluded.session_id",
             (tid, getattr(user, "username", None), now, sid))
+        export_completed_trips()   # Stage-9 handshake file (best-effort)
         return {"ok": True, "validation": soft, "written": result["written"],
                 "promoted_mp3": result["promoted_mp3"], "awaiting_stage9": True,
                 "zh_warnings": result.get("zh_warnings") or []}
@@ -3081,6 +3084,65 @@ def review_queue() -> list[dict]:
 # --------------------------------------------------------------------------- #
 # Completed queue
 # --------------------------------------------------------------------------- #
+# Machine-readable mirror of the completed_trips table, next to trips_to_review.json,
+# so the Scripts/Stage-9 side can see which trips are finished WITHOUT touching
+# review.db. CURRENT-STATE snapshot, not an event log: an un-complete removes the row.
+COMPLETED_EXPORT_PATH = config.REVIEW_APP_ROOT / "completed_trips.json"
+
+
+def _iso(ts: float | None) -> str | None:
+    return (datetime.fromtimestamp(ts).astimezone().isoformat(timespec="seconds")
+            if ts is not None else None)
+
+
+def completed_export_payload(rows) -> dict:
+    """Build the completed_trips.json payload from completed_trips row mappings —
+    shared by the live server hook and scripts/export_completed.py (which reads the
+    db read-only). ``method`` is load-bearing downstream: 'approved' = the corrected
+    <i>.mp3 masters were promoted in place AND the text went to staging; 'manual' =
+    marker only, NOTHING was written. Never collapse the two."""
+    trips = []
+    for r in rows:
+        _lvl, fam = _level_family(r["trip_id"])
+        trips.append({
+            "trip_id": r["trip_id"],
+            "method": r["method"],
+            "completed_by": r["completed_by"],
+            "completed_at": _iso(r["completed_at"]),
+            "session_id": r["session_id"],
+            "note": r["note"] or "",
+            "language": audio_core.language_of(r["trip_id"]),
+            "family": fam or "",
+        })
+    return {
+        "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "source": "review.db completed_trips",
+        "trips": trips,
+    }
+
+
+def write_completed_export(payload: dict,
+                           path: Path = COMPLETED_EXPORT_PATH) -> None:
+    """Atomic write (tmp + os.replace) so Stage 9 never reads a half-written file."""
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+                   encoding="utf-8")
+    os.replace(tmp, path)
+
+
+def export_completed_trips() -> None:
+    """Refresh completed_trips.json from the table. Called on approve, manual
+    complete, and un-complete. BEST-EFFORT: an export hiccup must never fail the
+    API operation that triggered it (the one-shot script can always rebuild)."""
+    try:
+        rows = db.query(
+            "SELECT trip_id, completed_by, completed_at, method, session_id, note "
+            "FROM completed_trips ORDER BY completed_at")
+        write_completed_export(completed_export_payload(rows))
+    except Exception as e:  # noqa: BLE001 — see docstring
+        print(f"[completed-export] skipped: {e}")
+
+
 def completed(user) -> list[dict]:
     """The completed queue (approved + admin-marked-complete). BOTH roles; reviewers are
     filtered to their languages (admins see all). Newest first. View-only — an admin
@@ -3121,6 +3183,7 @@ def complete_trip(user, trip_id: str, note: str = "") -> dict:
         "completed_by=excluded.completed_by, completed_at=excluded.completed_at, "
         "method='manual', session_id=NULL, note=excluded.note",
         (trip_id, getattr(user, "username", None), now, note or ""))
+    export_completed_trips()   # Stage-9 handshake file (best-effort)
     return {"ok": True}
 
 
@@ -3128,6 +3191,7 @@ def uncomplete_trip(user, trip_id: str) -> dict:
     """ADMIN un-complete: delete the completed_trips row so the trip returns to the main
     list and becomes openable again. Idempotent (no-op if not completed)."""
     db.execute("DELETE FROM completed_trips WHERE trip_id=?", (trip_id,))
+    export_completed_trips()   # Stage-9 handshake file (best-effort; row removed)
     return {"ok": True}
 
 

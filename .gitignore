@@ -19,3 +19,4 @@ backend/thumb_upload_cache.json
 
 # audio scratch (review working copies; masters live in the Scripts tree)
 backend/work/**
+completed_trips.json

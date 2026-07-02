@@ -66,6 +66,19 @@ backfilled via `backfill_review_blocks.py --apply`, which now PRESERVES the bloc
 annotations instead of stripping them). Every export also prints an **audit** of audio-ready
 drafts that sit on NO lane-6/7 card, so a stale block can't hide trips silently again.
 
+## Completed-trips export (Stage-9 handshake)
+`completed_trips.json` (repo root, next to the manifest; **gitignored** — server-written
+churn) mirrors the `completed_trips` table so Scripts/Stage-9 sees finished trips WITHOUT
+touching review.db. Shape: `{generated_at, source, trips:[{trip_id, method, completed_by,
+completed_at (iso), session_id, note, language, family}]}`. **`method` is load-bearing**:
+`approved` = corrected `<i>.mp3` masters promoted in place + text written to staging (also
+mirrored to R2 `review-audio/<cid>/`); `manual` = marker only, NOTHING written. CURRENT-STATE
+snapshot, not a log — un-complete REMOVES the row (Stage 9 keeps its own finalised ledger and
+should re-finalise when a trip's `completed_at` is newer than its ledger entry). Rewritten
+(atomic tmp+os.replace, best-effort — never fails the API op) on approve / manual complete /
+un-complete by `sessions.export_completed_trips`; rebuild any time with
+`py -3.12 scripts/export_completed.py` (opens review.db read-only; works with the server down).
+
 ## Audio (MP3 end-to-end)
 - **Sources** (`sessions.resolve_audio_dir`): Quicktrips masters
   (`stage9.common.paths_for`) → `Audio Generation/<trip>/` (England A12/B1) →
