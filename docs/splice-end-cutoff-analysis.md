@@ -58,6 +58,20 @@
 > the pending shogunate candidate had already been combined with the stale tR — that is
 > what deposited its stray. Not applicable to CJK (no stop-final syllables in JP/ZH).
 >
+> **Follow-up 4 — sentence-boundary seams + the pause tools (2026-07-03):**
+> 1. `insert_silence`/`remove_silence` seed at Whisper's END of the word before the
+>    caret — for a stop-final word that is the CLOSURE, so "insert 0.5 s before 'As'"
+>    landed inside "right." ("righ…0.5s…t", dave's report). Both tools now run
+>    `_skip_stop_closure` on the found run before acting (EN + CJK paths; inert for
+>    CJK, no stop finals).
+> 2. A combined span ending at a sentence boundary carried only ~0.2–0.4 s of seam
+>    silence (trimmed candidate tail + the ≤0.28 s the cut keeps) — the next sentence
+>    started almost immediately. `plan_segment` and the CJK planners now set
+>    `seam_pause_l/r` flags (sentence enders only, not commas: `_ends_sentence` /
+>    。！？), and `_splice_span_only` floors the MEASURED seam silence to
+>    `_SENTENCE_SEAM_PAUSE` (0.75 s) with zero-padding — takes already carrying enough
+>    are untouched. Applies to EN and CJK combines alike.
+>
 > **CJK audit (same day):** all of the above flows to `_JP`/`_ZH` automatically (shared
 > `sessions.regenerate` / `generate_with_timestamps` / `trim_trailing_breath`), and they
 > NEED it — Japanese 〜です/〜ます endings are DEVOICED (very quiet, exactly the clipped

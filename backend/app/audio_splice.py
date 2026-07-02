@@ -185,6 +185,9 @@ def _whisper_index_map(orig_toks: list[str],
 
 
 _EXPAND_CAP = 12   # max extra words to re-voice when the boundary is connected speech
+_SENTENCE_SEAM_PAUSE = 0.75   # minimum total silence at a seam that sits on a sentence
+                              # boundary (trimmed candidate + kept pause alone ≈ 0.2-0.4 s,
+                              # which reads as the next sentence starting immediately)
 _LOOK = 0.45       # backward reach (~one word) to find the adjacent pause
 _FWD = 0.45        # forward reach: Whisper often absorbs the boundary pause INTO the start
                    # of the following word (stretching it), so the real pause sits forward.
@@ -384,6 +387,13 @@ def plan_segment(doc_id: str, cleaned_orig: str, cleaned_new: str,
         "mode": "segment", "span_only": True,
         "tL": tL, "tR": tR, "orig_duration": dur,
         "changed_tokens": len(parts), "cand_words": cand_words, "phrase": phrase,
+        # Sentence boundaries at the seams: the combine floors the seam silence there
+        # (_SENTENCE_SEAM_PAUSE) so a re-voiced sentence doesn't run into its
+        # neighbour — the trimmed candidate + the ≤0.28 s the cut keeps read as the
+        # next sentence "starting immediately".
+        "seam_pause_l": bool(oa > 0 and new_blo > 0
+                             and _ends_sentence(new_toks[new_blo - 1])),
+        "seam_pause_r": bool(ob < n_orig and _ends_sentence(phrase)),
     }
     return RegenPlan(candidate_mp3=mp3, meta=meta)
 
@@ -445,6 +455,25 @@ def _splice_span_only(orig: np.ndarray, cand: np.ndarray, meta: dict,
     sL = max(0, min(int(round(tL * sr)), len(orig)))
     sR = max(sL, min(int(round(tR * sr)), len(orig)))
     head, tail, mid = orig[:sL], orig[sR:], cand
+
+    # Sentence-boundary seams get a natural inter-sentence pause: measure the silence
+    # actually present across each flagged seam (candidate tail + retained-side lead,
+    # or head tail + candidate lead) and top it up with zeros to _SENTENCE_SEAM_PAUSE.
+    # Measured, so takes that already carry enough silence are untouched.
+    if meta.get("seam_pause_r") and len(tail):
+        have = audio_io.trailing_silence_seconds(mid, sr)
+        onset = audio_io.first_voice_onset(tail, sr, 0.0, _SENTENCE_SEAM_PAUSE + 0.5)
+        have += onset if onset is not None else _SENTENCE_SEAM_PAUSE
+        pad = _SENTENCE_SEAM_PAUSE - have
+        if pad > 0.01:
+            mid = np.concatenate([mid, np.zeros(int(pad * sr), dtype=np.float32)])
+    if meta.get("seam_pause_l") and len(head):
+        have = audio_io.trailing_silence_seconds(head, sr)
+        onset = audio_io.first_voice_onset(mid, sr, 0.0, _SENTENCE_SEAM_PAUSE + 0.5)
+        have += onset if onset is not None else 0.0
+        pad = _SENTENCE_SEAM_PAUSE - have
+        if pad > 0.01:
+            mid = np.concatenate([np.zeros(int(pad * sr), dtype=np.float32), mid])
 
     retained = np.concatenate([head, tail]) if (len(head) + len(tail)) else orig
     ref_db = audio_io.gated_rms_db(retained, sr)

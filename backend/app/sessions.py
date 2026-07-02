@@ -2162,6 +2162,7 @@ def insert_silence(sid: str, fid: int, pos: int, seconds: float = 1.0) -> dict:
                 "detail": "No pause at the cursor to extend — put the caret right after "
                           "the clause punctuation (。/、). This lengthens a pause, it "
                           "won't split a word."})
+        run = audio_splice._skip_stop_closure(base, sr, run)
         mid = (run[0] + run[1]) / 2.0
         cut = max(0, min(int(round(mid * sr)), n))
         gap = np.zeros(int(round(seconds * sr)), dtype=np.float32)
@@ -2193,6 +2194,10 @@ def insert_silence(sid: str, fid: int, pos: int, seconds: float = 1.0) -> dict:
             "error": "no_pause",
             "detail": "No pause at the cursor to extend — put the caret right after a "
                       "full stop (or other gap). This lengthens a pause, it won't split a word."})
+    # A caret after a stop-final word ("…to the right.| As") seeds at Whisper's word END,
+    # which sits at the stop's CLOSURE silence — inserting there splits the word
+    # ("righ…0.5s…t"). Skip past the burst to the real pause.
+    run = audio_splice._skip_stop_closure(base, sr, run)
     mid = (run[0] + run[1]) / 2.0            # drop the gap inside the existing silence
     cut = max(0, min(int(round(mid * sr)), n))
     gap = np.zeros(int(round(seconds * sr)), dtype=np.float32)
@@ -2262,6 +2267,9 @@ def remove_silence(sid: str, fid: int, pos: int, seconds: float = 1.0) -> dict:
             "error": "no_pause",
             "detail": "No pause at the cursor to shorten — put the caret right after a "
                       "full stop (or other gap)."})
+    # Same stop-closure trap as insert_silence: a caret after "right." seeds at the
+    # closure — shortening THAT would eat the word's own articulation. Skip first.
+    run = audio_splice._skip_stop_closure(base, sr, run)
     # Re-measure the run's TRUE extent from its midpoint: the ±0.4s discovery window
     # above clips a long pause (e.g. one just extended by insert_silence to 1.4s reads
     # as ~1.1s), which made remove take LESS than insert added. 12s covers any pause

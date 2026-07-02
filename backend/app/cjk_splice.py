@@ -45,6 +45,8 @@ from .audio_splice import RegenPlan   # reuse the plan dataclass (candidate + sp
 # Clause/sentence punctuation (CJK + ASCII) + spaces — dropped from alignment, used as the
 # expansion boundaries. Mirrors align_service.PUNCT so `pos` indices line up.
 PUNCT = set("。，、！？；：…—～「」『』（）()，.!?;:　 ")
+# Sentence enders (vs the comma-class clause pauses) — flag the combine's seam-pause floor.
+_SENT_ENDERS = set("。！？.!?")
 
 # ---- per-language gates (tunable; validated ZH mean≈0.96, JP kana mean≈0.60) --------------
 # Anchor-char alignment confidence: the boundary char whose timing defines a cut must be
@@ -117,6 +119,7 @@ def plan_cjk(audio_path: str, old_text: str, new_text: str,
             "tL": cuts["tL"], "tR": cuts["tR"], "orig_duration": cuts["dur"],
             "changed_tokens": max(1, len(_spoken(cuts["revoiced_new"]))),
             "cand_words": cand_words, "phrase": cuts["revoiced_new"],
+            "seam_pause_l": cuts["seam_pause_l"], "seam_pause_r": cuts["seam_pause_r"],
             "cjk_detail": cuts["detail"],
         }
         return RegenPlan(candidate_mp3=mp3, meta=meta)
@@ -292,6 +295,11 @@ def _cuts_for_old_span(audio_path: str, old_text: str, new_text: str, lang: str,
         "revoiced_new": revoiced_new, "jL": jL, "jR": jR,
         "prev_text": new_text[:jL].strip() or None,
         "next_text": new_text[jR:].strip() or None,
+        # SENTENCE-boundary seams (。！？ — not the comma-class pauses): the combine
+        # floors the seam silence there so the re-voiced clause doesn't run into its
+        # neighbour (mirrors the English seam_pause flags).
+        "seam_pause_l": pL >= 0 and old_text[pL] in _SENT_ENDERS,
+        "seam_pause_r": pR < len(old_text) and old_text[pR] in _SENT_ENDERS,
         "detail": {
             "revoiced_old": revoiced_old, "revoiced_new": revoiced_new,
             "anchorL_conf": round(cL, 3), "anchorR_conf": round(cR, 3),
@@ -406,6 +414,7 @@ def plan_cjk_span(audio_path: str, old_text: str, new_text: str,
             "tL": cuts["tL"], "tR": cuts["tR"], "orig_duration": cuts["dur"],
             "changed_tokens": max(1, len(_spoken(phrase))),
             "cand_words": cand_words, "phrase": phrase,
+            "seam_pause_l": cuts["seam_pause_l"], "seam_pause_r": cuts["seam_pause_r"],
             "cjk_detail": {**cuts["detail"], "revoiced_new": phrase,
                            "selection": [new_span[0], new_span[1]], "alt": bool(alt)},
         }
