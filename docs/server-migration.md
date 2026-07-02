@@ -100,6 +100,10 @@ Gets you always-on with the least code change (all absolute-path assumptions pre
 
 ## Phase 2 — decouple (recommended follow-on; removes the sync)
 
+*(Also the prerequisite for the **Ubuntu** route — see `ubuntu-server-setup.md`. The old
+laptop can't run Windows 11 (Ivy Bridge, no TPM 2.0) and Windows 10 is EOL, so Linux is the
+better fit for that box — but the app must be path-ported first, which is exactly this phase.)*
+
 Implements the `CLAUDE.md` "Path B" deploy change so the workstation can be **off** without
 breaking the app:
 
@@ -119,9 +123,12 @@ by GitHub + R2.
 ## Switching hosts — the baton (one host at a time)
 
 **Golden rule:** exactly one machine runs uvicorn+tunnel **and** owns `review.db`. Never both
-(review.db diverges). This is enforced by **`scripts/host_baton.py`** (wrappers
-`host_release.cmd` / `host_acquire.cmd`) + an R2 marker
-`s3://review-audio/_db-backups/ACTIVE_HOST.json` (`{host, state, at}`).
+(review.db diverges). This is enforced by **`scripts/host_baton.py`** + an R2 marker
+`s3://review-audio/_db-backups/ACTIVE_HOST.json` (`{host, state, at}`). It's **cross-platform** —
+either host can be Windows or Linux (SQLite + the JSON marker move byte-for-byte); only the
+stop/start differs. Use the wrappers for your OS: **Windows** `host_release.cmd` /
+`host_acquire.cmd` (taskkill + detached launch); **Linux** `host_release.sh` / `host_acquire.sh`
+(the `review-app`/`review-tunnel` systemd units — run with `sudo`).
 
 **To hand off** (only while the app is idle):
 
