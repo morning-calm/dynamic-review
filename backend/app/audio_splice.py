@@ -186,8 +186,14 @@ def _whisper_index_map(orig_toks: list[str],
 
 _EXPAND_CAP = 12   # max extra words to re-voice when the boundary is connected speech
 _LOOK = 0.45       # backward reach (~one word) to find the adjacent pause
-_FWD = 0.22        # forward reach: Whisper often absorbs the boundary pause INTO the start
-                   # of the following word (stretching it), so the real pause sits forward
+_FWD = 0.45        # forward reach: Whisper often absorbs the boundary pause INTO the start
+                   # of the following word (stretching it), so the real pause sits forward.
+                   # Symmetric with _LOOK since 2026-07-02: a real 410 ms pause started
+                   # 226 ms after the reported word start ("residence | and" — Whisper
+                   # stretched "and" over 630 ms of pause) and the old 0.22 reach missed
+                   # it by 6 ms, expanding the re-voiced span 4 words leftward for nothing.
+                   # silence_run_nearest picks the run NEAREST the anchor, so a genuine
+                   # backward pause still wins whenever one exists.
 
 
 def _w_time(wmap, idx, which):

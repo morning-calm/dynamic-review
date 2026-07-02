@@ -13,6 +13,16 @@
 > Fix 3 = the one-shot no-context retry in `audio_core.generate_with_timestamps`
 > (`_LEAK_RETRY_LEAD_S`). Fixes 4–5 remain open (4's risk is reduced by the EL end
 > times we observed running long, not short).
+>
+> **Follow-up (same day):** report 2's "extra words before the phrase" turned out to be
+> mostly plan-time LEFT-EXPANSION, not the leak: on the real Tokyo_08 take the pause
+> between "residence | and" starts 226 ms AFTER Whisper's reported start of "and"
+> (Whisper stretched "and" over 630 ms of the pause), and `_silence_cut`'s forward
+> reach `_FWD=0.22` missed it by 6 ms → the span expanded 4 words back to "as".
+> `_FWD` is now 0.45 (symmetric with `_LOOK`; `silence_run_nearest` still prefers the
+> nearest run, so genuine backward pauses keep winning). Verified on the live session
+> audio: the highlight now plans exactly "and the headquarters of the shogunate."
+> (tL inside the real pause), and the Seimon sentence plan is unchanged.
 
 Two field reports from English review (Tokyo_08_ImperialPalace_EN), both on
 SceneDesc highlight/alt regenerates:

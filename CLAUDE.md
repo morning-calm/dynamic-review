@@ -116,9 +116,12 @@ drafts that sit on NO lane-6/7 card, so a stale block can't hide trips silently 
   `cand_words[0].start` (shifting cand_words; `trim_candidate` re-applies `cand_front_trim_s`
   from the pristine copy); `generate_with_timestamps` retries ONCE without `previous_text` when
   the first word starts > 0.4 s in (the v2 context leak). Validated on synthetic DSP set + 3
-  real EL takes (Whisper-verified "gate"/"shogunate" survive, tails still trimmed). Analysis +
-  the two still-open proposals (combine-side end margin, Whisper candidate verify):
-  `docs/splice-end-cutoff-analysis.md`.
+  real EL takes (Whisper-verified "gate"/"shogunate" survive, tails still trimmed). Follow-up:
+  the "extra words before the phrase" was mostly plan-time LEFT-EXPANSION — Whisper stretched
+  "and" over 630 ms of the preceding pause and `_silence_cut`'s forward reach (`_FWD` 0.22)
+  missed the pause start by 6 ms → `_FWD` now 0.45, symmetric with `_LOOK` (nearest-run
+  preference keeps genuine backward pauses winning). Analysis + the two still-open proposals
+  (combine-side end margin, Whisper candidate verify): `docs/splice-end-cutoff-analysis.md`.
 - **Versioning:** canonical `<i>.mp3`; superseded takes archived `versions/<i>v<n>.mp3`.
 - **Submit** writes changed **text** to staging Trip + TripGroup (desc + re-derived
   `tripCategories`) and leaves the corrected `<i>.mp3` masters in place — **Stage 9**
