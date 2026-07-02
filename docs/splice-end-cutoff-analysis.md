@@ -41,6 +41,23 @@
 > "Shogunate." on a clip that audibly ends at "shoguna" (only a cut ~0.2 s earlier
 > made it say "Shogun"). Don't reach for transcription to detect truncation.
 >
+> **Follow-up 3 (same day) — the seam-side mirror of the same phenomenon:** with the
+> candidate now correctly keeping its final burst, combines of spans ending in a stop
+> word ("in front," / "to the right." / "shogunate.") produced a DOUBLED t: the
+> right-cut search latched onto the stop's closure-silence (or the candidate pad on a
+> re-splice) and left the ORIGINAL take's burst in the retained tail ("…in front t").
+> Fix: `_skip_stop_closure` in `audio_splice._silence_cut` (both sides) — while the
+> chosen silence run is followed within ~200 ms by a short (≤160 ms), quiet (≤0.6× the
+> loudest preceding speech frame, peak-frame RMS), silence-bounded blip, advance to the
+> silence AFTER the blip, chained ≤3 hops (a previously-spliced take carries
+> burst→pad→stray-burst). A genuine next word never matches (its onset runs into voiced
+> speech; a real short word sits at word level). Trim-noise's GAP branch could not
+> remove these strays because Whisper attributes the stray t to the preceding word, so
+> the gap-blank starts after it. Both artefacted working takes (4.mp3 Ishibashi,
+> 8.mp3 shogunate) were repaired in place (stray blanked, legit burst kept, versioned);
+> the pending shogunate candidate had already been combined with the stale tR — that is
+> what deposited its stray. Not applicable to CJK (no stop-final syllables in JP/ZH).
+>
 > **CJK audit (same day):** all of the above flows to `_JP`/`_ZH` automatically (shared
 > `sessions.regenerate` / `generate_with_timestamps` / `trim_trailing_breath`), and they
 > NEED it — Japanese 〜です/〜ます endings are DEVOICED (very quiet, exactly the clipped

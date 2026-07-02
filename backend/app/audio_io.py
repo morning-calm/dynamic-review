@@ -235,6 +235,26 @@ def silence_run_nearest(samples: np.ndarray, sr: int, t_anchor: float,
     return best
 
 
+def segment_rms(samples: np.ndarray, sr: int, t0: float, t1: float) -> float:
+    """Plain RMS (linear) of samples in [t0, t1] seconds; 0.0 for an empty span."""
+    a, b = max(0, int(t0 * sr)), min(len(samples), int(t1 * sr))
+    if b - a < 8:
+        return 0.0
+    seg = samples[a:b].astype(np.float64)
+    return float(np.sqrt(np.mean(seg ** 2)))
+
+
+def peak_frame_rms(samples: np.ndarray, sr: int, t0: float, t1: float) -> float:
+    """LOUDEST 10 ms-frame RMS (linear) in [t0, t1] seconds — the level of whatever
+    speech the span contains, unaffected by how much silence surrounds it (a mean over
+    the span would be dragged down by padding). 0.0 for an empty span."""
+    a, b = max(0, int(t0 * sr)), min(len(samples), int(t1 * sr))
+    if b - a < 8:
+        return 0.0
+    _, rms = _frame_rms(samples[a:b], sr, frame_ms=10.0, hop_ms=5.0)
+    return float(np.max(rms)) if len(rms) else 0.0
+
+
 def trim_slivers(samples: np.ndarray, sr: int, t0: float, t1: float,
                  thresh_db: float = -38.0, sliver_max: float = 0.13,
                  sil_min: float = 0.04) -> np.ndarray:

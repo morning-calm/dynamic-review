@@ -210,6 +210,33 @@ def _keep_pause(run_len: float) -> float:
     return min(0.28, max(0.10, 0.35 * run_len))
 
 
+def _skip_stop_closure(base, sr, run):
+    """A word-final stop reads as CLOSURE-silence → short burst → the REAL pause
+    ("front," / "right." / "gate."). When the pause search latches onto the closure,
+    the cut leaves the word's burst in the RETAINED original — heard after a combine
+    as a doubled 't' ("…in front t, with…"), since the candidate now correctly keeps
+    its own final burst. While ``run`` is followed within ~200 ms by a SHORT (≤160 ms),
+    QUIET (≤0.6× the loudest speech frame in the preceding ~0.6 s), silence-bounded
+    blip, advance to the silence run AFTER the blip — chained (≤3 hops), because a
+    previously-spliced take can carry burst→pad→stray-burst before the real pause. A
+    genuine next word never matches: its onset runs into voiced speech (no bounding
+    silence), and a real short word sits at word level, not burst level."""
+    for _ in range(3):
+        s0, s1 = run
+        nxt = audio_io.silence_run(base, sr, s1 + 0.015, s1 + 0.20, min_ms=40.0)
+        if nxt is None:
+            return run
+        blip_dur = nxt[0] - s1
+        if not (0.02 <= blip_dur <= 0.16):
+            return run
+        body = audio_io.peak_frame_rms(base, sr, s0 - 0.60, s0)
+        blip = audio_io.peak_frame_rms(base, sr, s1, nxt[0])
+        if body <= 0 or blip / body > 0.6:
+            return run
+        run = nxt
+    return run
+
+
 def _silence_cut(base, sr, wmap, n_orig, start_idx, side, dur):
     """Anchor a cut in REAL silence (not at an imprecise Whisper word edge). From the word
     edge it searches a forward/backward LOOK window — NOT bounded by Whisper's next/prev
@@ -228,8 +255,9 @@ def _silence_cut(base, sr, wmap, n_orig, start_idx, side, dur):
             # this word), with a touch of back-reach for Whisper over-estimating word.end.
             run = audio_io.silence_run_nearest(base, sr, we, 0.05, _LOOK)
             if run is not None:                   # cut near the END of the pause (keep a
-                s0, s1 = run                      # short pause, drop the excess)
-                return max(s0, s1 - _keep_pause(s1 - s0)), oj
+                run = _skip_stop_closure(base, sr, run)   # …the REAL pause, past a final
+                s0, s1 = run                      # stop's burst — short pause kept,
+                return max(s0, s1 - _keep_pause(s1 - s0)), oj   # excess dropped
         return None, None                         # reached cap/clip end with no pause → flag
     for oj in range(start_idx, max(0, start_idx - _EXPAND_CAP) - 1, -1):
         ws = _w_time(wmap, oj, "start")
@@ -239,7 +267,8 @@ def _silence_cut(base, sr, wmap, n_orig, start_idx, side, dur):
         # before the pause (correct) OR absorb the pause into the word (stretched, _FWD).
         run = audio_io.silence_run_nearest(base, sr, ws, _LOOK, _FWD)
         if run is not None:                       # cut near the START of the pause
-            s0, s1 = run
+            run = _skip_stop_closure(base, sr, run)   # closure→burst before the span:
+            s0, s1 = run                          # keep the previous word's burst intact
             return min(s1, s0 + _keep_pause(s1 - s0)), oj
     return None, None                             # reached cap/clip start with no pause → flag
 
