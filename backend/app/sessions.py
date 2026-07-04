@@ -235,7 +235,10 @@ def _has_scene_mp3(d: Path | None) -> bool:
 def resolve_audio_dir(trip_id: str, trip: dict) -> Path:
     """Folder holding this trip's MP3 masters. Try the Quicktrips tree
     (``paths_for``); if that can't be resolved (no Stage-9 COUNTRY_CFG) OR it holds no
-    ``{i}.mp3``, fall back to ``Audio Generation/<trip_id>/``."""
+    ``{i}.mp3``, fall back to ``Audio Generation/<trip_id>/``. Last resort (a host with
+    no local master trees, e.g. the Ubuntu server — server-migration.md Phase 2): pull
+    the masters from the R2 ``review-audio/<trip_id>/`` mirror into a local seed cache
+    and reuse it on later calls."""
     try:
         mp3_dir = paths_for(trip, trip_id)["mp3_dir"]
         if _has_scene_mp3(mp3_dir):
@@ -252,6 +255,11 @@ def resolve_audio_dir(trip_id: str, trip: dict) -> Path:
         for cand in ag.glob(pat):
             if _has_scene_mp3(cand):
                 return cand
+    seed_cache = config.WORK_ROOT / "_r2_seed_cache" / trip_id
+    if _has_scene_mp3(seed_cache):
+        return seed_cache
+    if review_audio.download_dir(trip_id, seed_cache) and _has_scene_mp3(seed_cache):
+        return seed_cache
     return ag / trip_id
 
 

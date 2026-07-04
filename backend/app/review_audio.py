@@ -77,3 +77,38 @@ def upload(content_id: str, local_path: "str | Path", name: str) -> bool:
     except Exception as e:  # noqa: BLE001
         print(f"[review_audio] WARN upload failed {content_id}/{name}: {e}")
         return False
+
+
+def download_dir(content_id: str, dest_dir: "str | Path") -> bool:
+    """Seed-time fallback for hosts with no local master audio (the Ubuntu
+    server, per docs/server-migration.md Phase 2): pull every object under
+    ``review-audio/<content_id>/`` down into *dest_dir*, flattened (R2 keys are
+    already flat — ``<content_id>/<file>.mp3``). Skips takes that aren't plain
+    numbered scene masters (``versions/``, ``_fallback``) has no bearing here —
+    those keys don't exist for a trip that was only ever bulk-uploaded.
+
+    Returns True if at least one file was downloaded. Never raises; any error
+    logs a WARN and returns False so callers keep their existing empty-dir
+    handling as the ultimate fallback.
+    """
+    try:
+        s3 = _r2()
+        if s3 is None:
+            return False
+        prefix = f"{content_id}/"
+        dest = Path(dest_dir)
+        got_any = False
+        paginator = s3.get_paginator("list_objects_v2")
+        for page in paginator.paginate(Bucket=BUCKET, Prefix=prefix):
+            for obj in page.get("Contents", []):
+                key = obj["Key"]
+                name = key[len(prefix):]
+                if not name or "/" in name:
+                    continue  # skip versions/ subfolders — masters only
+                dest.mkdir(parents=True, exist_ok=True)
+                s3.download_file(BUCKET, key, str(dest / name))
+                got_any = True
+        return got_any
+    except Exception as e:  # noqa: BLE001
+        print(f"[review_audio] WARN download_dir failed {content_id}: {e}")
+        return False

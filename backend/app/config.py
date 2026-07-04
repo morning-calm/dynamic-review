@@ -15,7 +15,13 @@ import sys
 from pathlib import Path
 
 # --- The reused codebase (READ-ONLY; we never modify it) -------------------
-SCRIPTS_ROOT = Path(r"D:\Dynamic Languages\Scripts")
+# REVIEW_APP_SCRIPTS_ROOT overrides the Windows default so the app can run on a
+# host (e.g. the Ubuntu server) where the Scripts repo lives at a different path,
+# or where it's absent entirely (masters then come from R2 — see
+# sessions.resolve_audio_dir's R2 fallback). Importing stage9.* still requires
+# SOME Scripts checkout on sys.path; a bare Linux box needs at least the repo
+# cloned even if the source audio trees themselves aren't synced.
+SCRIPTS_ROOT = Path(os.environ.get("REVIEW_APP_SCRIPTS_ROOT", r"D:\Dynamic Languages\Scripts"))
 RW_STAGES = SCRIPTS_ROOT / "Research and Writing" / "stages"
 
 for p in (str(SCRIPTS_ROOT), str(RW_STAGES)):
@@ -53,14 +59,23 @@ MANIFEST_PATH = REVIEW_APP_ROOT / "trips_to_review.json"
 AUDIO_GENERATION_ROOT = SCRIPTS_ROOT / "Audio Generation"
 
 # --- Scene thumbnails (videoId → local VID/PIC JPG → Cloudflare R2) ----------
+# These source trees are best-effort (thumbnails already serve from R2 in
+# production — see thumbs.py); on a host without them (e.g. the Ubuntu server)
+# they simply never match and the R2-served thumb is used instead. Overridable
+# via REVIEW_APP_THUMB_ROOTS (comma-separated) for hosts that DO have local
+# copies at different paths.
 VIDEOIDS_JSON = SCRIPTS_ROOT / "VRD" / "VideoIds-1782220834.json"
-THUMB_ROOTS = [
-    Path(r"D:\Final stitch\Backed Up\England VID-PIC Thumbnails"),
-    Path(r"D:\Final stitch\Backed Up\Japan VID-PIC Thumbnails"),
-    Path(r"D:\Final stitch\Backed Up\Korea VID-PIC Thumbnails"),
-    Path(r"D:\Final stitch\Backed Up\Scotland VID-PIC Thumbnails"),
-    Path(r"D:\Final stitch\Backed Up\Taiwan VID-PIC Thumbnails"),
-]
+_thumb_roots_env = os.environ.get("REVIEW_APP_THUMB_ROOTS")
+if _thumb_roots_env:
+    THUMB_ROOTS = [Path(p.strip()) for p in _thumb_roots_env.split(",") if p.strip()]
+else:
+    THUMB_ROOTS = [
+        Path(r"D:\Final stitch\Backed Up\England VID-PIC Thumbnails"),
+        Path(r"D:\Final stitch\Backed Up\Japan VID-PIC Thumbnails"),
+        Path(r"D:\Final stitch\Backed Up\Korea VID-PIC Thumbnails"),
+        Path(r"D:\Final stitch\Backed Up\Scotland VID-PIC Thumbnails"),
+        Path(r"D:\Final stitch\Backed Up\Taiwan VID-PIC Thumbnails"),
+    ]
 THUMB_BUCKET = "dynamic-languages-thumbs"
 THUMB_KEY_PREFIX = "scene-thumbs/"
 THUMB_PUBLIC_BASE = "https://thumbs.dynamiclanguages.org/"
@@ -120,9 +135,13 @@ OVERLAY_SEARCH_DIRS = [
 #   Audio Generation/ogg/<base_id>/           (Japan Tokyo_06-10 EN, all Taiwan EN, A12/B1)
 #   Japanese/Trips/Day Series/Ogg/<loc>/<id>  (Japan Day Series N5/EN: Tokyo_01-05, Shikoku…)
 AUDIO_GENERATION_OGG = AUDIO_GENERATION_ROOT / "ogg"
-EXTRA_IMAGE_OGG_ROOTS = [
-    Path(r"D:\Dynamic Languages\Japanese\Trips\Day Series\Ogg"),
-]
+_extra_ogg_env = os.environ.get("REVIEW_APP_EXTRA_IMAGE_OGG_ROOTS")
+if _extra_ogg_env:
+    EXTRA_IMAGE_OGG_ROOTS = [Path(p.strip()) for p in _extra_ogg_env.split(",") if p.strip()]
+else:
+    EXTRA_IMAGE_OGG_ROOTS = [
+        Path(r"D:\Dynamic Languages\Japanese\Trips\Day Series\Ogg"),
+    ]
 
 # Per-trip drafting choices live in <root>/<trip_id>/staging_choices.json. The
 # leveled pipelines keep their data under language-specific roots (NOT the single
