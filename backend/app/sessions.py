@@ -25,6 +25,7 @@ import os
 import re
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 
@@ -519,28 +520,50 @@ def list_trips(user=None) -> list[dict]:
     return trips
 
 
+def _fetch_trip_and_reviewable(tid: str) -> tuple[dict | None, bool]:
+    """Off-thread I/O for one manifest entry: the staging Firestore read plus
+    (best-effort) audio resolution, including ``resolve_audio_dir``'s R2 seed-cache
+    download fallback. Both are blocking network calls, so this is run in a thread
+    pool by ``_list_trips_from_manifest`` rather than serially per trip."""
+    trip = None
+    try:
+        trip = get_trip(tid)                 # staging; may be absent
+    except SystemExit:
+        trip = None
+    reviewable = False
+    if trip is not None:
+        try:
+            reviewable = _has_scene_mp3(resolve_audio_dir(tid, trip))
+        except Exception:  # noqa: BLE001
+            reviewable = False
+    return trip, reviewable
+
+
 def _list_trips_from_manifest() -> list[dict]:
     data = json.loads(config.MANIFEST_PATH.read_text(encoding="utf-8"))
     # Tolerate both the canonical {"trips":[…]} and a bare […] list.
     entries = data if isinstance(data, list) else (data.get("trips") or [])
+    entries = [t for t in entries if t.get("trip_id")]
+    # stage9.common.db()'s lazy singleton init (`if _DB is None: ... initialize_app()`)
+    # isn't lock-guarded — read-only reused code, not ours to change — so the first
+    # Firestore call must happen alone, on this thread, before any concurrent get_trip()
+    # calls race on initialize_app() and crash with "default app already exists".
+    try:
+        fb_db()
+    except Exception:  # noqa: BLE001 - individual per-trip fetches handle their own failures
+        pass
+    # get_trip (Firestore) + resolve_audio_dir (R2 fallback download on a host with no
+    # local masters, e.g. this one) are per-trip network I/O — sequentially that's
+    # ~0.4s/trip (tens of seconds for a full manifest on modest hardware, enough to trip
+    # the tunnel/edge timeout). Both release the GIL on I/O and use shared, thread-safe
+    # clients (boto3, the Firestore client), so fan them out instead.
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        fetched = list(pool.map(_fetch_trip_and_reviewable, (t["trip_id"] for t in entries)))
     out: list[dict] = []
-    for t in entries:
-        tid = t.get("trip_id")
-        if not tid:
-            continue
-        trip = None
-        try:
-            trip = get_trip(tid)                 # staging; may be absent
-        except SystemExit:
-            trip = None
+    for t, (trip, reviewable) in zip(entries, fetched):
+        tid = t["trip_id"]
         folder_name = (trip.get("folderName") or "") if trip else ""
         title = (trip.get("contentTitleKey") if trip else None) or t.get("title") or tid
-        reviewable = False
-        if trip is not None:
-            try:
-                reviewable = _has_scene_mp3(resolve_audio_dir(tid, trip))
-            except Exception:  # noqa: BLE001
-                reviewable = False
         has_session, status, edit_required = _session_meta(tid)
         lvl, fam = _level_family(tid)
         out.append({
