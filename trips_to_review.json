@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-06T00:21:38+01:00",
+  "generated_at": "2026-07-06T00:23:33+01:00",
   "source": "trello 6,7",
   "trips": [
     {
@@ -18,6 +18,23 @@
       ],
       "card_url": "https://trello.com/c/Iu0gKxqs",
       "pos": 140737488355328
+    },
+    {
+      "trip_id": "Taipei101_HSK12_ZH",
+      "lane": "6",
+      "level": "HSK1-2",
+      "family": "Taipei101",
+      "voice": "jason",
+      "gender": "male",
+      "title": "Taipei101_HSK12_ZH",
+      "labels": [
+        "EN",
+        "Trip",
+        "ZH-HSK3",
+        "ZH-HSK1-2"
+      ],
+      "card_url": "https://trello.com/c/5fy4E76e",
+      "pos": 140737488388096
     },
     {
       "trip_id": "Tokyo_03_Beg_N4_JP",
