@@ -1,7 +1,24 @@
 {
-  "generated_at": "2026-07-02T10:16:47+01:00",
+  "generated_at": "2026-07-06T00:21:38+01:00",
   "source": "trello 6,7",
   "trips": [
+    {
+      "trip_id": "Taichung_HSK12_ZH",
+      "lane": "6",
+      "level": "HSK1-2",
+      "family": "Taichung",
+      "voice": "yu",
+      "gender": "male",
+      "title": "Taichung_HSK12_ZH",
+      "labels": [
+        "Trip",
+        "EN",
+        "ZH-HSK3",
+        "ZH-HSK1-2"
+      ],
+      "card_url": "https://trello.com/c/Iu0gKxqs",
+      "pos": 140737488355328
+    },
     {
       "trip_id": "Tokyo_03_Beg_N4_JP",
       "lane": "6",
@@ -596,6 +613,20 @@
       ],
       "card_url": "https://trello.com/c/lde6zVso",
       "pos": 140737488879616
+    },
+    {
+      "trip_id": "A._A. Milne and Rudyard Kipling_A12_EN",
+      "lane": "7",
+      "level": "A12",
+      "family": "A._A. Milne and Rudyard Kipling",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "A._A. Milne and Rudyard Kipling_A12_EN",
+      "labels": [
+        "EN"
+      ],
+      "card_url": "https://trello.com/c/p7TBN1I1",
+      "pos": 140737488322560
     },
     {
       "trip_id": "Blaenavon_A12_EN",
