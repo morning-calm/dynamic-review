@@ -879,10 +879,15 @@ def assert_editable(sid: str) -> None:
                       "admin approval (or already approved)"})
 
 
-def _working_duration(frow) -> float:
-    if not frow["has_audio"] or not frow["current_mp3_path"]:
+def _working_duration(sid: str, frow) -> float:
+    if not frow["has_audio"] or not frow["current_mp3_path"] or not frow["mp3_name"]:
         return 0.0
-    p = Path(frow["current_mp3_path"])
+    # Reconstruct from the work dir rather than trusting the stored absolute
+    # current_mp3_path: a session seeded on one host (e.g. Windows "D:\...") and
+    # later served from another (the Linux review server) has a baked-in path that
+    # won't resolve, which would silently zero the duration and permanently block
+    # coverage recording + the Done gate.
+    p = work_dirs(sid)["working"] / frow["mp3_name"]
     return audio_io.mp3_duration_seconds(p) if p.exists() else 0.0
 
 
@@ -920,7 +925,7 @@ def _coverage_for(sid: str, frow) -> tuple[list[list[float]], bool]:
         return [], True
     cov = json.loads(frow["played_coverage_json"] or "{}")
     ranges = cov.get("ranges", []) if cov.get("hash") == frow["working_audio_hash"] else []
-    dur = _working_duration(frow)
+    dur = _working_duration(sid, frow)
     working_done = bool(dur) and _coverage_total(ranges) >= COVERAGE_DONE_FRACTION * dur
     return ranges, working_done or _original_done(sid, frow)
 
@@ -2299,7 +2304,7 @@ def played(sid: str, fid: int, ranges: list[list[float]],
         cov = json.loads(frow["played_coverage_json"] or "{}")
         existing = (cov.get("ranges", [])
                     if cov.get("hash") == frow["working_audio_hash"] else [])
-        dur = _working_duration(frow)
+        dur = _working_duration(sid, frow)
     # S8: clamp each incoming range to [0, duration] so a bogus [[0, 1e9]] can't satisfy
     # the 95% done gate.
     incoming = []
