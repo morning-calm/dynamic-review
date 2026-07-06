@@ -261,3 +261,8 @@ the tunnel — uvicorn-only means they're locked out.
   a voice matching the master, or the seam is a *voice* mismatch, not a splice defect. The demo session
   `sess_5bc56203b40a` was mis-stored as `yu` and has since been corrected to `annasu`; real trips resolve
   voice by gender via the registry.
+
+
+## Session logs
+
+Follow the global session-logging protocol in `~/.claude/CLAUDE.md`. For THIS project, use the name **review-app** in the session-log filename and header, i.e. `docs/session-logs/YYYY-MM-DD-review-app.md`, so it is always clear which project a log belongs to.
