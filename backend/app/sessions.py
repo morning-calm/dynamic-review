@@ -501,6 +501,32 @@ def list_trips(user=None) -> list[dict]:
             "has_session": has_session, "status": status,
             "edit_required": edit_required, "reviewable": True,
         })
+    # Session-backed injection: any trip with an existing (non-completed) session that the
+    # manifest no longer lists — e.g. a Trello [review] block was edited to drop a sibling
+    # variant (an HSK3 script whose card now lists only HSK1-2), or a manifest refresh
+    # otherwise removed it. In-progress review work must NEVER be hidden by a manifest
+    # change, so surface it here regardless of the manifest. (The `done` filter below still
+    # removes any that have since been completed; language scope still applies.) reviewable
+    # is True — a resumable session already has its working audio in work/{sid}/.
+    have = {t["trip_id"] for t in trips}
+    for srow in db.query("SELECT DISTINCT trip_id FROM sessions"):
+        tid = srow["trip_id"]
+        if tid in have:
+            continue
+        try:
+            trip = get_trip(tid)
+        except SystemExit:
+            trip = None
+        lvl, fam = _level_family(tid)
+        has_session, status, edit_required = _session_meta(tid)
+        trips.append({
+            "trip_id": tid,
+            "title": (trip.get("contentTitleKey") if trip else None) or tid,
+            "folder_name": (trip.get("folderName") or "") if trip else "",
+            "lane": "6", "level": lvl, "family": fam,
+            "has_session": has_session, "status": status,
+            "edit_required": edit_required, "reviewable": True,
+        })
     # Completed trips (approved or admin-marked) leave the active queue entirely — for
     # ALL roles. An admin un-completes to return one to the list.
     done = {r["trip_id"] for r in db.query("SELECT trip_id FROM completed_trips")}
