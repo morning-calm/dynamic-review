@@ -120,3 +120,50 @@ step would also surface it on the card.
   duration unknown (R2-only audio) — cosmetic. Follow-up idea for dynamic-content:
   `resolve_voice_gender` should inherit a family's HSK12 voice for a sibling HSK3 lacking
   stored voice data, so a board-wide backfill can't re-mis-default it to `yu`.
+
+## Follow-up (same day, ~16:30) — Ted can't mark Done on Taipei101 HSK3 (cross-host path bug)
+
+**Goal:** Ted reported he can't mark anything Done on `Taipei101_HSK3_ZH` (audio plays fine).
+Root-cause without losing any of Ted's data.
+
+**Root cause (single, Phase-2 migration bug):** `sessions._working_duration()` trusted the
+stored absolute `field_edits.current_mp3_path`. That column is baked in at seed time; Ted's
+session (`sess_db4ac31ff3ff`) was seeded on the **Windows workstation**, so every row's path
+is `D:\Projects\WebApp\review-app\backend\work\...\working\<n>.mp3`. On the **Linux laptop**
+(now the live host) that path never resolves → `p.exists()` False → duration returns `0.0`.
+That `dur=0.0`:
+  1. **Zeroed play-coverage recording** — `played()` clamps every listened range to `[0,0]`,
+     so nothing accumulates (DB confirmed: 0 coverage on all 30 audio fields despite Ted
+     listening). Audio still *plays* because the serving route (`audio_path`) + `_orig_path`
+     already reconstruct from the work dir — only `_working_duration` used the stored path.
+  2. **Permanently locked the Done gate** — `working_done = bool(0.0) and ...` always False;
+     `_original_done` also False (V3 working take ≠ original master hash). → `set_flag('done')`
+     409s "play the whole clip before marking done".
+Affects ANY session seeded on Windows and now served from the laptop, not just this trip.
+
+**Verified live (read-only) on laptop data:** old stored-path logic resolved **0/30** audio
+fields (→ dur 0); reconstructed work-dir path resolves **30/30** with real durations
+(1.mp3=6.88s, etc.).
+
+**Fix shipped (`0e5e7ec`, pushed to main, pulled + restarted on laptop):**
+`_working_duration(frow)` → `_working_duration(sid, frow)`, reconstructs
+`work_dirs(sid)["working"]/mp3_name` (host-independent, matches `audio_path`/`_orig_path`).
+Updated both callers (`_coverage_for`, `played`). `py_compile` OK. Committed sessions.py only
+(left the pre-existing unrelated `audio_core.py` working-tree change alone).
+
+**Deployed:** laptop `git pull --ff-only` → `0e5e7ec`; restarted via NOPASSWD
+`sudo -n /usr/bin/systemctl restart review-app.service` (exact-path form — the sudoers rule
+matches `/usr/bin/systemctl restart review-app.service`, NOT a bare `sudo systemctl restart
+review-app`). New process 66364, "Application startup complete", both units active.
+
+**No data lost** — all investigation read-only (`file:...?mode=ro`); Ted's edits/flags/
+comments/audio intact. **Behaviour note for Ted:** his earlier listens weren't recorded, so he
+must replay each clip once (to the end) before Done unlocks — nothing he *did* is gone.
+Message drafted and given to user to send Ted.
+
+**Open/minor:** the systemd "unit file changed on disk" warning reappeared on restart — still
+want a `sudo systemctl daemon-reload` on the laptop when convenient (outside restart sudoers
+scope). Consider a one-off DB migration to rewrite legacy Windows `current_mp3_path` values to
+the laptop's paths (cosmetic now that the code no longer trusts them; would also fix the
+candidate/fallback path columns which are the same class of stored-abs-path but currently
+harmless since candidates are created on the live host).
