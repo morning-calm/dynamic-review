@@ -164,14 +164,60 @@ pattern, fix everything, write it up for Ted, add a soft UI warning.
 - (A tar-sync of audio onto the laptop was attempted then found unnecessary — R2 was the
   designed path all along; the auto-mode classifier rightly blocked host writes anyway.)
 
-## Open / carried forward
-- **Auto-review Phase 3** (auto-approve clean reports) — NOT enabled; needs dave's shadow-
-  mode confidence first. Also possible: "apply suggested fix" button; level_check.py vocab
-  reuse for a deterministic HSK-level gate; JP-specific Gate-1 checks.
-- **JP/Taiwan audio-generation flows have no R2 upload hook** — new audio for manifest
-  trips needs a manual `upload_review_audio_r2.py --manifest` (or add hooks like 5c).
-- **Exact start/break attribution** — stamp user_id on field_edits (backend change; next
-  restart window).
+## HANDOFF (session closed 2026-07-08 evening — pick up from here)
+
+### 1. THE ONE BLOCKING STEP: restart the backend in an idle window
+Ted was live at session close, so the last backend deploy is PENDING. When no one is
+editing (check: last `field_edits.updated_at`, or just ask Ted):
+```
+ssh review-laptop
+cd /home/dynamic-languages/Desktop/Server/review-app && git pull --ff-only   # likely already pulled by cron
+sudo -n /usr/bin/systemctl restart review-app.service
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8000/api/trips    # expect 401 = up
+```
+The restart activates (all committed + already pulled, just not loaded by uvicorn):
+- Gate-1 auto-checks with the **submit=warn / approve=block** split + punctuation-only demotion
+- the `zh_writeback` empty-pinyin **409 guard**
+- `GET /api/sessions/{sid}/auto-checks` + `/auto-review` endpoints (the FE Auto-review panel
+  on the Changes-summary page shows data only after this restart)
+Everything else from today is ALREADY LIVE: notifier (immediate login/start/finish +
+auto-review verdicts, token-based attribution, cron */5), Gate-2 shadow reviewer (cron */5),
+mobile quick wins incl. the clipped Resume/Open fix (dist was rebuilt BEFORE Ted's session),
+R2 audio for the 125 trips, manifest without the 2 retired B1s.
+Optional while there: `sudo systemctl daemon-reload` (needs password — unit file changed on
+disk; restart works regardless).
+
+### 2. Email Ted
+`docs/ted-zh-sibling-corrections-2026-07-08.md` is the ready-to-send write-up (his 34
+fields, all corrections listed, your message text at the top). Already delivered in-chat too.
+
+### 3. Watch the shadow reports
+First three auto-review verdicts (Taichung_HSK3 0ok/11warn, Taipei101 2ok/4warn/2flag,
+Taichung_HSK12 7ok/1warn) — compare against your own judgment when approving. New
+submissions get reviewed within ~5 min and emailed. When you trust it, Phase 3
+(auto-approve clean reports) is the next build — NOT enabled, needs your explicit go.
+Note: approving the 3 submitted ZH trips will now hard-require the sibling consistency
+that was already fixed in their sessions — they should pass clean.
+
+### 4. Verify-on-next-occurrence (no action unless wrong)
+- Next time Ted logs in/starts/finishes: emails should say **ted** (token-based attribution)
+  and arrive within ~5 min.
+- Trip list on the laptop: "no local audio" badges should be gone for Taiwan EN +
+  Tokyo_06-10 (first load re-resolves via R2 seed cache; first click of each trip may be
+  slower while it downloads).
+- If a usage-limit period happens: `backend/autoreview.log` should show "usage-limit
+  backoff" lines and reviews resume after reset (no error spam).
+
+### Backlog (uncommitted-to, in rough priority)
+- Phase 3 auto-approve (config flag design in docs/auto-review-proposal.md §3).
+- "Apply suggested fix" button on the Auto-review panel (fixes are already machine-verified).
+- Stamp `user_id` on field_edits for exact start/break attribution (backend, restart needed).
+- R2 upload hooks for the JP/Taiwan audio flows (until then: re-run
+  `py -3.12 upload_review_audio_r2.py --manifest` after generating audio for queued trips).
+- Mobile deeper work: touch splice-selection UX (or declare splice desktop/tablet-only),
+  sticky mini-player, collapse the 17-button RegenerateControls row.
+- level_check.py vocab reuse for a deterministic HSK-level Gate-1 check; JP Gate-1 checks.
+- Prune inert Mandarin A/B leftovers (`ab_audio_path` etc., flagged in CLAUDE.md).
 - Mobile deeper work deferred: touch-first splice selection UX (or explicitly keep splice
   desktop/tablet-only); sticky mini-player; collapsing the 17-button RegenerateControls row.
 - systemd `daemon-reload` on the laptop (see note above).
