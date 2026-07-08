@@ -3,13 +3,17 @@
 work in the review app.
 
 WHAT IT REPORTS (nothing else — individual field autosaves are "minor" and dropped):
+  * reviewer LOGIN — a reviewer-role user logged in (exact, from auth_sessions;
+                     admin logins are NOT reported — that's usually dave himself)
   * trip STARTED   — a reviewer/admin begins (or resumes after a 90m+ break) a session
   * trip FINISHED  — session submitted / approved / marked complete (exact user attribution)
   * BREAK 90m+     — someone who was active has gone quiet for >=90 min (also the
                      "done for the day" signal)
 
-RATE LIMITS (hard): <= 1 email/hour, <= 10 emails/day. Notable events accumulate in a
-pending buffer and ride out batched with the next allowed email, so nothing is lost.
+RATE LIMITS: login / start / finish are IMMEDIATE — they bypass the 1/hour gate so dave
+knows exactly when a reviewer starts and finishes (per request 2026-07-08). Breaks are
+batched behind the 1/hour gate as before. A hard <= 40 emails/day cap backstops runaways;
+held events ride out with the next allowed email, so nothing is lost.
 
 SAFETY: opens review.db READ-ONLY and keeps its own state in backend/notifier_state.json.
 It never writes the DB and never touches the running app — safe to run while a review is live.
@@ -21,7 +25,7 @@ blast); only activity after that generates emails.
 Usage:
   py -3.12 scripts/activity_notifier.py            # detect + send if allowed
   py -3.12 scripts/activity_notifier.py --dry-run  # detect + PRINT the email, send nothing
-  py -3.12 scripts/activity_notifier.py --force     # ignore the 1/hour gate (still <=10/day)
+  py -3.12 scripts/activity_notifier.py --force     # ignore the 1/hour gate (still <=40/day)
   py -3.12 scripts/activity_notifier.py --reset-baseline   # re-seed baseline, emit nothing
 """
 from __future__ import annotations
@@ -36,7 +40,9 @@ CONFIG_PATH = Path(__file__).resolve().parent / "notifier_config.json"
 
 BREAK_SECONDS = 90 * 60
 MAX_PER_HOUR_SECONDS = 60 * 60
-MAX_PER_DAY = 10
+MAX_PER_DAY = 40
+# Event kinds that must reach dave IMMEDIATELY (skip the 1/hour gate, not the daily cap).
+IMMEDIATE_KINDS = {"login", "start", "finish"}
 
 # ---------------------------------------------------------------- attribution
 # field_edits has no user_id. Finishes use the exact submitted_by/approved_by/
@@ -72,6 +78,28 @@ def logins_by_user(con):
     for r in con.execute("SELECT user_id, created_at FROM auth_sessions ORDER BY created_at"):
         out.setdefault(r["user_id"], []).append(r["created_at"])
     return out
+
+
+def detect_logins(state, users, logins, now):
+    """Exact login events for REVIEWER-role users: any auth_sessions row created after
+    the stored watermark. Admin logins are skipped (that's normally dave). Rows deleted
+    by logout/expiry before we see them are simply missed — acceptable."""
+    wm = state.get("login_watermark")
+    if wm is None:
+        # First run after upgrade (or fresh baseline): silently start from now.
+        state["login_watermark"] = now
+        return []
+    events = []
+    for u in users:
+        if u["role"] == "admin":
+            continue
+        for t in logins.get(u["id"], []):
+            if t > wm:
+                events.append({"ts": t, "kind": "login", "user": u["username"]})
+    state["login_watermark"] = now
+    events.sort(key=lambda e: e["ts"])
+    state["pending"].extend(events)
+    return events
 
 
 def attribute(lang, at_ts, users, logins):
@@ -149,7 +177,10 @@ def detect(state, sess, completed, users, logins, now):
                        and last_ts > prev["last_ts"]
                        and prev.get("break_reported"))
             if not prev["started"] or resumed:
-                who = attribute(lang, s.get("first_ts") or last_ts, users, logins)
+                # Attribute at the RECENT activity time, not first_ts — a session seeded
+                # weeks ago by admin then picked up by ted must read "ted", not "admin"
+                # (the 2026-07-07 mis-attribution).
+                who = attribute(lang, last_ts, users, logins)
                 verb = "resumed" if resumed else "started"
                 new_events.append({"ts": last_ts if resumed else (s.get("first_ts") or last_ts),
                                    "kind": "start", "user": who, "trip": s["trip_id"],
@@ -198,13 +229,14 @@ def fmt_time(ts):
 
 def compose(pending):
     """Return (subject, text_body, html_body) for the buffered events."""
-    order = {"start": 0, "finish": 1, "break": 2}
     evs = sorted(pending, key=lambda e: e["ts"])
     lines = []
     for e in evs:
         t = fmt_time(e["ts"])
         u = e["user"]
-        if e["kind"] == "start":
+        if e["kind"] == "login":
+            lines.append(f"{t} — {u} logged in")
+        elif e["kind"] == "start":
             lines.append(f"{t} — {u} {e.get('verb','started')} {e['trip']} ({e['lang']})")
         elif e["kind"] == "finish":
             prog = f" — {e.get('done',0)}/{e.get('touched',0)} done" if e.get("touched") else ""
@@ -266,6 +298,9 @@ def can_send(state, now, force):
     sent_today = sum(1 for t in log if dt.date.fromtimestamp(t) == today)
     if sent_today >= MAX_PER_DAY:
         return False, f"daily cap reached ({sent_today}/{MAX_PER_DAY})"
+    # login / start / finish must land immediately — only pure-break batches wait.
+    if any(e.get("kind") in IMMEDIATE_KINDS for e in state["pending"]):
+        force = True
     if not force and log and (now - max(log)) < MAX_PER_HOUR_SECONDS:
         wait = int((MAX_PER_HOUR_SECONDS - (now - max(log))) / 60)
         return False, f"1/hour gate: next send in ~{wait} min"
@@ -303,6 +338,7 @@ def main():
         # never blast historical activity. Only NEW work after now generates events.
         state = fresh_state()
         state["baseline_at"] = now
+        state["login_watermark"] = now   # never blast historical logins
         for sid, s in sess.items():
             last_ts = s.get("last_ts")
             state["sessions"][sid] = {
@@ -316,9 +352,10 @@ def main():
               f"({len(sess)} sessions); no email.")
         return
 
-    new_events = detect(state, sess, completed, users, logins, now)
+    new_events = detect_logins(state, users, logins, now)
+    new_events += detect(state, sess, completed, users, logins, now)
     for e in new_events:
-        print(f"[event] {e['kind']:6} {fmt_time(e['ts'])} {e['user']} {e['trip']}")
+        print(f"[event] {e['kind']:6} {fmt_time(e['ts'])} {e['user']} {e.get('trip','')}")
 
     if not state["pending"]:
         print("[notifier] no pending events; nothing to send.")

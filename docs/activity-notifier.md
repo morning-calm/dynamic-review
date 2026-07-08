@@ -1,13 +1,15 @@
 # Activity notifier — email digest of reviewer/admin work
 
-Emails **dave@dynamiclanguages.org** a short, rate-limited digest of who is working in the
-review app: trips **started**, **finished**, and **90-min+ breaks** in between. Individual
+Emails **dave@dynamiclanguages.org** who is working in the review app: reviewer **logins**,
+trips **started**, **finished** (all immediate), and **90-min+ breaks** (batched). Individual
 field autosaves are "minor" and never emailed.
 
 - **Script:** `scripts/activity_notifier.py` (stdlib only — no extra deps).
-- **Wrapper:** `scripts/run_activity_notifier.cmd` → logs to `backend/notifier.log`.
-- **Schedule:** Windows Task Scheduler task **`ReviewAppActivityNotify`**, every **15 min**
-  (mirrors `ReviewAppDbBackup`). 15 min is the poll grain; the rate limits decide sends.
+- **Wrapper (Windows):** `scripts/run_activity_notifier.cmd` → logs to `backend/notifier.log`.
+- **Schedule:** on the LIVE host (the Ubuntu laptop since 2026-07-04) a **cron** entry every
+  **15 min** runs it with the Scripts venv python; the old Windows Task Scheduler task
+  **`ReviewAppActivityNotify`** was the workstation-era equivalent. The poll grain bounds
+  "immediate" — a login email can lag up to one poll interval.
 - **State:** `backend/notifier_state.json` (gitignored). **Config/secrets:**
   `scripts/notifier_config.json` (gitignored).
 
@@ -16,17 +18,22 @@ Opens `review.db` **read-only** and only writes its own state/log — it never t
 running app or the DB writer, so it is safe to run while a review is live.
 
 ## What it reports (attribution)
+- **Login:** **exact** — new `auth_sessions` rows past a stored watermark, reviewer-role
+  users only (admin logins are normally dave himself and are skipped).
 - **Finish** (submitted / approved / completed): **exact** — from `submitted_by` /
   `approved_by` / `completed_by`.
 - **Start / break:** best-effort — `field_edits` has no `user_id`, so it attributes to the
   language specialist (Mandarin→ted, Japanese→toshifumi) if they logged in within 12 h of the
-  activity, else the language-capable user with the most recent prior login, else the language
-  default. Good enough for a "who's working" digest; exact attribution would need a one-line
-  backend change to stamp `user_id` on edits.
+  **recent activity time** (`last_ts` — NOT `first_ts`, which mis-blamed "admin" for a session
+  admin seeded weeks earlier, 2026-07-07), else the language-capable user with the most recent
+  prior login, else the language default. Exact attribution would need a one-line backend
+  change to stamp `user_id` on edits.
 
-## Rate limits (hard)
-`<= 1 email/hour`, `<= 10 emails/day`. Events accumulate in a pending buffer and ride out
-**batched** with the next allowed email — nothing is lost, only delayed. A quiet day sends
+## Rate limits
+**Login / start / finish send IMMEDIATELY** — they bypass the 1-hour gate (dave wants to know
+exactly when a reviewer starts and finishes; requested 2026-07-08). **Breaks** stay batched
+behind the `<= 1 email/hour` gate. Hard backstop: `<= 40 emails/day` — beyond that, events
+accumulate in the pending buffer and ride out with the next allowed email. A quiet day sends
 zero.
 
 ## Email transport — MailWizz v2 (on SES)
@@ -41,7 +48,7 @@ Verify delivery any time with `py -3.12 scripts/activity_notifier.py --test` (ex
 ## Operate / troubleshoot
 ```bash
 py -3.12 scripts/activity_notifier.py --dry-run   # detect + print the email, send nothing
-py -3.12 scripts/activity_notifier.py --force     # bypass the 1/hour gate (still <=10/day)
+py -3.12 scripts/activity_notifier.py --force     # bypass the 1/hour gate (still <=40/day)
 py -3.12 scripts/activity_notifier.py --reset-baseline  # re-seed baseline, emit nothing
 ```
 - **First run ever** (or `--reset-baseline`) seeds a **silent baseline** of current sessions

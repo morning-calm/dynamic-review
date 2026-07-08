@@ -2822,6 +2822,25 @@ def zh_writeback(sid: str, *, dry_run: bool = True) -> dict:
     if dry_run:
         return plan
 
+    # ---- HARD GATE: never APPLY with an empty regenerated pinyin (2026-07-08) ----
+    # KaohsiungLotusPond_HSK3_ZH was approved on a host missing jieba: _zh_regen_pinyin
+    # degraded to '' and the writeback stripped the pinyin display line from every edited
+    # Trip-doc field + wrote empty target.pinyin. Warning-and-proceeding is fine for the
+    # to_pinyin(Hans) FALLBACK (non-empty), but an EMPTY pinyin on a phonetics-bearing
+    # field means the environment is broken — block the approve instead of corrupting
+    # staging. (dry_run still returns the full plan + warnings for the UI.)
+    _needs_pinyin = {"SceneDesc", "questionKey", "questionOption"}
+    _broken = [e for e in changed_out
+               if e.get("field_path") in _needs_pinyin
+               and e.get("pinyin_warnings") and not e.get("pinyin")]
+    if _broken:
+        raise HTTPException(409, detail={
+            "error": "pinyin_regen_failed",
+            "detail": "pinyin could not be regenerated (hsk_lib/jieba unavailable?) — "
+                      "approve blocked so the staging pinyin lines are not stripped",
+            "fields": [f"scene {e['scene_index']} {e['field_path']}" for e in _broken],
+            "warnings": warnings})
+
     # ---- APPLY (admin approve, _ZH branch) — SAFETY: only reached with dry_run=False ----
     loc_update: dict = {"status": "reviewed"}
     if loc_scene_changed:
