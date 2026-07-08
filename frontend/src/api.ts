@@ -193,6 +193,35 @@ export interface RecallResponse {
   existing?: boolean;
 }
 
+// --- External (stage-4b web/VR) bug reports ---
+
+export type ExternalReportStatus = 'open' | 'acknowledged' | 'resolved';
+
+/** A bug report filed from the customer web/VR app during stage-4b review, mirrored
+ * from staging Firebase `UserReports` (only structured, scene-scoped payloads). */
+export interface ExternalReport {
+  id: string;
+  trip_id: string;
+  scene_index: number | null;
+  scene_id: string | null;
+  source: string; // 'web' | 'vr' | ''
+  report_type: string;
+  categories: string[];
+  body: string;
+  reporter: string;
+  created_at: number | null;
+  status: ExternalReportStatus;
+  resolved_by: string | null;
+  resolved_at: number | null;
+}
+
+export interface ExternalReportsResponse {
+  trip_id: string;
+  reports: ExternalReport[];
+  /** Set when refresh=1 couldn't reach staging — cached rows are still returned. */
+  sync_error: string | null;
+}
+
 /** One row of the admin staging-wide trip search (GET /api/admin/staging-trips). */
 export interface AdminStagingTrip {
   trip_id: string;
@@ -757,6 +786,15 @@ export const api = {
   logout: (): Promise<void> => requestJson<void>('/api/logout', { method: 'POST', headers: authHeaders() }),
 
   me: (): Promise<AuthUser> => getJson('/api/me'),
+
+  // --- External (stage-4b web/VR) bug reports ---
+  /** Reports for this session's trip; refresh=true re-syncs from staging first. */
+  externalReports: (sid: string, refresh = false): Promise<ExternalReportsResponse> =>
+    getJson(`/api/sessions/${encodeURIComponent(sid)}/external-reports${refresh ? '?refresh=1' : ''}`),
+
+  /** Admin only: triage an external report (mirrored back to the staging doc). */
+  setExternalReportStatus: (reportId: string, status: ExternalReportStatus): Promise<ExternalReport> =>
+    postJson(`/api/external-reports/${encodeURIComponent(reportId)}/status`, { status }),
 
   // --- Admin staging-wide editor (search/open ANY staging trip) ---
   /** Admin only: search the whole staging Trips collection by id/title substring. */

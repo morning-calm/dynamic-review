@@ -8,6 +8,7 @@ import {
   isEditableStatus,
   type ApproveResponse,
   type AutoReviewReport,
+  type ExternalReport,
   type Field,
   type LocalizationBlock,
   type LocalizationScripts,
@@ -22,6 +23,7 @@ import EditableField from '../components/EditableField';
 import FlagControl from '../components/FlagControl';
 import ZhFieldBlock from '../components/ZhFieldBlock';
 import RecallControl from '../components/RecallControl';
+import ExternalReports from '../components/ExternalReports';
 import SaveStatus from '../components/SaveStatus';
 import { SaveStatusProvider } from '../SaveStatusProvider';
 import { useSaveCoordinator } from '../saveStatusContext';
@@ -356,6 +358,21 @@ const ChangesSummaryPage = () => {
   // a reviewer's recall into a request instead of a silent yank.
   useHeartbeat(session ? sid : undefined, isAdmin ? 'reviewing (admin)' : 'viewing changes');
 
+  // Stage-4b field reports from the web/VR apps (refresh syncs from staging).
+  const [extReports, setExtReports] = useState<ExternalReport[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .externalReports(sid, true)
+      .then((r) => !cancelled && setExtReports(r.reports))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [sid]);
+  const updateExtReport = (r: ExternalReport) =>
+    setExtReports((prev) => prev.map((o) => (o.id === r.id ? r : o)));
+
   const applyFix = (f: { scene: number | null; field: string; option: number | null }) => {
     if (f.scene == null) return;
     const key = `${f.scene}·${f.field}·${f.option ?? ''}`;
@@ -635,6 +652,27 @@ const ChangesSummaryPage = () => {
             {autoReview.status === 'ok' && autoReview.fields.every((f) => f.verdict === 'ok') && (
               <p className="text-xs text-emerald-400">All changed fields passed — nothing flagged.</p>
             )}
+          </section>
+        )}
+
+        {/* Stage-4b field reports (web/VR), grouped by scene */}
+        {extReports.length > 0 && (
+          <section className="space-y-3 rounded-lg border border-gray-700 bg-gray-800/60 p-4">
+            <h2 className="text-sm font-semibold text-white">
+              Field reports ({extReports.filter((r) => r.status !== 'resolved').length} open)
+            </h2>
+            {[null, ...session.scenes.map((sc) => sc.index)].map((idx) => {
+              const group = extReports.filter((r) => r.scene_index === idx);
+              if (group.length === 0) return null;
+              return (
+                <div key={idx ?? 'trip'}>
+                  <p className="mb-1 text-xs font-medium text-gray-400">
+                    {idx === null ? 'Trip level' : `Scene ${idx}`}
+                  </p>
+                  <ExternalReports reports={group} onUpdate={updateExtReport} />
+                </div>
+              );
+            })}
           </section>
         )}
 

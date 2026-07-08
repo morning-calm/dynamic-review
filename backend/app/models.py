@@ -34,6 +34,11 @@ class Recall(BaseModel):
     reason: str = ""
 
 
+class ExternalReportStatus(BaseModel):
+    """Admin triage of a stage-4b external (web/VR) bug report."""
+    status: Literal["open", "acknowledged", "resolved"]
+
+
 class RecallResolve(BaseModel):
     """Admin resolves a pinned recall request: grant = send the trip back to the reviewer
     (changes_requested; un-completes first if it was approved), decline = keep it."""

@@ -208,6 +208,27 @@ CREATE TABLE IF NOT EXISTS recall_requests (
     resolution_note TEXT NOT NULL DEFAULT ''
 );
 
+-- External (stage-4b) bug reports: rows mirrored from the staging Firebase `UserReports`
+-- collection (submitted from the customer web/VR apps during human review). Synced
+-- per-trip on demand (external_reports.py); `status` is OUR triage state and is never
+-- overwritten by a re-sync (it's also mirrored back onto the Firestore doc best-effort).
+CREATE TABLE IF NOT EXISTS external_reports (
+    id              TEXT PRIMARY KEY,          -- Firestore UserReports doc id
+    trip_id         TEXT NOT NULL DEFAULT '',  -- context.contentId
+    scene_index     INTEGER,
+    scene_id        TEXT,                      -- resolved from staging quickTrips at ingest
+    source          TEXT NOT NULL DEFAULT '',  -- web | vr | ''
+    report_type     TEXT NOT NULL DEFAULT '',
+    categories_json TEXT NOT NULL DEFAULT '[]',
+    body            TEXT NOT NULL DEFAULT '',
+    reporter        TEXT NOT NULL DEFAULT '',
+    created_at      REAL,
+    status          TEXT NOT NULL DEFAULT 'open',   -- open | acknowledged | resolved
+    resolved_by     TEXT,
+    resolved_at     REAL,
+    synced_at       REAL NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS auto_reviews (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     session_id   TEXT NOT NULL,
@@ -221,6 +242,8 @@ CREATE TABLE IF NOT EXISTS auto_reviews (
     report_json  TEXT NOT NULL DEFAULT '{}'     -- Gate-2 per-field verdicts (see claude_review.py)
 );
 
+CREATE INDEX IF NOT EXISTS ix_extreports_trip ON external_reports(trip_id, scene_index);
+CREATE INDEX IF NOT EXISTS ix_extreports_status ON external_reports(status, created_at);
 CREATE INDEX IF NOT EXISTS ix_presence_session ON presence(session_id, updated_at);
 CREATE INDEX IF NOT EXISTS ix_recall_status ON recall_requests(status, created_at);
 CREATE INDEX IF NOT EXISTS ix_recall_session ON recall_requests(session_id, created_at);

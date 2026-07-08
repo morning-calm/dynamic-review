@@ -11,14 +11,14 @@ from fastapi.concurrency import run_in_threadpool
 
 import json
 
-from . import auth, db, sessions
+from . import auth, db, external_reports, sessions
 from .auth import scope_sid, scope_sid_editable
 from .models import (CreateSession, TextUpdate, SourceUpdate, Regenerate, Fallback,
                      PlayedRanges, FlagSet, CommentSet, NarrationSet,
                      ClipCreate, ClipRegen, ClipComment, TrimNoise, TrimCandidate,
                      InsertSilence, RemoveSilence, RequestChanges, CompleteTrip,
                      LocalizationUpdate, VersionSet, ApplySuggestedFix,
-                     Heartbeat, Recall, RecallResolve)
+                     Heartbeat, Recall, RecallResolve, ExternalReportStatus)
 
 router = APIRouter(prefix="/api")
 
@@ -224,6 +224,20 @@ def post_apply_suggested_fix(sid: str, body: ApplySuggestedFix):
     """Apply one machine-verified suggested fix (from the latest Gate-2 report) to the
     identified _ZH field, then return the updated field + a fresh Gate-1 pass."""
     return sessions.apply_suggested_fix(sid, body.scene, body.field, body.option)
+
+
+# --- External (stage-4b web/VR) bug reports ---
+@router.get("/sessions/{sid}/external-reports", dependencies=_SCOPE)
+def get_external_reports(sid: str, refresh: int = 0, user=Depends(auth.require_user)):
+    # refresh=1 re-syncs from staging UserReports first (best-effort — a staging
+    # hiccup returns the cached rows + sync_error instead of failing the page).
+    return external_reports.for_session(sid, refresh=bool(refresh))
+
+
+@router.post("/external-reports/{report_id}/status")
+def post_external_report_status(report_id: str, body: ExternalReportStatus,
+                                admin=Depends(auth.require_admin)):
+    return external_reports.set_status(report_id, admin, body.status)
 
 
 # --- Presence + recall ---
