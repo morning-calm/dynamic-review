@@ -70,15 +70,23 @@ flag/comment only. Quick wins are all Tailwind-class-level.
 - sessions.py: py_compile OK. (Guard not exercised end-to-end — would need a broken-env
   approve; logic is a pre-APPLY check on the already-computed plan.)
 
+## Deployed (same day, dave's go-ahead; last edit was 13.5h earlier — no one editing)
+- Laptop notifier cron */15 → ***/5** (login emails now land within 5 min).
+- `npm run build` on the laptop (new bundle `index-Clr5iE46.js` confirmed served) +
+  `sudo -n /usr/bin/systemctl restart review-app.service`.
+- **Data-safety verified before AND after restart** (review state is all in review.db +
+  work/ on disk): sessions {approved:2, in_review:8, submitted:3}, 806 field_edits,
+  19 live auth tokens — identical after; reviewers stay logged in. cloudflared untouched
+  and running; local API answers (401 unauth as expected).
+- Note: systemd warned "unit file changed on disk — run daemon-reload"; restart still used
+  the old unit definition. Harmless now; run a daemon-reload at some point.
+
 ## Open / carried forward
-- **Idle-window laptop deploy**: `npm run build` in the laptop's frontend + uvicorn restart —
-  activates the mobile quick wins AND the zh_writeback pinyin guard. Confirm no one is
-  editing first. (Notifier needs neither — cron re-reads the script after git pull.)
-- Optional: tighten laptop notifier cron */15 → */5 so login emails land faster.
 - Mobile deeper work deferred: touch-first splice selection UX (or explicitly keep splice
   desktop/tablet-only); sticky mini-player; collapsing the 17-button RegenerateControls row.
+- systemd `daemon-reload` on the laptop (see note above).
 - The `--test`/`--force` flags and MailWizz transport unchanged.
 
 ## Next steps
-Wait for an idle window → rebuild dist + restart uvicorn on the laptop; confirm the first
-immediate login email when a reviewer next logs in.
+Confirm the first immediate login email when a reviewer next logs in; sanity-check the app
+on a phone now that the quick wins are live.
