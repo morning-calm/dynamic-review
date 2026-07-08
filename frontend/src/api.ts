@@ -493,6 +493,15 @@ export const api = {
   getAutoReview: (sid: string): Promise<{ report: AutoReviewReport | null }> =>
     getJson(`/api/sessions/${encodeURIComponent(sid)}/auto-review`),
 
+  /** `_ZH` only: apply a machine-verified suggested fix from the latest Gate-2 report to
+   * one field (identified by its report location). Returns the updated field + a fresh
+   * Gate-1 pass so any newly-introduced blocker is visible. */
+  applySuggestedFix: (
+    sid: string,
+    loc: { scene: number; field: string; option: number | null },
+  ): Promise<{ field: Field; applied: string[]; skipped: { script: string; reason: string }[] }> =>
+    postJson(`/api/sessions/${encodeURIComponent(sid)}/auto-review/apply`, loc),
+
   regenerate: (
     sid: string,
     fid: number,

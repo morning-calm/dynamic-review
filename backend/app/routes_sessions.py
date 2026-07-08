@@ -17,7 +17,7 @@ from .models import (CreateSession, TextUpdate, SourceUpdate, Regenerate, Fallba
                      PlayedRanges, FlagSet, CommentSet, NarrationSet,
                      ClipCreate, ClipRegen, ClipComment, TrimNoise, TrimCandidate,
                      InsertSilence, RemoveSilence, RequestChanges, CompleteTrip,
-                     LocalizationUpdate, VersionSet)
+                     LocalizationUpdate, VersionSet, ApplySuggestedFix)
 
 router = APIRouter(prefix="/api")
 
@@ -216,6 +216,13 @@ def get_auto_review(sid: str, user=Depends(auth.require_user)):
         "flag": row["flag_count"], "fields": json.loads(row["report_json"]).get("fields", []),
         "summary": json.loads(row["report_json"]).get("summary", ""),
     }}
+
+
+@router.post("/sessions/{sid}/auto-review/apply", dependencies=_EDIT)
+def post_apply_suggested_fix(sid: str, body: ApplySuggestedFix):
+    """Apply one machine-verified suggested fix (from the latest Gate-2 report) to the
+    identified _ZH field, then return the updated field + a fresh Gate-1 pass."""
+    return sessions.apply_suggested_fix(sid, body.scene, body.field, body.option)
 
 
 # --- Submit -> approve workflow ---

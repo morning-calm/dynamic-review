@@ -41,6 +41,14 @@ class LocalizationUpdate(BaseModel):
     text: str
 
 
+class ApplySuggestedFix(BaseModel):
+    """Apply the latest Gate-2 report's machine-verified suggested fix to one _ZH field,
+    identified by its report location (scene/field/option — the same keys the report uses)."""
+    scene: int
+    field: str
+    option: Optional[int] = None
+
+
 class VersionSet(BaseModel):
     """Set the trip's preferred ElevenLabs A/B version (per-session). ``null`` clears
     the pick and returns the session to the V2/V3 side-by-side audition (audio edit

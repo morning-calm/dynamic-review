@@ -226,3 +226,22 @@ that was already fixed in their sessions — they should pass clean.
 ## Next steps
 Confirm the first immediate login email when a reviewer next logs in; sanity-check the app
 on a phone now that the quick wins are live.
+
+## Follow-up (next day) — THE BLOCKING RESTART DONE
+Picked up the handoff's one blocking step: restarted the backend in a confirmed-idle window.
+- **Idle verified first:** last `field_edits.updated_at` = 2026-07-08 13:58 (~116 min idle);
+  `git pull` already up to date (cron).
+- **Restart:** `sudo -n systemctl restart review-app.service` → `/api/trips` 401 (up),
+  cloudflared still running (PID 99883, untouched), `/api/sessions/x/auto-checks` now 401
+  (endpoint loaded — was the tell it hadn't been live).
+- **Data-safety identical pre/post:** sessions {approved 2, in_review 9, submitted 3},
+  field_edits 865, live_tokens 19. Reviewers stay logged in.
+- **Now live** (was pending on this restart): Gate-1 auto-checks submit=warn/approve=block
+  split + punct-only demotion, `zh_writeback` empty-pinyin 409 guard, `/auto-checks` +
+  `/auto-review` endpoints (Changes-summary Auto-review panel now shows data).
+
+Remaining open (non-blocking, carried forward): email Ted the sibling-corrections write-up
+(`docs/ted-zh-sibling-corrections-2026-07-08.md`); watch the first shadow-report verdicts +
+first token-attributed login email; optional laptop `sudo systemctl daemon-reload` (unit
+file changed on disk). Plus the standing backlog above (Phase-3 auto-approve, "apply
+suggested fix" button, user_id on field_edits, JP/Taiwan R2 upload hooks, mobile deeper work).

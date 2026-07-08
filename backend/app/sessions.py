@@ -326,23 +326,6 @@ def _zh_voicetest_trip_ids() -> list[str]:
     return sorted(ids)
 
 
-def _ab_dir(sid: str, ver: str) -> Path:
-    d = WORK_ROOT / sid / ver
-    d.mkdir(parents=True, exist_ok=True)
-    return d
-
-
-def _copy_audio_set(src: Path, dst: Path) -> None:
-    """Byte-copy every *.mp3 of an A/B take folder into work/{sid}/{ver} (these are already
-    finished ElevenLabs mp3s — no re-encode needed). Best-effort per file."""
-    dst.mkdir(parents=True, exist_ok=True)
-    for p in sorted(src.glob("*.mp3")):
-        try:
-            audio_io.mp3_to_mp3_copy(p, dst / p.name)
-        except Exception as e:  # noqa: BLE001
-            print(f"[zh-seed] copy skipped {p.name}: {e}")
-
-
 def _fetch_localization(trip_id: str) -> dict | None:
     """The live TripLocalizations/{id} doc (4-script text), or None if absent/unreadable."""
     try:
@@ -1182,6 +1165,77 @@ def update_localization(sid: str, fid: int, script: str, text: str) -> dict:
     db.update_fields(fid, **patch)
     db.touch_session(sid)
     return serialize_field(sid, _field_row(sid, fid))
+
+
+def apply_suggested_fix(sid: str, scene: int, field: str,
+                        option: int | None) -> dict:
+    """Apply the machine-verified suggested fix from the latest Gate-2 (Claude) report to
+    the identified _ZH field, via the normal `update_localization` autosave path. The fix
+    is an already-computed, already-hsk-verified value (`scripts/claude_review.py:verify_fixes`
+    → `suggested_fix_verified`); this only plumbs it into the field so the reviewer doesn't
+    retype it — they still listen/approve. Scoped to _ZH: that's where suggested fixes carry a
+    verification badge; for EN/JP the panel stays read-only.
+
+    Guards: (1) _ZH only; (2) refuse if the report marks the fix `suggested_fix_verified=False`
+    (hsk_lib said the fix itself is inconsistent); (3) re-run Gate-1 AFTER applying and return
+    it, so a fix that would introduce a new blocker is visible immediately."""
+    if not _is_zh_session(sid):
+        raise HTTPException(422, detail={
+            "error": "apply_zh_only",
+            "detail": "suggested-fix apply is available for Mandarin (_ZH) fields only"})
+    row = db.query_one(
+        "SELECT * FROM auto_reviews WHERE session_id=? ORDER BY created_at DESC LIMIT 1",
+        (sid,))
+    if not row:
+        raise HTTPException(404, detail={"error": "no_auto_review",
+                                         "detail": "no Gate-2 report for this session yet"})
+    report_fields = json.loads(row["report_json"]).get("fields", [])
+    rf = next((f for f in report_fields
+               if f.get("scene") == scene and f.get("field") == field
+               and f.get("option") == option), None)
+    if rf is None:
+        raise HTTPException(404, detail={
+            "error": "no_report_field",
+            "detail": f"scene={scene} field={field} option={option} not in the report"})
+    fix = rf.get("suggested_fix")
+    if not isinstance(fix, dict) or not fix:
+        raise HTTPException(422, detail={"error": "no_suggested_fix",
+                                         "detail": "this field has no suggested fix to apply"})
+    if rf.get("suggested_fix_verified") is False:
+        raise HTTPException(409, detail={
+            "error": "fix_unverified",
+            "detail": "the report marks this fix as FAILED verification — do not apply as-is"})
+
+    # Locate the field_edits row for (scene, field, option) — option_index may be NULL.
+    cands = db.query(
+        "SELECT * FROM field_edits WHERE session_id=? AND scene_index=? AND field_path=?",
+        (sid, scene, field))
+    frow = next((c for c in cands if c["option_index"] == option), None)
+    if frow is None:
+        raise HTTPException(404, detail={"error": "no_field",
+                                         "detail": f"no field row for scene={scene} {field}"})
+    fid = frow["id"]
+
+    loc = json.loads(_srow_get(frow, "localization_json") or "{}")
+    cur_scripts = set((loc.get("cur") or {}).keys())
+    applied: list[str] = []
+    skipped: list[dict] = []
+    result = serialize_field(sid, frow)
+    for script, text in fix.items():
+        if script not in cur_scripts:
+            skipped.append({"script": script, "reason": "not an editable script on this field"})
+            continue
+        result = update_localization(sid, fid, script, text)
+        applied.append(script)
+    if not applied:
+        raise HTTPException(422, detail={
+            "error": "nothing_applied",
+            "detail": f"none of {sorted(fix.keys())} are editable here "
+                      f"(editable: {sorted(cur_scripts)})"})
+
+    hard, soft = validate(sid, mode="submit")
+    return {"field": result, "applied": applied, "skipped": skipped,
+            "gate1": {"hard": hard, "soft": soft}}
 
 
 def set_version(sid: str, version: str | None) -> dict:
@@ -3270,20 +3324,6 @@ def version_path(sid: str, fid: int, n: int) -> Path:
     if not row:
         raise HTTPException(404, detail={"error": "no_version", "detail": str(n)})
     return Path(row["path"])
-
-
-def ab_audio_path(sid: str, fid: int, ver: str) -> Path:
-    """The copied V2/V3 A/B take for a _ZH field (work/{sid}/{ver}/{mp3_name})."""
-    if ver not in ("v2", "v3"):
-        raise HTTPException(404, detail={"error": "bad_version", "detail": ver})
-    frow = _field_row(sid, fid)
-    name = frow["mp3_name"]
-    if not name:
-        raise HTTPException(404, detail={"error": "no_audio", "detail": "text field"})
-    p = _ab_dir(sid, ver) / name
-    if not p.exists():
-        raise HTTPException(404, detail={"error": "no_audio", "detail": f"{ver}/{name}"})
-    return p
 
 
 # Leveled/target-language trip id → the BASE trip ids whose display images it shares.

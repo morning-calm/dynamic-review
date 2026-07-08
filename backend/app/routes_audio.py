@@ -78,12 +78,6 @@ def get_clip(sid: str, fid: int, cid: int, request: Request):
     return _serve_range(sessions.clip_path(sid, fid, cid), request, "audio/mpeg")
 
 
-@router.get("/audio/{sid}/{fid}/ab/{ver}", dependencies=_SCOPE)
-def get_ab_audio(sid: str, fid: int, ver: str, request: Request):
-    # Mandarin (_ZH) A/B take — the copied V2/V3 clip for side-by-side audition.
-    return _serve_range(sessions.ab_audio_path(sid, fid, ver), request, "audio/mpeg")
-
-
 @router.get("/audio/{sid}/{fid}/{which}", dependencies=_SCOPE)
 def get_audio(sid: str, fid: int, which: str, request: Request):
     if which not in ("original", "working", "candidate", "fallback"):
