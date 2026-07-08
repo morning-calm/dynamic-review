@@ -168,6 +168,13 @@ const EditableField = ({
         className={baseClasses}
       />
       {changed && <InlineDiff original={field.original_text} current={diffValue} />}
+      {/* Soft reminder (never blocks): the target text changed but its English sibling
+          didn't — if the meaning shifted, the translation must be updated too. */}
+      {changed && field.source_text !== '' && field.source_text === field.original_source && (
+        <p className="mt-1 text-xs text-amber-400/90">
+          ⚠ Text changed but the English translation hasn’t been updated — if the meaning changed, edit it too (these fields are final).
+        </p>
+      )}
       {field.source_text !== '' && <SourceEditor field={field} sid={sid} onFieldUpdate={onFieldUpdate} />}
     </div>
   );

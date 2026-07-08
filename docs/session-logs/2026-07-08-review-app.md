@@ -81,6 +81,27 @@ flag/comment only. Quick wins are all Tailwind-class-level.
 - Note: systemd warned "unit file changed on disk — run daemon-reload"; restart still used
   the old unit definition. Harmless now; run a daemon-reload at some point.
 
+## Afternoon session — Ted's sibling-field audit + corrections + UI warning
+Dave asked: analyse ALL of Ted's submitted ZH content for the Hans-changed-but-siblings-not
+pattern, fix everything, write it up for Ted, add a soft UI warning.
+- **Audit:** the Kaohsiung pattern held everywhere — 34 changed fields across 4 trips
+  (Kaohsiung approved; Taichung_HSK3 / Taipei101_HSK3 / Taichung_HSK12 submitted, sess ids
+  0ef71bcd/db4ac31f/16e3026e), ALL with only Hans edited. Also: traditional chars mixed into
+  Hans (舊/颱風/損/現場/飲料/賣/進 — same pronunciation, audio unaffected), one en typo by
+  Ted ("moves to to"), 4 fields where en needed a meaning update.
+- **Corrections:** built full Hant/zhuyin(+Hans normalization+en) table
+  (scratchpad corrections.json), machine-verified all 34 (to_simplified(Hant)==Hans exact;
+  zhuyin_to_pinyin full-confirm vs new Hans — same check as the approve). Applied:
+  Kaohsiung → staging directly (loc target.Hant/zhuyin all 7; s17 Hans typo 走進→走进 incl.
+  Trip line-1; s19 en incl. Trip SceneDescEn); 27 pending-session fields → laptop review.db
+  localization_json cur (fresh R2 backup taken first; 843 min idle). Spot-checks pass.
+- **Write-up for Ted:** `docs/ted-zh-sibling-corrections-2026-07-08.md` — dave's email text +
+  every correction listed per trip/scene, ready to email.
+- **UI warning (soft, non-blocking; dave + AI agree not a blocker):**
+  LocalizationEditor — amber hint when some of Hans/Hant/zhuyin/en changed and others didn't;
+  EditableField — hint when target text changed but the English sibling (source_text) wasn't
+  updated. Build green; deployed via dist rebuild (static serve — no restart needed).
+
 ## Open / carried forward
 - Mobile deeper work deferred: touch-first splice selection UX (or explicitly keep splice
   desktop/tablet-only); sticky mini-player; collapsing the 17-button RegenerateControls row.
