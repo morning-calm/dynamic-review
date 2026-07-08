@@ -3,7 +3,7 @@
 Running list of deferred / low-urgency work, ordered by priority. Enough context to
 pick each up cold. Move finished items to **Done** (with date) rather than deleting.
 
-Facts below were verified against the code on 2026-07-09 (file:line refs are the evidence).
+Facts below were verified against the code on 2026-07-08 (file:line refs are the evidence).
 Deploy model reminder: the **live host is the Ubuntu laptop** (`ssh review-laptop`); backend
 code changes need a `systemctl restart review-app.service` in an idle window, FE changes need
 `npm run build` on the laptop. **Never restart / write review.db while a reviewer is editing.**
@@ -104,4 +104,9 @@ chore next time SSH'd in (password-gated).
 ---
 
 ## Done
-_(none yet — move items here with completion date)_
+- **2026-07-08** — P1 #1 "Apply suggested fix" button (BE `apply_suggested_fix` +
+  `POST /sessions/{sid}/auto-review/apply`, FE panel button) and P2 #4 prune of the dead
+  Mandarin A/B code. Branch `backlog/apply-fix-and-ab-prune` (not merged/deployed yet —
+  BE change needs a restart in an idle window). Verified: py_compile + import + `vite build`
+  green; NOT end-to-end driven (needs a live `_ZH` session with an `auto_reviews` row on the
+  laptop). #1 and #4 above stay listed until this branch is merged + deployed.

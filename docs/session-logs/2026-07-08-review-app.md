@@ -227,7 +227,7 @@ that was already fixed in their sessions — they should pass clean.
 Confirm the first immediate login email when a reviewer next logs in; sanity-check the app
 on a phone now that the quick wins are live.
 
-## Follow-up (next day) — THE BLOCKING RESTART DONE
+## Follow-up (later — new session, same day) — THE BLOCKING RESTART DONE
 Picked up the handoff's one blocking step: restarted the backend in a confirmed-idle window.
 - **Idle verified first:** last `field_edits.updated_at` = 2026-07-08 13:58 (~116 min idle);
   `git pull` already up to date (cron).
@@ -245,3 +245,30 @@ Remaining open (non-blocking, carried forward): email Ted the sibling-correction
 first token-attributed login email; optional laptop `sudo systemctl daemon-reload` (unit
 file changed on disk). Plus the standing backlog above (Phase-3 auto-approve, "apply
 suggested fix" button, user_id on field_edits, JP/Taiwan R2 upload hooks, mobile deeper work).
+
+## Backlog write-up + two items implemented (branch, not deployed)
+Orchestrated with subagents (sonnet to ground the codebase facts; a Fable Phase-3 assessment
+was started then stopped — Phase 3 stays deferred per dave until we have shadow-report results).
+- **`docs/session-logs/BACKLOG.md` created** (the protocol file didn't exist) — ordered P1–P4,
+  each entry grounded in file:line. **Correction the grounding caught:** the session-log claim
+  "JP/Taiwan flows have NO R2 hook" is WRONG — `run_n4.py:40`/`run_n5.py:114` (JP) and
+  `run_5a.py:217` (HSK) already call `upload_review_audio_r2.py`. The real gap is manifest
+  *coverage* (trips can join the review manifest without a fresh staged run), so that backlog
+  item was reframed to a coverage/reconciliation task, not "add hooks".
+- **Implemented on branch `backlog/apply-fix-and-ab-prune` (commit a3783eb):**
+  - P1 "Apply suggested fix" — `POST /sessions/{sid}/auto-review/apply` → `apply_suggested_fix`
+    (applies the latest Gate-2 report's machine-verified fix to a `_ZH` field via
+    `update_localization`, re-runs Gate-1, returns updated field + fresh Gate-1). `_ZH`-only;
+    refuses `suggested_fix_verified=False`; FE button on the Auto-review panel, shown only when
+    editable + verified. Note: report exists at `submitted` (locked), so the button acts once the
+    admin sends back to `changes_requested`/`in_review`.
+  - P2 pruned the inert Mandarin A/B code (route + `ab_audio_path`/`_ab_dir`/`_copy_audio_set`).
+- **Verified:** backend py_compile + import (symbol present / A/B gone); `tsc -b && vite build`
+  green. **NOT end-to-end driven** — needs a running backend + a `_ZH` session with an
+  `auto_reviews` row (that data is on the laptop). **NOT deployed** — BE change needs a restart;
+  branch left for review/merge (didn't push to main — cron auto-pulls main to the laptop).
+
+## Next steps (updated)
+Merge `backlog/apply-fix-and-ab-prune` when reviewed, then deploy in an idle window (pull +
+`npm run build` + `systemctl restart`), and drive the Apply button against a real `_ZH` report.
+Everything else on BACKLOG.md is captured. Phase 3 remains OFF pending shadow-report results.

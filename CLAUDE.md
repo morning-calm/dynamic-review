@@ -257,7 +257,7 @@ the tunnel — uvicorn-only means they're locked out.
   (409 otherwise) — `_clear_version_pick` and the FE `ZhAudioAB`/`PreferredVersionControl` were
   removed. Legacy sessions were migrated (Taipei101 auto-picked v3). The inert A/B leftovers (the
   `/audio/{sid}/{fid}/ab/{ver}` route + `ab_audio_path`/`_ab_dir`/`_copy_audio_set`) were pruned
-  2026-07-09.
+  2026-07-08.
 - **Mandarin voices:** `annasu` is **female**; `yu` and `jason` are **male** — a splice/regen must use
   a voice matching the master, or the seam is a *voice* mismatch, not a splice defect. The demo session
   `sess_5bc56203b40a` was mis-stored as `yu` and has since been corrected to `annasu`; real trips resolve
