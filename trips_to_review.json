@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-06T01:24:38+01:00",
+  "generated_at": "2026-07-08T13:26:30+01:00",
   "source": "trello 6,7",
   "trips": [
     {
@@ -863,20 +863,6 @@
       "pos": 140737488470016
     },
     {
-      "trip_id": "Lake_District2_B1_EN",
-      "lane": "7",
-      "level": "B1",
-      "family": "Lake_District2_B1",
-      "voice": "",
-      "gender": "",
-      "title": "Lake_District2_B1_EN",
-      "labels": [
-        "EN"
-      ],
-      "card_url": "https://trello.com/c/e2ZbWhPk",
-      "pos": 140737488478208
-    },
-    {
       "trip_id": "Lake_District3_A12_EN",
       "lane": "7",
       "level": "A12",
@@ -1227,20 +1213,6 @@
       "voice": "andrea",
       "gender": "female",
       "title": "Canterbury_A12_EN",
-      "labels": [
-        "EN"
-      ],
-      "card_url": "https://trello.com/c/CHEhXJA6",
-      "pos": 140737488764928
-    },
-    {
-      "trip_id": "Canterbury_B1_EN",
-      "lane": "7",
-      "level": "B1",
-      "family": "Canterbury",
-      "voice": "andrea",
-      "gender": "female",
-      "title": "Canterbury_B1_EN",
       "labels": [
         "EN"
       ],
