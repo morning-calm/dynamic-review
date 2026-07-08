@@ -80,6 +80,19 @@ def logins_by_user(con):
     return out
 
 
+def live_tokens_by_user(con, at_ts):
+    """user_id -> True if the user holds a token VALID at at_ts. THE reliable 'is this
+    person using the app' signal: tokens persist for days, so 'logged in recently' misses
+    a returning reviewer (the 13:12 2026-07-08 email blamed 'admin' for Ted's session —
+    Ted's last login ROW was 2 days old but his token was live)."""
+    out = {}
+    for r in con.execute(
+            "SELECT user_id FROM auth_sessions WHERE created_at <= ? AND expires_at > ?",
+            (at_ts + 1, at_ts)):
+        out[r["user_id"]] = True
+    return out
+
+
 def detect_logins(state, users, logins, now):
     """Exact login events for REVIEWER-role users: any auth_sessions row created after
     the stored watermark. Admin logins are skipped (that's normally dave). Rows deleted
@@ -129,13 +142,18 @@ def detect_auto_reviews(state, con, now):
     return events
 
 
-def attribute(lang, at_ts, users, logins):
+def attribute(lang, at_ts, users, logins, live_tokens=None):
     """Best-effort username for a start/break at time at_ts on a session of `lang`."""
     by_name = {u["username"]: u for u in users}
-    # 1) specialty language + specialist logged in recently -> the specialist
+    # 1) specialty language + the specialist holds a LIVE token (or logged in recently)
+    #    -> the specialist. Token presence beats login recency: reviewers stay logged in
+    #    for days, so a fresh login row is the exception, not the rule.
     spec = SPECIALIST.get(lang)
     if spec and spec in by_name:
-        prior = [t for t in logins.get(by_name[spec]["id"], []) if t <= at_ts + 1]
+        uid = by_name[spec]["id"]
+        if live_tokens and live_tokens.get(uid):
+            return spec
+        prior = [t for t in logins.get(uid, []) if t <= at_ts + 1]
         if prior and (at_ts - max(prior)) <= SPECIALIST_LOGIN_WINDOW:
             return spec
     # 2) otherwise the language-capable user with the most recent prior login
@@ -187,7 +205,7 @@ def fresh_state():
 
 
 # ---------------------------------------------------------------- detection
-def detect(state, sess, completed, users, logins, now):
+def detect(state, sess, completed, users, logins, now, live_tokens=None):
     """Mutate state.sessions and append events to state['pending']. Returns new events list."""
     new_events = []
     st = state["sessions"]
@@ -207,7 +225,7 @@ def detect(state, sess, completed, users, logins, now):
                 # Attribute at the RECENT activity time, not first_ts — a session seeded
                 # weeks ago by admin then picked up by ted must read "ted", not "admin"
                 # (the 2026-07-07 mis-attribution).
-                who = attribute(lang, last_ts, users, logins)
+                who = attribute(lang, last_ts, users, logins, live_tokens)
                 verb = "resumed" if resumed else "started"
                 new_events.append({"ts": last_ts if resumed else (s.get("first_ts") or last_ts),
                                    "kind": "start", "user": who, "trip": s["trip_id"],
@@ -228,7 +246,7 @@ def detect(state, sess, completed, users, logins, now):
             state_verb, who = finished_now
             done = s.get("done", 0); touched_n = s.get("touched", 0)
             new_events.append({"ts": s.get("last_ts") or now, "kind": "finish",
-                               "user": who or attribute(lang, now, users, logins),
+                               "user": who or attribute(lang, now, users, logins, live_tokens),
                                "trip": s["trip_id"], "lang": lang, "verb": state_verb,
                                "done": done, "touched": touched_n})
             prev["finished"] = True
@@ -236,7 +254,7 @@ def detect(state, sess, completed, users, logins, now):
         # ---- BREAK 90m+ ----
         if (prev["started"] and not prev["finished"] and last_ts is not None
                 and (now - last_ts) >= BREAK_SECONDS and not prev.get("break_reported")):
-            who = attribute(lang, last_ts, users, logins)
+            who = attribute(lang, last_ts, users, logins, live_tokens)
             new_events.append({"ts": last_ts, "kind": "break", "user": who,
                                "trip": s["trip_id"], "lang": lang,
                                "done": s.get("done", 0), "touched": s.get("touched", 0),
@@ -388,7 +406,8 @@ def main():
 
     new_events = detect_logins(state, users, logins, now)
     new_events += detect_auto_reviews(state, con, now)
-    new_events += detect(state, sess, completed, users, logins, now)
+    live_tokens = live_tokens_by_user(con, now)
+    new_events += detect(state, sess, completed, users, logins, now, live_tokens)
     for e in new_events:
         print(f"[event] {e['kind']:6} {fmt_time(e['ts'])} {e['user']} {e.get('trip','')}")
 
