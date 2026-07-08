@@ -193,6 +193,80 @@ export interface RecallResponse {
   existing?: boolean;
 }
 
+// --- External (stage-4b web/VR) bug reports ---
+
+export type ExternalReportStatus = 'open' | 'acknowledged' | 'resolved';
+
+/** A bug report filed from the customer web/VR app during stage-4b review, mirrored
+ * from staging Firebase `UserReports` (only structured, scene-scoped payloads). */
+export interface ExternalReport {
+  id: string;
+  trip_id: string;
+  scene_index: number | null;
+  scene_id: string | null;
+  source: string; // 'web' | 'vr' | ''
+  report_type: string;
+  categories: string[];
+  body: string;
+  reporter: string;
+  created_at: number | null;
+  status: ExternalReportStatus;
+  resolved_by: string | null;
+  resolved_at: number | null;
+}
+
+export interface ExternalReportsResponse {
+  trip_id: string;
+  reports: ExternalReport[];
+  /** Set when refresh=1 couldn't reach staging — cached rows are still returned. */
+  sync_error: string | null;
+}
+
+// --- Pipeline (R2 review-bus publish handshake) ---
+
+/** A job on the R2 review bus. Queued by any admin; executed only on the workstation
+ * (publisher mode / publish_inbox.py) where the production key lives. */
+export interface BusJob {
+  id: string;
+  kind: 'publish';
+  trip_id: string;
+  note: string;
+  requested_by: string;
+  requested_at: number;
+  status: 'queued' | 'dry_run' | 'done' | 'failed';
+  resolved_by?: string;
+  resolved_at?: number;
+  log?: string;
+}
+
+export interface DriftResponse {
+  trip_id: string;
+  /** null = no prod snapshot on the bus yet (run publish_inbox.py snapshot). */
+  snapshot_at: number | null;
+  /** Display fields differing staging vs the prod snapshot; null when no snapshot. */
+  fields_differ: string[] | null;
+}
+
+/** One row of the admin staging-wide trip search (GET /api/admin/staging-trips). */
+export interface AdminStagingTrip {
+  trip_id: string;
+  title: string;
+  folder_name: string;
+  language: string;
+  has_session: boolean;
+  status: SessionStatus | null;
+  edit_required: boolean;
+  completed_method: CompletionMethod | null;
+  completed_by: string | null;
+}
+
+export interface AdminStagingList {
+  /** Matches before the 200-row cap. */
+  total: number;
+  shown: number;
+  trips: AdminStagingTrip[];
+}
+
 /** field_path values from the contract's field_path table. */
 export type FieldPath =
   | 'contentTitleKey'
@@ -737,6 +811,41 @@ export const api = {
   logout: (): Promise<void> => requestJson<void>('/api/logout', { method: 'POST', headers: authHeaders() }),
 
   me: (): Promise<AuthUser> => getJson('/api/me'),
+
+  // --- External (stage-4b web/VR) bug reports ---
+  /** Reports for this session's trip; refresh=true re-syncs from staging first. */
+  externalReports: (sid: string, refresh = false): Promise<ExternalReportsResponse> =>
+    getJson(`/api/sessions/${encodeURIComponent(sid)}/external-reports${refresh ? '?refresh=1' : ''}`),
+
+  /** Admin only: triage an external report (mirrored back to the staging doc). */
+  setExternalReportStatus: (reportId: string, status: ExternalReportStatus): Promise<ExternalReport> =>
+    postJson(`/api/external-reports/${encodeURIComponent(reportId)}/status`, { status }),
+
+  // --- Admin staging-wide editor (search/open ANY staging trip) ---
+  /** Admin only: search the whole staging Trips collection by id/title substring. */
+  adminStagingTrips: (q: string, refresh = false): Promise<AdminStagingList> =>
+    getJson(`/api/admin/staging-trips?q=${encodeURIComponent(q)}${refresh ? '&refresh=1' : ''}`),
+
+  /** Admin only: open ANY staging trip (bypasses the manifest + completed exclusion). */
+  adminOpenTrip: (tripId: string): Promise<Session> =>
+    postJson('/api/admin/open', { trip_id: tripId }),
+
+  // --- Pipeline (publish bus) ---
+  /** Admin only: queue a staging→prod TEXT publish request on the R2 bus. */
+  queuePublish: (tripId: string, note = ''): Promise<BusJob> =>
+    postJson('/api/admin/pipeline/queue', { trip_id: tripId, kind: 'publish', note }),
+
+  /** Admin only: jobs on the bus (optionally one trip's). */
+  pipelineJobs: (tripId = ''): Promise<{ publisher_mode: boolean; jobs: BusJob[] }> =>
+    getJson(`/api/admin/pipeline/jobs${tripId ? `?trip_id=${encodeURIComponent(tripId)}` : ''}`),
+
+  /** Publisher mode only: execute a queued job (dry-run unless both flags true). */
+  runPipelineJob: (jobId: string, apply = false, iAmSure = false): Promise<BusJob> =>
+    postJson('/api/admin/pipeline/run', { job_id: jobId, apply, i_am_sure: iAmSure }),
+
+  /** Admin only: staging vs live drift for a trip (vs the bus prod snapshot). */
+  drift: (tripId: string): Promise<DriftResponse> =>
+    getJson(`/api/admin/drift/${encodeURIComponent(tripId)}`),
 
   // --- Presence + recall ---
   /** Presence ping (~30s while a session page is open): what this user is looking at.

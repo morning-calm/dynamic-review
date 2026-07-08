@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { api, ApiError, isEditableStatus, type Field, type Session } from '../api';
+import { api, ApiError, isEditableStatus, type ExternalReport, type Field, type Session } from '../api';
 import { SaveStatusProvider } from '../SaveStatusProvider';
 import { useSaveCoordinator } from '../saveStatusContext';
 import NavBar from '../components/NavBar';
@@ -12,6 +12,7 @@ import SceneCard from '../components/SceneCard';
 import NarrationControls from '../components/NarrationControls';
 import ZhFieldBlock from '../components/ZhFieldBlock';
 import RecallControl from '../components/RecallControl';
+import ExternalReports from '../components/ExternalReports';
 import { useHeartbeat } from '../usePresence';
 
 /** Scroll the first not-yet-done field into view (document order, read from the DOM
@@ -115,6 +116,25 @@ const ReviewBody = () => {
   useHeartbeat(
     session ? sid : undefined,
     session && isEditableStatus(session.status) ? 'editing' : 'viewing (locked)',
+  );
+
+  // Stage-4b field reports from the web/VR apps (refresh=true re-syncs from staging).
+  const [extReports, setExtReports] = useState<ExternalReport[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .externalReports(sid, true)
+      .then((r) => {
+        if (!cancelled) setExtReports(r.reports);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [sid]);
+  const updateExtReport = useCallback(
+    (r: ExternalReport) => setExtReports((prev) => prev.map((o) => (o.id === r.id ? r : o))),
+    [],
   );
 
   // Stable updater. Replaces only the changed field's array entry so unchanged
@@ -259,18 +279,26 @@ const ReviewBody = () => {
           </div>
         </section>
 
+        {/* Trip-level field reports (no scene index) */}
+        <ExternalReports reports={extReports.filter((r) => r.scene_index === null)} onUpdate={updateExtReport} />
+
         {/* Scenes */}
         {session.scenes.map((scene, si) => (
-          <SceneCard
-            key={scene.index}
-            scene={scene}
-            fields={sceneFields[si] ?? scene.fields}
-            sid={session.id}
-            onFieldUpdate={updateField}
-            readOnly={!editable}
-            isZh={isZh}
-            language={session.language}
-          />
+          <div key={scene.index} className="space-y-2">
+            <ExternalReports
+              reports={extReports.filter((r) => r.scene_index === scene.index)}
+              onUpdate={updateExtReport}
+            />
+            <SceneCard
+              scene={scene}
+              fields={sceneFields[si] ?? scene.fields}
+              sid={session.id}
+              onFieldUpdate={updateField}
+              readOnly={!editable}
+              isZh={isZh}
+              language={session.language}
+            />
+          </div>
         ))}
 
         {/* Bottom submit — only submits once every section is listened-to & done;

@@ -6,23 +6,7 @@ import { api, ApiError, type RecallRequest, type ReviewQueueItem } from '../api'
 import NavBar from '../components/NavBar';
 import PresenceBadge from '../components/PresenceBadge';
 import { usePresence } from '../usePresence';
-
-const MODAL_STYLE: Modal.Styles = {
-  overlay: { backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 50 },
-  content: {
-    inset: '50% auto auto 50%',
-    transform: 'translate(-50%,-50%)',
-    maxWidth: '480px',
-    width: '90%',
-    background: '#111827',
-    border: '1px solid #374151',
-    borderRadius: '0.5rem',
-    padding: '1rem',
-    color: 'white',
-    maxHeight: '85vh',
-    overflow: 'auto',
-  },
-};
+import { MODAL_STYLE } from '../modalStyle';
 
 const formatSubmittedAt = (t: number | null): string => {
   if (t === null) return '—';

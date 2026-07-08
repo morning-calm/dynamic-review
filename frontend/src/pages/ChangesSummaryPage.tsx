@@ -8,23 +8,20 @@ import {
   isEditableStatus,
   type ApproveResponse,
   type AutoReviewReport,
+  type ExternalReport,
   type Field,
-  type LocalizationBlock,
-  type LocalizationScripts,
   type Session,
   type SubmitResponse,
 } from '../api';
 import { useAuth } from '../authContext';
+import { fieldChanged, zhChangedScripts } from '../fieldDiff';
 import NavBar from '../components/NavBar';
 import InlineDiff from '../components/InlineDiff';
-import SceneCard from '../components/SceneCard';
-import EditableField from '../components/EditableField';
-import FlagControl from '../components/FlagControl';
-import ZhFieldBlock from '../components/ZhFieldBlock';
+import AdminInlineEdit from '../components/AdminInlineEdit';
 import RecallControl from '../components/RecallControl';
-import SaveStatus from '../components/SaveStatus';
+import ExternalReports from '../components/ExternalReports';
+import PipelinePanel from '../components/PipelinePanel';
 import { SaveStatusProvider } from '../SaveStatusProvider';
-import { useSaveCoordinator } from '../saveStatusContext';
 import { useHeartbeat } from '../usePresence';
 
 interface FlatField {
@@ -66,19 +63,6 @@ const flatten = (s: Session): FlatField[] => {
 const fieldLabel = (ff: FlatField): string =>
   ff.sceneIndex === null ? ff.field.field_path : `Scene ${ff.sceneIndex} · ${ff.field.field_path}`;
 
-// _ZH edits live in the localization block (cur vs orig per script), NOT current_text, so
-// the change list must diff each of the 4 scripts.
-const ZH_SCRIPTS: [keyof LocalizationScripts, string][] = [
-  ['Hant', 'Traditional'],
-  ['Hans', 'Simplified'],
-  ['zhuyin', 'Zhuyin'],
-  ['en', 'English'],
-];
-const zhChangedScripts = (b: LocalizationBlock): [keyof LocalizationScripts, string][] =>
-  ZH_SCRIPTS.filter(([s]) => (b.cur[s] ?? '') !== (b.orig[s] ?? ''));
-const fieldChanged = (f: Field): boolean =>
-  f.localization ? zhChangedScripts(f.localization).length > 0 : f.current_text !== f.original_text;
-
 const ImportMp3 = ({ field, sid, onUpdate }: { field: Field; sid: string; onUpdate: (f: Field) => void }) => {
   const [busy, setBusy] = useState(false);
   return (
@@ -105,143 +89,6 @@ const ImportMp3 = ({ field, sid, onUpdate }: { field: Field; sid: string; onUpda
         }}
       />
     </label>
-  );
-};
-
-/**
- * Admin inline editing on the approve page: expand the trip header or a scene to get
- * the FULL reviewer toolbox (text edit, regenerate/splice, highlight, trim, pauses,
- * flags, comments) via the same SceneCard the review page uses. Only rendered while
- * the session is `submitted` and the user is an admin — the backend edit gate
- * (assert_editable) allows exactly that combination. The session stays `submitted`;
- * Approve/Send back remain available in the nav.
- */
-const AdminInlineEdit = ({ session, onUpdate }: { session: Session; onUpdate: (f: Field) => void }) => {
-  const { state: saveState } = useSaveCoordinator();
-  // -1 = the trip-header pseudo-scene.
-  const [open, setOpen] = useState<Set<number>>(new Set());
-  const toggle = (k: number) =>
-    setOpen((prev) => {
-      const n = new Set(prev);
-      if (n.has(k)) n.delete(k);
-      else n.add(k);
-      return n;
-    });
-  const isZh = session.is_zh;
-  const contentTitleKey = session.trip_fields.find((f) => f.field_path === 'contentTitleKey');
-  const tripDescription = session.trip_fields.find((f) => f.field_path === 'tripgroup_description');
-  const tripChanged = session.trip_fields.some(fieldChanged);
-
-  const rowBtn =
-    'flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-gray-200 hover:bg-gray-700/50';
-  const changedChip = (
-    <span className="rounded bg-amber-600/80 px-1.5 py-0.5 text-[10px] font-medium text-white">changed</span>
-  );
-
-  return (
-    <section className="rounded-lg border border-purple-800/60 bg-gray-800/60 p-4">
-      <div className="mb-1 flex flex-wrap items-center gap-3">
-        <h2 className="text-sm font-semibold text-white">Edit inline (admin)</h2>
-        <SaveStatus state={saveState} />
-      </div>
-      <p className="mb-3 text-xs text-gray-400">
-        Final touch-ups without sending the trip back — expand a scene for the full reviewer toolbox.
-        Edits autosave; the session stays <span className="text-blue-300">submitted</span>, so Approve /
-        Send back above when you’re done.
-      </p>
-
-      {(contentTitleKey || tripDescription) && (
-        <div className="mb-2 overflow-hidden rounded border border-gray-700">
-          <button type="button" className={rowBtn} onClick={() => toggle(-1)}>
-            <span className="flex items-center gap-2">
-              Trip header (title &amp; description)
-              {tripChanged && changedChip}
-            </span>
-            <span className="text-xs text-gray-500">{open.has(-1) ? 'Collapse' : 'Edit'}</span>
-          </button>
-          {open.has(-1) && (
-            <div className="space-y-4 border-t border-gray-700 p-3">
-              {contentTitleKey &&
-                (isZh ? (
-                  <ZhFieldBlock
-                    field={contentTitleKey}
-                    sid={session.id}
-                    onFieldUpdate={onUpdate}
-                    label="Display title (contentTitleKey)"
-                    singleLine
-                  />
-                ) : (
-                  <div className="space-y-2">
-                    <EditableField
-                      field={contentTitleKey}
-                      sid={session.id}
-                      onFieldUpdate={onUpdate}
-                      label="Display title (contentTitleKey)"
-                      singleLine
-                    />
-                    <FlagControl field={contentTitleKey} sid={session.id} onFieldUpdate={onUpdate} />
-                  </div>
-                ))}
-              {tripDescription &&
-                (isZh ? (
-                  <ZhFieldBlock
-                    field={tripDescription}
-                    sid={session.id}
-                    onFieldUpdate={onUpdate}
-                    label="TripGroup description"
-                    rows={4}
-                  />
-                ) : (
-                  <div className="space-y-2">
-                    <EditableField
-                      field={tripDescription}
-                      sid={session.id}
-                      onFieldUpdate={onUpdate}
-                      label="TripGroup description"
-                      rows={4}
-                    />
-                    <FlagControl field={tripDescription} sid={session.id} onFieldUpdate={onUpdate} />
-                  </div>
-                ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {session.scenes.map((scene) => {
-        const sceneChanged = scene.fields.some(fieldChanged);
-        const editRequired = scene.fields.some((f) => f.flag === 'edit_required');
-        return (
-          <div key={scene.index} className="mb-2 overflow-hidden rounded border border-gray-700">
-            <button type="button" className={rowBtn} onClick={() => toggle(scene.index)}>
-              <span className="flex items-center gap-2">
-                Scene {scene.index}
-                {sceneChanged && changedChip}
-                {editRequired && (
-                  <span className="rounded bg-amber-600 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                    edit required
-                  </span>
-                )}
-              </span>
-              <span className="text-xs text-gray-500">{open.has(scene.index) ? 'Collapse' : 'Edit'}</span>
-            </button>
-            {open.has(scene.index) && (
-              <div className="border-t border-gray-700 p-3">
-                <SceneCard
-                  scene={scene}
-                  fields={scene.fields}
-                  sid={session.id}
-                  onFieldUpdate={onUpdate}
-                  readOnly={false}
-                  isZh={isZh}
-                  language={session.language}
-                />
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </section>
   );
 };
 
@@ -355,6 +202,21 @@ const ChangesSummaryPage = () => {
   // Presence heartbeat: an admin's live presence on a submitted session is what turns
   // a reviewer's recall into a request instead of a silent yank.
   useHeartbeat(session ? sid : undefined, isAdmin ? 'reviewing (admin)' : 'viewing changes');
+
+  // Stage-4b field reports from the web/VR apps (refresh syncs from staging).
+  const [extReports, setExtReports] = useState<ExternalReport[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .externalReports(sid, true)
+      .then((r) => !cancelled && setExtReports(r.reports))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [sid]);
+  const updateExtReport = (r: ExternalReport) =>
+    setExtReports((prev) => prev.map((o) => (o.id === r.id ? r : o)));
 
   const applyFix = (f: { scene: number | null; field: string; option: number | null }) => {
     if (f.scene == null) return;
@@ -550,6 +412,9 @@ const ChangesSummaryPage = () => {
         {/* Recall submission (reviewer takes it back / requests it back). */}
         <RecallControl session={session} onChanged={() => void load()} />
 
+        {/* Approved trips: publish-to-live pipeline (queue on the R2 bus). */}
+        {isAdmin && session.status === 'approved' && <PipelinePanel tripId={session.trip_id} />}
+
         {result && <ResultPanel result={result} />}
 
         {/* Gate-2 auto-review report (shadow mode: informational, approve stays manual) */}
@@ -635,6 +500,27 @@ const ChangesSummaryPage = () => {
             {autoReview.status === 'ok' && autoReview.fields.every((f) => f.verdict === 'ok') && (
               <p className="text-xs text-emerald-400">All changed fields passed — nothing flagged.</p>
             )}
+          </section>
+        )}
+
+        {/* Stage-4b field reports (web/VR), grouped by scene */}
+        {extReports.length > 0 && (
+          <section className="space-y-3 rounded-lg border border-gray-700 bg-gray-800/60 p-4">
+            <h2 className="text-sm font-semibold text-white">
+              Field reports ({extReports.filter((r) => r.status !== 'resolved').length} open)
+            </h2>
+            {[null, ...session.scenes.map((sc) => sc.index)].map((idx) => {
+              const group = extReports.filter((r) => r.scene_index === idx);
+              if (group.length === 0) return null;
+              return (
+                <div key={idx ?? 'trip'}>
+                  <p className="mb-1 text-xs font-medium text-gray-400">
+                    {idx === null ? 'Trip level' : `Scene ${idx}`}
+                  </p>
+                  <ExternalReports reports={group} onUpdate={updateExtReport} />
+                </div>
+              );
+            })}
           </section>
         )}
 

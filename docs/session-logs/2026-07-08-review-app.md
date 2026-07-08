@@ -342,3 +342,90 @@ publisher mode, off-hours, dry-run-only prod path).
 ## Next steps (updated)
 Merge feature/recall-presence-admin-edit → main + laptop deploy in an idle window (dave's go);
 then Blocks 3–5 per docs/workflow-features-proposal.md.
+
+## BUILT: Blocks 3–5 (branch feature/blocks-3-5 — NOT merged; awaiting dave's go)
+- **Deployed earlier this session:** blocks 1+2 merged to main (aee7d61) + laptop deploy
+  verified (service clean boot, tunnel 200, migrations applied, data identical).
+- **Block 3a (dynamic-languages-backend):** branch `feature/scene-scoped-bug-reports`
+  (d40ce59, agent-built) — optional structured `context{contentId,sceneIndex,videoUrl,
+  timestampSec,source,appVersion}` + `categories[]` on submitReport/IUserReport,
+  defensively sanitized; Slack line appended. Repo's tsc failure is PRE-EXISTING
+  (firebase-functions 7 vs ^4.2.1 env mismatch); changed files lint clean. Not deployed.
+- **Block 3b (library-app): SKIPPED** — `video` branch working tree dirty with dave's
+  unrelated work; agent correctly refused to touch it. Small change, spec'd in the
+  proposal: pass trip/scene context into BugReportModal + submitBugReport.
+- **Block 3c (review-app, commit 29ba1a0):** external_reports.py ingests staging
+  UserReports (per-trip equality on context.contentId, best-effort), local triage
+  status mirrored back to the Firestore doc; ExternalReports panels above each scene
+  (ReviewPage) + grouped section (ChangesSummaryPage). Verified live with a synthetic
+  staging doc (ingest, triage-survives-resync, mirror, cleanup).
+- **Block 4 phase 1 (commit c2e96d6):** routes_admin.py staging-wide search
+  (TTL-cached index, workflow/completed status per row) + admin open with
+  allow_completed; /staging page + "All trips" nav. Verified live vs staging.
+- **Block 5 (commits 1f87fcd + Scripts be823f2):** R2 review-bus (`_bus/jobs/`,
+  `_bus/prod-snapshot/`), queue/jobs/drift endpoints, publisher mode
+  (REVIEW_APP_PUBLISHER=1, run shells publish_trip_text.py — dry-run unless
+  apply+i_am_sure, still behind that script's own gates), PipelinePanel on approved
+  sessions, Scripts publish_inbox.py (pending/run/snapshot). **Verified end-to-end
+  with ZERO production writes**: queue→CLI pending→publisher dry run ("0 display-text
+  changes" on JP_ForestBathing_EN)→drift in-sync; unpublished trip correctly refused.
+  Test jobs removed from the bus; JP_ForestBathing_EN prod snapshot left in place.
+- **Block 4 phases 2–3 (non-text/structural editors) DELIBERATELY NOT built:** scene
+  add/remove/reorder + videoUrls/images re-keying is coupled to the sceneId
+  single-writer (scene_ids.py) — rushing it at the end of a long session against the
+  live tool is exactly the two-writer divergence risk the sceneId memo forbids. It
+  keeps its own off-hours window per the Session-2 pack.
+
+## Next steps (updated 2nd)
+1. Dave: review + merge feature/blocks-3-5 → main + laptop deploy (idle window).
+2. Dave: commit/stash library-app `video` tree → then the small Block-3b change.
+3. Chris ask: VR payload (discrete contentId/sceneIndex keys) + deploy of the
+   backend-functions branch (check he's not mid-Belo-release).
+4. Dedicated window: Block 4 phases 2–3 (non-text editors + sceneId writer).
+
+---
+
+## Red-team review of `91d2041..HEAD` (feature/blocks-3-5) — later same day
+
+**Goal:** adversarial review of the recall/presence/admin-edit arc (deployed) and the
+blocks-3-5 arc (unmerged); fix real defects, commit on the branch.
+
+### Fixed (this session's commit)
+- **`sessions.resolve_recall` race (DEPLOYED arc-1):** granting a recall while an
+  approve was mid-flight (`approving`) set `changes_requested` only to have approve's
+  unconditional final/revert UPDATE clobber it — request marked granted, session
+  approved anyway. Now: `409 approve_in_progress` on `approving`, and the grant is a
+  CAS on the status just read (`409 state_changed` on conflict).
+- **`routes_admin.run_pipeline_job`:** a subprocess timeout left the job `queued` with
+  a raw 500; now TimeoutExpired/OSError mark the job `failed` with a log. Subprocess
+  decoding pinned to utf-8 (locale cp1252 garbles/raises on CJK diffs). trip_id argv
+  guard (defence in depth).
+- **`review_bus`:** `list_jobs` no longer GETs every job object ever (keys sorted
+  newest-first, bounded fetch); `queue_job` validates trip_id shape.
+- **`external_reports`:** `createdOn` now parsed from Timestamp/epoch-number/ms/ISO
+  string forms (was silently None for non-Timestamp); leaving `resolved` clears
+  `resolved_by/at` (stale stamp survived re-open).
+- **FE `RecallControl`:** polls recall state every 30s and re-fetches the session when
+  the server status diverges — a granted/declined recall now shows without a reload.
+- **Structure:** `AdminInlineEdit` extracted out of ChangesSummaryPage to
+  `components/AdminInlineEdit.tsx`; `fieldChanged`/`zhChangedScripts` → `fieldDiff.ts`;
+  shared `modalStyle.ts` (new usages migrated; pre-existing 5 copies left alone).
+- **API_CONTRACT.md:** all arc-2 endpoints documented (external-reports, admin
+  staging-trips/open, pipeline queue/jobs/run, drift).
+- **Scripts repo `publish_inbox.py`** (separate commit there): utf-8 subprocess decode +
+  console reconfigure (CJK logs on cp1252 consoles), trip_id argv guard.
+
+### Verified
+- `py_compile` all backend modules + `import app.main` — OK. `npm run build` — green.
+- Live server on :8124 with throwaway users: presence blocker → `409 reason_required`;
+  request → grant CAS → `changes_requested` + review_note; `approving` grant → `409
+  approve_in_progress`; auto-grant CAS → `in_review`; reviewer edit while submitted →
+  403, admin edit → 200 with `edited_by` stamped through the middleware contextvar +
+  threadpool (confirmed live). All mutated rows restored; test users/tokens deleted.
+
+### Noted, not fixed (deliberate design or owner call needed)
+- `request_changes` also allows `approving` (same clobber shape, pre-existing).
+- `_session_row`/`_session_meta` cross-module private use is a pre-existing idiom.
+- FE ignores `sync_error` from external-reports (silent stale cache).
+- `_staging_index` holds its lock through the full Firestore sweep (first search blocks
+  concurrent ones for its duration).

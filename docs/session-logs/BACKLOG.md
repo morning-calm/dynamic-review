@@ -114,6 +114,7 @@ chore next time SSH'd in (password-gated).
 ## Workflow-features build (proposal agreed 2026-07-08 — docs/workflow-features-proposal.md)
 - [x] Block 1: presence heartbeat (reviewers+admins) + Recall submission + queue pinning/badge — BUILT 2026-07-08 (branch feature/recall-presence-admin-edit; verified 22/22 local e2e; awaiting merge+deploy)
 - [x] Block 2: admin inline editing on approve page — BUILT 2026-07-08 (same branch; gate + Edit-inline section + edited_by audit; awaiting merge+deploy)
-- [ ] Block 3: stage-4b bug intake — structured submitReport fields (backend+web), review-app ingest of staging UserReports next to SceneDesc; VR payload = Chris ask
-- [ ] Block 4: staging-wide trip search/open (routes_admin.py) + non-text field editors
-- [ ] Block 5: R2 review-bus job bus + publisher-mode instance (workstation, local prod key) + prod snapshot→R2 drift indicator — off-hours, NO real prod writes during build
+- [x] Block 3: stage-4b bug intake — BUILT 2026-07-08 except library-app half (dave's dirty video branch) + VR payload (Chris ask). Backend-fns branch feature/scene-scoped-bug-reports; review-app ingest on feature/blocks-3-5
+- [x] Block 4 PHASE 1 (search/open) BUILT 2026-07-08 on feature/blocks-3-5. [ ] Phases 2-3 (non-text/structural editors + sceneId single-writer) still open — needs its own off-hours window, coupled to scene_ids.py
+- [x] Block 5 BUILT 2026-07-08 (feature/blocks-3-5 + Scripts publish_inbox.py be823f2) — verified dry-run-only end-to-end; real publishes remain human-gated (--apply --i-am-sure)
+- [ ] request_changes allows status='approving' (pre-existing, flagged by red-team 2026-07-08): same clobber shape as the fixed resolve_recall race — BUT it doubles as the only unstick path if an approve crashes mid-flight (session stranded in 'approving'). Fix needs design, not a blanket 409: e.g. allow from 'approving' only when updated_at is older than ~5 min (a live approve finishes in seconds), else 409 approve_in_progress.

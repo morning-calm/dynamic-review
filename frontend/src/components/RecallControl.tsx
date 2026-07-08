@@ -1,25 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Modal from 'react-modal';
 import { toast } from 'react-toastify';
 import { api, ApiError, type RecallState, type Session } from '../api';
 import { useAuth } from '../authContext';
+import { MODAL_STYLE } from '../modalStyle';
 
-const MODAL_STYLE: Modal.Styles = {
-  overlay: { backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 50 },
-  content: {
-    inset: '50% auto auto 50%',
-    transform: 'translate(-50%,-50%)',
-    maxWidth: '480px',
-    width: '90%',
-    background: '#111827',
-    border: '1px solid #374151',
-    borderRadius: '0.5rem',
-    padding: '1rem',
-    color: 'white',
-    maxHeight: '85vh',
-    overflow: 'auto',
-  },
-};
+/** How often to re-poll the recall state while it matters — the admin can grant or
+ * decline at any moment, and the requester should see the outcome without a reload. */
+const POLL_MS = 30_000;
 
 interface RecallControlProps {
   session: Session;
@@ -44,17 +32,29 @@ const RecallControl = ({ session, onChanged }: RecallControlProps) => {
   const status = session.status;
   const relevant = status === 'submitted' || status === 'approving' || status === 'approved';
 
+  // Keep the latest onChanged without making it a poll dependency.
+  const onChangedRef = useRef(onChanged);
+  onChangedRef.current = onChanged;
+
   const refresh = useCallback(() => {
     if (!relevant) return;
     api
       .recallState(session.id)
-      .then(setState)
+      .then((s) => {
+        setState(s);
+        // The server-side status moved under us (e.g. the admin granted the recall →
+        // changes_requested, or approved it) — have the page re-fetch the session.
+        if (s.status !== status) onChangedRef.current();
+      })
       .catch(() => {});
-  }, [session.id, relevant]);
+  }, [session.id, relevant, status]);
 
   useEffect(() => {
     refresh();
-  }, [refresh, status]);
+    if (!relevant) return;
+    const t = setInterval(refresh, POLL_MS);
+    return () => clearInterval(t);
+  }, [refresh, relevant]);
 
   if (!user || !relevant || !state) return null;
 

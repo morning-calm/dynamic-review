@@ -659,7 +659,7 @@ def _list_trips_from_scan() -> list[dict]:
 # --------------------------------------------------------------------------- #
 # Seed / resume
 # --------------------------------------------------------------------------- #
-def create_or_resume(trip_id: str, user) -> dict:
+def create_or_resume(trip_id: str, user, *, allow_completed: bool = False) -> dict:
     # [P0-1] Language gate at the TOP — the create is keyed on trip_id, so the
     # per-{sid} scoping dependency structurally can't cover it. Admins bypass.
     from . import auth   # lazy import (auth imports sessions) — no module-load cycle
@@ -669,7 +669,9 @@ def create_or_resume(trip_id: str, user) -> dict:
             "detail": "this trip's narration language is not assigned to you"})
     # Completed trips are view-only — an admin must un-complete before it can be reviewed
     # again (checked before resume/seed so a leftover session can't reopen a done trip).
-    if db.query_one("SELECT 1 FROM completed_trips WHERE trip_id=?", (trip_id,)):
+    # allow_completed=True is the ADMIN staging-editor path (routes_admin.open) only.
+    if not allow_completed and db.query_one(
+            "SELECT 1 FROM completed_trips WHERE trip_id=?", (trip_id,)):
         raise HTTPException(409, detail={
             "error": "completed",
             "detail": "trip is completed — un-complete it to review"})
@@ -3354,14 +3356,34 @@ def resolve_recall(rid: int, admin, action: str, note: str = "") -> dict:
     if action == "grant":
         srow = _session_row(sid)
         status = srow["status"]
+        if status == "approving":
+            # An approve() is mid-flight. BOTH of its exits (→approved, or the
+            # revert-to-submitted on failure) write the status unconditionally, so a
+            # grant now would be silently clobbered — worse, commit() may already be
+            # half-written to staging. Make the admin wait for the approve to settle.
+            raise HTTPException(409, detail={
+                "error": "approve_in_progress",
+                "detail": "an approve is running on this session — retry once it "
+                          "finishes (it settles to approved or submitted)"})
         msg = (note or "").strip() or f"Recall granted: {row['reason']}"
-        if status == "approved":
-            uncomplete_trip(admin, srow["trip_id"])
-        if status in ("submitted", "approving", "approved"):
-            db.execute(
+        if status in ("submitted", "approved"):
+            if status == "approved":
+                uncomplete_trip(admin, srow["trip_id"])
+            # CAS on the status we just read: if approve claimed the session between
+            # the read and here, don't stomp its transient 'approving' state.
+            changed = db.execute_rowcount(
                 "UPDATE sessions SET status='changes_requested', review_note=?, "
-                "updated_at=? WHERE id=?", (msg, time.time(), sid))
-        session_status = "changes_requested" if status not in _EDITABLE_STATUSES else status
+                "updated_at=? WHERE id=? AND status=?",
+                (msg, time.time(), sid, status))
+            if not changed:
+                raise HTTPException(409, detail={
+                    "error": "state_changed",
+                    "detail": "the session state changed underneath — reload and retry"})
+            session_status = "changes_requested"
+        else:
+            # Already editable (auto-recalled / sent back concurrently) — nothing to do
+            # to the session; just close the request.
+            session_status = status
     now = time.time()
     db.execute(
         "UPDATE recall_requests SET status=?, resolved_by=?, resolved_at=?, "

@@ -24,7 +24,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from . import auth, db, routes_audio, routes_bugs, routes_help, routes_sessions
+from . import auth, db, routes_admin, routes_audio, routes_bugs, routes_help, routes_sessions
 from .config import CORS_ORIGINS, FRONTEND_DIST, HOST, PORT, SERVE_FRONTEND
 
 app = FastAPI(title="review-app backend", version="1.0",
@@ -97,6 +97,7 @@ def health():
 
 app.include_router(auth.router)
 app.include_router(routes_sessions.router)
+app.include_router(routes_admin.router)
 app.include_router(routes_audio.router)
 app.include_router(routes_bugs.router)
 app.include_router(routes_help.router)

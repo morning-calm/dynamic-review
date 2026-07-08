@@ -10,6 +10,7 @@ import ChangesSummaryPage from './pages/ChangesSummaryPage';
 import ReviewQueuePage from './pages/ReviewQueuePage';
 import CompletedPage from './pages/CompletedPage';
 import BugReportsPage from './pages/BugReportsPage';
+import StagingSearchPage from './pages/StagingSearchPage';
 
 const App = () => (
   <BrowserRouter>
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/bugs" element={<BugReportsPage />} />
             <Route element={<RequireAdmin />}>
               <Route path="/queue" element={<ReviewQueuePage />} />
+              <Route path="/staging" element={<StagingSearchPage />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -34,6 +34,26 @@ class Recall(BaseModel):
     reason: str = ""
 
 
+class QueueJob(BaseModel):
+    """Queue a review-bus job (currently only staging→prod text publish requests)."""
+    trip_id: str
+    kind: Literal["publish"] = "publish"
+    note: str = ""
+
+
+class RunJob(BaseModel):
+    """Publisher-mode execution of a queued job. Default = DRY RUN; a real production
+    write needs BOTH flags true (and still rides publish_trip_text.py's own gates)."""
+    job_id: str
+    apply: bool = False
+    i_am_sure: bool = False
+
+
+class ExternalReportStatus(BaseModel):
+    """Admin triage of a stage-4b external (web/VR) bug report."""
+    status: Literal["open", "acknowledged", "resolved"]
+
+
 class RecallResolve(BaseModel):
     """Admin resolves a pinned recall request: grant = send the trip back to the reviewer
     (changes_requested; un-completes first if it was approved), decline = keep it."""
