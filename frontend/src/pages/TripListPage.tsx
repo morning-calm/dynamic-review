@@ -5,6 +5,8 @@ import { toast } from 'react-toastify';
 import { api, ApiError, type SessionStatus, type TripListItem } from '../api';
 import { useAuth } from '../authContext';
 import UserMenu from '../components/UserMenu';
+import PresenceBadge from '../components/PresenceBadge';
+import { usePresence } from '../usePresence';
 
 type LaneFilter = 'all' | '6' | '7';
 
@@ -65,6 +67,8 @@ const TripListPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
   const [lane, setLane] = useState<LaneFilter>('all');
+  // Live presence dots: who is on which trip right now (heartbeat from the session pages).
+  const presence = usePresence();
 
   // Mark-complete modal (admin only): the trip pending confirmation + its optional note.
   const [completeTarget, setCompleteTarget] = useState<TripListItem | null>(null);
@@ -235,7 +239,10 @@ const TripListPage = () => {
                       {trip.level || '—'}
                     </span>
                     <div className="min-w-0">
-                      <p className="truncate text-sm text-gray-200">{trip.title || trip.trip_id}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate text-sm text-gray-200">{trip.title || trip.trip_id}</p>
+                        <PresenceBadge entries={presence.filter((p) => p.trip_id === trip.trip_id)} />
+                      </div>
                       <p className="truncate text-[11px] text-gray-500">{trip.trip_id}</p>
                     </div>
                   </div>

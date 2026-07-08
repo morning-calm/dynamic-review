@@ -284,3 +284,61 @@ was started then stopped — Phase 3 stays deferred per dave until we have shado
 Drive the Apply button against a real `_ZH` report when one next has a suggested fix (send the
 session back to `changes_requested` so it's editable). Everything else on BACKLOG.md is captured.
 Phase 3 remains OFF pending shadow-report results.
+
+---
+
+## 2nd session (evening) — feature planning: recall / presence / admin edit / Stage-9-in-app / 4b bug intake
+
+**Goal:** Dave asked for a proposal (no build yet) covering: reviewer "get my submission back",
+admin inline editing on the approve page — which grew to include reviewer+admin presence,
+Stage-9→publish managed by the app, a staging/live editor, and surfacing stage-4b VR/web bug
+reports next to the SceneDesc.
+
+**What I did**
+- Explored (agents): review-app lifecycle/state machine + admin page reusability; library-app +
+  dynamic-languages-backend + the Unity VR app for existing bug-report plumbing. Key finds: no
+  post-submit reviewer transition and no "admin mid-review" concept exist; editor components are
+  readOnly-parameterized (reusable on the approve page); a full bug-report pipeline already
+  exists in BOTH client apps → callable `submitReport` → Firestore `UserReports` (+Slack), but
+  with NO structured trip/scene fields (VR embeds contentId+scene in a text blob; web sends
+  nothing).
+- Wrote the agreed proposal: **`docs/workflow-features-proposal.md`** (all decisions inline).
+- Decisions locked with Dave: "Recall submission" (submitter-only auto-grant; request+reason if
+  admin mid-review/approved; approved grant = un-complete + changes_requested behind a warning);
+  presence heartbeats for reviewers AND admins; admin inline edit with no listen gate;
+  Stage-9/publish = publisher-mode app on the workstation reading a locally-stored prod key over
+  an R2 `review-bus/` job bus, human-clicked publishes with diff, prod state to the laptop via
+  R2 snapshots; "edit Live" stays staging→publish (no direct prod writes).
+
+**Verified:** planning session — no code changes, nothing to run.
+
+**Next steps:** build order per the proposal (presence+recall → admin inline edit → 4b bug
+intake (backend+web ours; VR = Chris ask) → staging-wide search/non-text editors → job bus +
+publisher mode, off-hours, dry-run-only prod path).
+
+## BUILT: Blocks 1+2 of the workflow features (branch feature/recall-presence-admin-edit)
+- **Backend:** `presence` + `recall_requests` tables (db.py); heartbeat/presence/recall-state/
+  recall/requests/count/resolve endpoints (sessions.py + routes_sessions.py); `assert_editable`
+  now admits ADMIN edits at `submitted` (approve-page touch-ups; approving/approved stay locked);
+  `field_edits.edited_by` audit stamp via a `db.CURRENT_EDITOR` contextvar set in the auth
+  middleware (event-loop context — a sync-dependency set would be lost to the threadpool copy).
+- **Frontend:** `usePresence.ts` (heartbeat + poll hooks), `PresenceBadge`, `RecallControl`
+  (auto-grant / reason modal / waiting+declined banners); ReviewPage + ChangesSummaryPage
+  heartbeat + recall; ChangesSummaryPage gains the admin **Edit inline** section (trip header +
+  per-scene SceneCard with the full toolbox, SaveStatusProvider-wrapped) and "edited by" chips;
+  ReviewQueuePage pins recall requests (grant/decline modal, approved-trip warning) + presence
+  dots; TripListPage presence dots; UserMenu amber recall badge on Review queue (admin).
+- **Contract:** API_CONTRACT.md — new endpoint rows, recall/presence workflow bullets,
+  `edited_by` on Field; removed the stale (pruned 2026-07-08) `/audio/…/ab/{ver}` row.
+- **Verified:** backend import OK; `tsc -b && vite build` green; **22/22 end-to-end checks**
+  against a live local uvicorn (port 8123, dev review.db): auto-recall CAS, admin-heartbeat
+  block → 409 reason_required → request, submitter-only 403, admin list/count, decline+note
+  visible to reviewer, grant → changes_requested + review_note, approved-trip grant →
+  un-complete + reopen, reviewer 403 vs admin 200 edit at `submitted` (edited_by stamped),
+  admin 403 at approving/approved, presence list. Dev DB state + test users fully restored.
+- **NOT deployed** — branch only (laptop cron auto-pulls main, so merging = deploying the BE;
+  FE needs `npm run build` + service restart there in an idle window).
+
+## Next steps (updated)
+Merge feature/recall-presence-admin-edit → main + laptop deploy in an idle window (dave's go);
+then Blocks 3–5 per docs/workflow-features-proposal.md.

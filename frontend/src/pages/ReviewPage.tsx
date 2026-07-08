@@ -11,6 +11,8 @@ import FlagControl from '../components/FlagControl';
 import SceneCard from '../components/SceneCard';
 import NarrationControls from '../components/NarrationControls';
 import ZhFieldBlock from '../components/ZhFieldBlock';
+import RecallControl from '../components/RecallControl';
+import { useHeartbeat } from '../usePresence';
 
 /** Scroll the first not-yet-done field into view (document order, read from the DOM
  * anchors FlagControl renders). Returns true if one was found. */
@@ -100,6 +102,21 @@ const ReviewBody = () => {
     };
   }, [sid, applySession]);
 
+  // Re-fetch after a recall (the session just became editable again).
+  const reload = useCallback(() => {
+    api
+      .getSession(sid)
+      .then(applySession)
+      .catch((e: unknown) => setError(e instanceof ApiError ? e.detail || e.code : 'Failed to load session'));
+  }, [sid, applySession]);
+
+  // Presence heartbeat: who's on this session and what they're doing (trip list /
+  // queue live dots; also the recall "admin mid-review" signal on the admin pages).
+  useHeartbeat(
+    session ? sid : undefined,
+    session && isEditableStatus(session.status) ? 'editing' : 'viewing (locked)',
+  );
+
   // Stable updater. Replaces only the changed field's array entry so unchanged
   // scene arrays keep their reference and memoised SceneCards skip re-rendering.
   const updateField = useCallback((f: Field) => {
@@ -180,6 +197,9 @@ const ReviewBody = () => {
             edits would start a new round of corrections in a fresh session.
           </div>
         )}
+
+        {/* Recall submission: auto-grant when possible, else a reasoned admin request. */}
+        <RecallControl session={session} onChanged={reload} />
 
         {!isZh && <NarrationControls session={session} onUpdate={applySession} />}
 

@@ -62,6 +62,10 @@ async def require_auth(request: Request, call_next):
                             content={"error": "unauthorized",
                                      "detail": "authentication required"})
     request.state.user = user
+    # Request-context editor identity for field_edits.edited_by stamping (db.update_fields).
+    # Set here (event-loop task context) so it propagates into threadpool'd sync handlers;
+    # a set() inside a sync dependency would be lost to the threadpool's context copy.
+    db.CURRENT_EDITOR.set(user.username)
     return await call_next(request)
 
 

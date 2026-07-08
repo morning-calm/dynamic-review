@@ -9,6 +9,7 @@ import { api } from '../api';
 const UserMenu = () => {
   const { user, logout } = useAuth();
   const [bugBadge, setBugBadge] = useState(0);
+  const [recallBadge, setRecallBadge] = useState(0);
   const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
@@ -23,6 +24,25 @@ const UserMenu = () => {
         .catch(() => {});
     load();
     // Light polling so a new report / reply surfaces without a reload.
+    const t = setInterval(load, 60000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [user]);
+
+  // Admin-only: open recall requests → badge on the Review queue link.
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return;
+    let cancelled = false;
+    const load = () =>
+      api
+        .recallCounts()
+        .then((c) => {
+          if (!cancelled) setRecallBadge(c.open);
+        })
+        .catch(() => {});
+    load();
     const t = setInterval(load, 60000);
     return () => {
       cancelled = true;
@@ -92,9 +112,15 @@ const UserMenu = () => {
       {user.role === 'admin' && (
         <Link
           to="/queue"
-          className="rounded border border-gray-600 px-2 py-1 text-gray-200 hover:bg-gray-700"
+          className="relative rounded border border-gray-600 px-2 py-1 text-gray-200 hover:bg-gray-700"
+          title={recallBadge > 0 ? `${recallBadge} recall request${recallBadge === 1 ? '' : 's'} waiting` : undefined}
         >
           Review queue
+          {recallBadge > 0 && (
+            <span className="ml-1 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-gray-900">
+              {recallBadge}
+            </span>
+          )}
         </Link>
       )}
       <span

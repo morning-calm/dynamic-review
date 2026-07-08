@@ -11,6 +11,7 @@ Tables (per the design plan; a few columns added for clean version lookup):
 
 from __future__ import annotations
 
+import contextvars
 import sqlite3
 import threading
 import time
@@ -20,6 +21,13 @@ from .config import DB_PATH
 
 _LOCK = threading.RLock()
 _CONN: sqlite3.Connection | None = None
+
+# Who is performing the current request (set by the auth middleware in main.py, which
+# runs in the request's task context so it propagates into threadpool'd handlers).
+# update_fields stamps it into field_edits.edited_by — a best-effort audit hint (some
+# low-level writes bypass update_fields), used to show "touched by admin" on the diff.
+CURRENT_EDITOR: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "CURRENT_EDITOR", default=None)
 
 
 SCHEMA = """
@@ -170,6 +178,36 @@ CREATE TABLE IF NOT EXISTS bug_report_messages (
     FOREIGN KEY (report_id) REFERENCES bug_reports(id)
 );
 
+-- Live presence: who has which session open right now (reviewer OR admin), heartbeated
+-- by the FE every ~30s with a human-readable context ("Scene 4 · SceneDesc — editing").
+-- A row is "live" while updated_at is within PRESENCE_LIVE_SECONDS; stale rows are
+-- pruned opportunistically on each heartbeat. Also drives the recall "admin mid-review"
+-- check, so a reviewer can't yank a session out from under a reviewing admin.
+CREATE TABLE IF NOT EXISTS presence (
+    username   TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    role       TEXT NOT NULL DEFAULT 'reviewer',
+    context    TEXT NOT NULL DEFAULT '',
+    updated_at REAL NOT NULL,
+    PRIMARY KEY (username, session_id)
+);
+
+-- Recall requests: a reviewer asks for their SUBMITTED trip back when it can't be
+-- auto-recalled (admin mid-review, or already approved). Admin grants (send back) or
+-- declines from the review queue, where open requests are pinned.
+CREATE TABLE IF NOT EXISTS recall_requests (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id      TEXT NOT NULL,
+    trip_id         TEXT NOT NULL DEFAULT '',
+    requested_by    TEXT NOT NULL,
+    reason          TEXT NOT NULL DEFAULT '',
+    status          TEXT NOT NULL DEFAULT 'open',   -- open | granted | declined
+    created_at      REAL NOT NULL,
+    resolved_by     TEXT,
+    resolved_at     REAL,
+    resolution_note TEXT NOT NULL DEFAULT ''
+);
+
 CREATE TABLE IF NOT EXISTS auto_reviews (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     session_id   TEXT NOT NULL,
@@ -183,6 +221,9 @@ CREATE TABLE IF NOT EXISTS auto_reviews (
     report_json  TEXT NOT NULL DEFAULT '{}'     -- Gate-2 per-field verdicts (see claude_review.py)
 );
 
+CREATE INDEX IF NOT EXISTS ix_presence_session ON presence(session_id, updated_at);
+CREATE INDEX IF NOT EXISTS ix_recall_status ON recall_requests(status, created_at);
+CREATE INDEX IF NOT EXISTS ix_recall_session ON recall_requests(session_id, created_at);
 CREATE INDEX IF NOT EXISTS ix_autoreviews_session ON auto_reviews(session_id, created_at);
 CREATE INDEX IF NOT EXISTS ix_bugreports_status ON bug_reports(status, created_at);
 CREATE INDEX IF NOT EXISTS ix_bugreports_reporter ON bug_reports(reporter, created_at);
@@ -235,6 +276,10 @@ def init() -> None:
             # which audio_versions.n the working take currently sits on, for undo/redo.
             # NULL = the latest version (no undo applied yet).
             conn.execute("ALTER TABLE field_edits ADD COLUMN version_cursor INTEGER")
+        if "edited_by" not in fcols:
+            # last user who changed this field (via update_fields) — audit hint for the
+            # approve page's "touched by admin" badge.
+            conn.execute("ALTER TABLE field_edits ADD COLUMN edited_by TEXT")
         if "localization_json" not in fcols:
             # Mandarin (_ZH) 4-script block for this field: JSON
             # {"cur":{Hans,Hant,zhuyin,en}, "orig":{…}}. NULL for every non-_ZH field
@@ -300,8 +345,12 @@ def execute_rowcount(sql: str, params: tuple = ()) -> int:
 
 
 def update_fields(field_id: int, **cols: Any) -> None:
-    """Patch named columns on a field_edits row, always bumping updated_at."""
+    """Patch named columns on a field_edits row, always bumping updated_at (and stamping
+    edited_by from the request context when known — see CURRENT_EDITOR)."""
     cols.setdefault("updated_at", time.time())
+    editor = CURRENT_EDITOR.get()
+    if editor:
+        cols.setdefault("edited_by", editor)
     sets = ", ".join(f"{k}=?" for k in cols)
     params = tuple(cols.values()) + (field_id,)
     execute(f"UPDATE field_edits SET {sets} WHERE id=?", params)

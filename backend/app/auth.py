@@ -237,10 +237,12 @@ def scope_sid(sid: str, request: Request) -> str:
 def scope_sid_editable(sid: str, request: Request) -> str:
     """Scope check PLUS the lock-on-submit gate: 403 while the session is not in an
     editable state (submitted/approving/approved are read-only). Applied to the editing
-    routes only — read/workflow routes (get, played, submit, approve, …) use scope_sid."""
+    routes only — read/workflow routes (get, played, submit, approve, …) use scope_sid.
+    ADMINS are additionally allowed to edit a 'submitted' session (approve-page inline
+    touch-ups) — see sessions.assert_editable."""
     from . import sessions
     trip_id = scope_sid(sid, request)
-    sessions.assert_editable(sid)
+    sessions.assert_editable(sid, require_user(request))
     return trip_id
 
 
