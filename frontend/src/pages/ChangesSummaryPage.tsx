@@ -163,6 +163,9 @@ const ChangesSummaryPage = () => {
   const [sendBackNote, setSendBackNote] = useState('');
   const [sendingBack, setSendingBack] = useState(false);
   const [autoReview, setAutoReview] = useState<AutoReviewReport | null>(null);
+  // Report-field keys whose suggested fix has been applied this visit (disables the button).
+  const [appliedFixes, setAppliedFixes] = useState<Set<string>>(new Set());
+  const [applyingFix, setApplyingFix] = useState<string | null>(null);
 
   const isAdmin = user?.role === 'admin';
 
@@ -197,6 +200,23 @@ const ChangesSummaryPage = () => {
   const allDone = all.length > 0 && notDone === 0;
   const shown = editOnly ? changed.filter((ff) => ff.field.flag === 'edit_required') : changed;
   const editable = session ? isEditableStatus(session.status) : false;
+  const isZh = useMemo(() => all.some((ff) => ff.field.localization), [all]);
+
+  const applyFix = (f: { scene: number | null; field: string; option: number | null }) => {
+    if (f.scene == null) return;
+    const key = `${f.scene}·${f.field}·${f.option ?? ''}`;
+    setApplyingFix(key);
+    api
+      .applySuggestedFix(sid, { scene: f.scene, field: f.field, option: f.option })
+      .then((res) => {
+        onUpdate(res.field);
+        setAppliedFixes((prev) => new Set(prev).add(key));
+        const skipped = res.skipped.length ? ` (skipped ${res.skipped.map((s) => s.script).join(', ')})` : '';
+        toast.success(`Applied ${res.applied.join(', ')}${skipped} — listen & confirm`);
+      })
+      .catch((e: unknown) => toast.error(e instanceof ApiError ? e.detail || e.code : 'Failed to apply fix'))
+      .finally(() => setApplyingFix(null));
+  };
 
   // C3: a plain <a href> can't carry the Authorization header (→ 401). Fetch the
   // zip as a blob with the header, then trigger a download from an object URL.
@@ -432,6 +452,24 @@ const ChangesSummaryPage = () => {
                             <span className="text-gray-500">{k}:</span> {v}
                           </p>
                         ))}
+                        {isZh && editable && f.suggested_fix_verified === true && f.scene != null && (() => {
+                          const key = `${f.scene}·${f.field}·${f.option ?? ''}`;
+                          const done = appliedFixes.has(key);
+                          return (
+                            <button
+                              type="button"
+                              disabled={done || applyingFix === key}
+                              onClick={() => applyFix(f)}
+                              className={`mt-2 rounded border px-2 py-1 text-xs font-medium ${
+                                done
+                                  ? 'cursor-default border-emerald-700/60 text-emerald-400'
+                                  : 'border-emerald-600 text-emerald-300 hover:bg-emerald-900/30'
+                              } ${applyingFix === key ? 'opacity-50' : ''}`}
+                            >
+                              {done ? '✓ Applied — listen & confirm' : applyingFix === key ? 'Applying…' : 'Apply fix'}
+                            </button>
+                          );
+                        })()}
                       </div>
                     )}
                   </li>
