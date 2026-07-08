@@ -102,7 +102,35 @@ pattern, fix everything, write it up for Ted, add a soft UI warning.
   EditableField — hint when target text changed but the English sibling (source_text) wasn't
   updated. Build green; deployed via dist rebuild (static serve — no restart needed).
 
+## Evening session — auto-review Phase 1+2 SHIPPED (dave approved the proposal)
+- **Gate 1** `backend/app/auto_checks.py` wired into `sessions.validate` (rides submit/
+  approve/FE validation): zh script purity, Hant↔Hans correspondence, zhuyin alignment
+  (all hsk_lib, lazy, degrade-to-warn) BLOCK; partial-sibling-edit warn; en-not-updated
+  note; format checks. Validated: pre-correction data → 61 blocks matching the hand audit
+  exactly; corrected data → 0 blocks (note-level only); EN/JP sessions → clean, no noise.
+  (Test quirk: scp'd review.db WITHOUT -wal → stale copy = accidental pre-correction
+  regression fixture. Copy db+wal or use .backup next time.)
+- **Gate 2** `scripts/claude_review.py` (SHADOW: reports only, never mutates): submitted
+  sessions w/o fresh report → diff JSON → headless `claude -p --model sonnet` (CLI verified
+  working on the laptop, ~$0.06-0.15/review, 50-130s) → per-field verdicts (meaning/quality/
+  level/Q&A) → zh suggested fixes post-verified with hsk_lib → auto_reviews row. Fail-open.
+  Laptop cron ***/5** added (logs backend/autoreview.log). Model/effort via env
+  REVIEW_CLAUDE_MODEL (default sonnet, default effort).
+- **First 3 shadow reports generated**: Taichung_HSK3 0ok/11warn (老旧 above-HSK3 + en
+  doesn't carry "worn-out" nuance — legit), Taipei101 2ok/4warn/2needs-human (攀巖 variant,
+  scene-9 commas, one likely-mistaken "Hant unchanged" flag on scene 4 — shadow-mode noise,
+  acceptable), Taichung_HSK12 7ok/1warn (铁轨 above HSK1-2). Verdict quality: genuinely
+  useful, errs cautious.
+- **Surfacing**: auto_reviews table (db.py); GET /sessions/{sid}/auto-checks +
+  /auto-review; ChangesSummaryPage "Auto-review" panel (chip + flagged fields + suggested
+  fixes w/ verification badge); notifier immediate `auto_review` events (dry-run verified —
+  first verdicts email goes out next cron tick).
+- Deployed: pull + dist rebuild + service restart (idle 892 min). All verified live.
+
 ## Open / carried forward
+- **Auto-review Phase 3** (auto-approve clean reports) — NOT enabled; needs dave's shadow-
+  mode confidence first. Also possible: "apply suggested fix" button; level_check.py vocab
+  reuse for a deterministic HSK-level gate; JP-specific Gate-1 checks.
 - Mobile deeper work deferred: touch-first splice selection UX (or explicitly keep splice
   desktop/tablet-only); sticky mini-player; collapsing the 17-button RegenerateControls row.
 - systemd `daemon-reload` on the laptop (see note above).
