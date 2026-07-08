@@ -7,15 +7,23 @@ Read/open only — every write still goes through the session editor + approve
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
 import threading
 import time
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
-from . import audio_core, auth, db, sessions
-from .models import CreateSession
+from . import audio_core, auth, db, review_bus, sessions
+from .config import SCRIPTS_ROOT
+from .models import CreateSession, QueueJob, RunJob
 
 router = APIRouter(prefix="/api/admin")
+
+# Publisher mode: the WORKSTATION instance of the app (the one machine holding the
+# production key). The laptop deploy must never set this — it only queues/views jobs.
+PUBLISHER_MODE = os.environ.get("REVIEW_APP_PUBLISHER") == "1"
 
 # One light Firestore sweep of Trips ids + display fields, cached: search-as-you-type
 # must not re-stream ~900 docs per keystroke. Refresh after TTL or on ?refresh=1.
@@ -79,3 +87,82 @@ def open_staging_trip(body: CreateSession, admin=Depends(auth.require_admin)):
     one (the reviewer flow 409s there; the admin editor is exactly for post-completion
     fixes). Seeding still requires resolvable MP3 masters (422 bad_folder otherwise)."""
     return sessions.create_or_resume(body.trip_id, admin, allow_completed=True)
+
+
+# --------------------------------------------------------------------------- #
+# Pipeline: R2 review-bus publish handshake (WS4 phase 4)
+# --------------------------------------------------------------------------- #
+@router.post("/pipeline/queue")
+def queue_pipeline_job(body: QueueJob, admin=Depends(auth.require_admin)):
+    """Queue a staging→production TEXT publish request for a trip. Writes a job object
+    to the R2 bus — nothing executes until a human runs it on the workstation
+    (publisher mode below, or `publish_inbox.py` in the Scripts repo)."""
+    return review_bus.queue_job(body.kind, body.trip_id, admin, body.note)
+
+
+@router.get("/pipeline/jobs")
+def pipeline_jobs(trip_id: str = "", admin=Depends(auth.require_admin)):
+    return {"publisher_mode": PUBLISHER_MODE,
+            "jobs": review_bus.list_jobs(trip_id or None)}
+
+
+@router.get("/drift/{trip_id}")
+def drift(trip_id: str, admin=Depends(auth.require_admin)):
+    """Staging vs production DISPLAY-TEXT drift for one trip, diffed against the
+    workstation-exported prod snapshot on the bus (`publish_inbox.py snapshot`).
+    The laptop never reads production directly — no prod credential of any kind."""
+    from .staging import get_trip
+    snap = review_bus.prod_snapshot(trip_id)
+    if snap is None:
+        return {"trip_id": trip_id, "snapshot_at": None, "fields_differ": None}
+    try:
+        stg = get_trip(trip_id)
+    except SystemExit as e:
+        raise HTTPException(404, detail={"error": "no_staging_trip", "detail": str(e)})
+    prod = snap.get("trip") or {}
+    differ: list[str] = []
+    for f in ("contentTitleKey", "descriptionTarget", "descriptionHome"):
+        if (stg.get(f) or "") != (prod.get(f) or ""):
+            differ.append(f)
+    s_scenes = stg.get("quickTrips") or []
+    p_scenes = prod.get("quickTrips") or []
+    if len(s_scenes) != len(p_scenes):
+        differ.append(f"scene_count ({len(p_scenes)} live vs {len(s_scenes)} staging)")
+    else:
+        for i, (ss, ps) in enumerate(zip(s_scenes, p_scenes)):
+            for f in ("titleKey", "titleKeyEn", "SceneDesc", "SceneDescEn",
+                      "questionKey", "questionKeyEn", "questionOptionKeys",
+                      "questionOptionKeysEn"):
+                if (ss or {}).get(f) != (ps or {}).get(f):
+                    differ.append(f"quickTrips[{i}].{f}")
+    return {"trip_id": trip_id, "snapshot_at": snap.get("fetched_at"),
+            "fields_differ": differ}
+
+
+@router.post("/pipeline/run")
+def run_pipeline_job(body: RunJob, admin=Depends(auth.require_admin)):
+    """PUBLISHER MODE ONLY (403 otherwise — the laptop can never execute): run a queued
+    publish job via the Scripts repo's `publish_trip_text.py`. Default is a DRY RUN
+    (field-level diff, no write); a real write requires apply+i_am_sure here AND rides
+    that script's own `--apply --i-am-sure` gates with the workstation-local prod key."""
+    if not PUBLISHER_MODE:
+        raise HTTPException(403, detail={
+            "error": "not_publisher",
+            "detail": "this instance is not running in publisher mode "
+                      "(REVIEW_APP_PUBLISHER=1 on the workstation only)"})
+    job = review_bus.get_job(body.job_id)
+    if job.get("kind") != "publish":
+        raise HTTPException(422, detail={"error": "bad_kind", "detail": job.get("kind")})
+    apply_write = bool(body.apply and body.i_am_sure)
+    cmd = [sys.executable, str(SCRIPTS_ROOT / "publish_trip_text.py"), job["trip_id"]]
+    if apply_write:
+        cmd += ["--apply", "--i-am-sure"]
+    proc = subprocess.run(cmd, cwd=str(SCRIPTS_ROOT), capture_output=True,
+                          text=True, timeout=300)
+    log = (proc.stdout or "") + (("\n" + proc.stderr) if proc.stderr else "")
+    status = ("failed" if proc.returncode != 0
+              else ("done" if apply_write else "dry_run"))
+    return review_bus.update_job(
+        body.job_id, status=status, log=log[-8000:],
+        resolved_by=getattr(admin, "username", None) or "",
+        resolved_at=time.time())

@@ -24,6 +24,7 @@ import FlagControl from '../components/FlagControl';
 import ZhFieldBlock from '../components/ZhFieldBlock';
 import RecallControl from '../components/RecallControl';
 import ExternalReports from '../components/ExternalReports';
+import PipelinePanel from '../components/PipelinePanel';
 import SaveStatus from '../components/SaveStatus';
 import { SaveStatusProvider } from '../SaveStatusProvider';
 import { useSaveCoordinator } from '../saveStatusContext';
@@ -566,6 +567,9 @@ const ChangesSummaryPage = () => {
 
         {/* Recall submission (reviewer takes it back / requests it back). */}
         <RecallControl session={session} onChanged={() => void load()} />
+
+        {/* Approved trips: publish-to-live pipeline (queue on the R2 bus). */}
+        {isAdmin && session.status === 'approved' && <PipelinePanel tripId={session.trip_id} />}
 
         {result && <ResultPanel result={result} />}
 

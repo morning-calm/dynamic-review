@@ -222,6 +222,31 @@ export interface ExternalReportsResponse {
   sync_error: string | null;
 }
 
+// --- Pipeline (R2 review-bus publish handshake) ---
+
+/** A job on the R2 review bus. Queued by any admin; executed only on the workstation
+ * (publisher mode / publish_inbox.py) where the production key lives. */
+export interface BusJob {
+  id: string;
+  kind: 'publish';
+  trip_id: string;
+  note: string;
+  requested_by: string;
+  requested_at: number;
+  status: 'queued' | 'dry_run' | 'done' | 'failed';
+  resolved_by?: string;
+  resolved_at?: number;
+  log?: string;
+}
+
+export interface DriftResponse {
+  trip_id: string;
+  /** null = no prod snapshot on the bus yet (run publish_inbox.py snapshot). */
+  snapshot_at: number | null;
+  /** Display fields differing staging vs the prod snapshot; null when no snapshot. */
+  fields_differ: string[] | null;
+}
+
 /** One row of the admin staging-wide trip search (GET /api/admin/staging-trips). */
 export interface AdminStagingTrip {
   trip_id: string;
@@ -804,6 +829,23 @@ export const api = {
   /** Admin only: open ANY staging trip (bypasses the manifest + completed exclusion). */
   adminOpenTrip: (tripId: string): Promise<Session> =>
     postJson('/api/admin/open', { trip_id: tripId }),
+
+  // --- Pipeline (publish bus) ---
+  /** Admin only: queue a staging→prod TEXT publish request on the R2 bus. */
+  queuePublish: (tripId: string, note = ''): Promise<BusJob> =>
+    postJson('/api/admin/pipeline/queue', { trip_id: tripId, kind: 'publish', note }),
+
+  /** Admin only: jobs on the bus (optionally one trip's). */
+  pipelineJobs: (tripId = ''): Promise<{ publisher_mode: boolean; jobs: BusJob[] }> =>
+    getJson(`/api/admin/pipeline/jobs${tripId ? `?trip_id=${encodeURIComponent(tripId)}` : ''}`),
+
+  /** Publisher mode only: execute a queued job (dry-run unless both flags true). */
+  runPipelineJob: (jobId: string, apply = false, iAmSure = false): Promise<BusJob> =>
+    postJson('/api/admin/pipeline/run', { job_id: jobId, apply, i_am_sure: iAmSure }),
+
+  /** Admin only: staging vs live drift for a trip (vs the bus prod snapshot). */
+  drift: (tripId: string): Promise<DriftResponse> =>
+    getJson(`/api/admin/drift/${encodeURIComponent(tripId)}`),
 
   // --- Presence + recall ---
   /** Presence ping (~30s while a session page is open): what this user is looking at.
