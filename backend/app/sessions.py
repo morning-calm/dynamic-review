@@ -2578,10 +2578,15 @@ def _field_has_edit(f) -> bool:
             or (f["source_text"] or "") != (f["original_source"] or ""))
 
 
-def validate(sid: str) -> tuple[list[dict], list[dict]]:
+def validate(sid: str, mode: str = "submit") -> tuple[list[dict], list[dict]]:
     """PURE pre-submit validation — NO writes. Returns (hard, soft) issue lists.
     Reads the FRESH live staging trip for the final-360 check (a read, not a write).
-    Shared by reviewer ``submit`` (gate) and admin ``approve`` (re-check vs live)."""
+    Shared by reviewer ``submit`` (gate) and admin ``approve`` (re-check vs live).
+
+    ``mode``: at "submit" the Gate-1 auto-check blockers are DEMOTED to warnings —
+    a reviewer fixing grammar in Hans shouldn't be locked out because the zhuyin
+    now needs a matching edit (dave, 2026-07-08). At "approve" they stay hard:
+    staging must never receive mismatched scripts."""
     srow = _session_row(sid)
     trip_id = srow["trip_id"]
     frows = db.query(
@@ -2663,9 +2668,14 @@ def validate(sid: str) -> tuple[list[dict], list[dict]]:
                      "severity": "block"})
 
     # Gate 1 of the auto-review pipeline: deterministic script-consistency / format checks
-    # (docs/auto-review-proposal.md). Same issue shape; blocks ride `hard` like the rest.
+    # (docs/auto-review-proposal.md). Hard at APPROVE (staging protection); demoted to
+    # loud warnings at SUBMIT so a reviewer is never locked out mid-handover.
     ac_hard, ac_soft = auto_checks.run_checks(frows, _is_zh_session(sid))
-    hard += ac_hard
+    if mode == "approve":
+        hard += ac_hard
+    else:
+        soft += [{**i, "severity": "warn",
+                  "issue": "[will block approval] " + i["issue"]} for i in ac_hard]
     soft += ac_soft
 
     return hard, soft
@@ -3026,7 +3036,7 @@ def approve(sid: str, user) -> dict:
             "error": "not_submitted",
             "detail": "session is not awaiting approval (must be 'submitted')"})
     try:
-        hard, soft = validate(sid)
+        hard, soft = validate(sid, mode="approve")
         if hard:
             # Live staging drifted / a gate now fails: don't write. Revert so an admin
             # can send it back (request-changes) for the reviewer to fix.

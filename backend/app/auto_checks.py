@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import re
+import unicodedata
 
 from . import config
 
@@ -39,6 +40,14 @@ def _hsk():
         return hsk_lib
     except Exception:  # noqa: BLE001
         return None
+
+
+def _strip_punct(text: str) -> str:
+    """Drop punctuation/whitespace so script-correspondence compares WORDS only —
+    a ，/。 difference between Hant and Hans is a style nit (warn), not a meaning
+    mismatch (block)."""
+    return "".join(c for c in text or ""
+                   if unicodedata.category(c)[0] not in ("P", "Z", "C"))
 
 
 def _srow_get(row, key):
@@ -116,17 +125,24 @@ def _zh_field_issues(f, loc: dict, hsk) -> list[dict]:
                                 f"({'/'.join(hsk.to_simplified(c) for c in bad)})",
                        "severity": "block"})
 
-    # -- Hant must be the traditional form of Hans (compare via to_simplified: stable) --
+    # -- Hant must be the traditional form of Hans (compare via to_simplified: stable).
+    #    Punctuation-only differences are a WARN, not a block (dave, 2026-07-08). --
     if hant:
         try:
             simp_of_hant = hsk.to_simplified(hant)
         except Exception:  # noqa: BLE001
             simp_of_hant = None
         if simp_of_hant is not None and simp_of_hant != simp_of_hans:
-            issues.append({"scene_index": si, "field_path": fp,
-                           "issue": "Traditional text doesn't correspond to the Simplified "
-                                    "text — they must say the same thing",
-                           "severity": "block"})
+            if _strip_punct(simp_of_hant) == _strip_punct(simp_of_hans):
+                issues.append({"scene_index": si, "field_path": fp,
+                               "issue": "Traditional and Simplified differ only in "
+                                        "punctuation — align them when convenient",
+                               "severity": "warn"})
+            else:
+                issues.append({"scene_index": si, "field_path": fp,
+                               "issue": "Traditional text doesn't correspond to the "
+                                        "Simplified text — they must say the same thing",
+                               "severity": "block"})
 
     # -- zhuyin must align syllable-by-syllable with the (simplified) spoken text --
     if cur.get("zhuyin") is not None and fp != "tripgroup_description":

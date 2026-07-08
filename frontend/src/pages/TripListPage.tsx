@@ -239,7 +239,7 @@ const TripListPage = () => {
                       <p className="truncate text-[11px] text-gray-500">{trip.trip_id}</p>
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-3">
+                  <div className="flex w-full flex-wrap items-center gap-2 gap-y-2 sm:w-auto sm:shrink-0 sm:justify-end sm:gap-3">
                     {trip.lane && (
                       <span className="rounded bg-gray-700 px-2 py-0.5 text-[11px] text-gray-300">Lane {trip.lane}</span>
                     )}

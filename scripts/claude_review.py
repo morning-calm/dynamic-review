@@ -38,9 +38,21 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 DB_PATH = REPO / "backend" / "review.db"
+STATE_PATH = REPO / "backend" / "autoreview_state.json"
 CLAUDE_BIN = os.environ.get("CLAUDE_BIN", "claude")
 MODEL = os.environ.get("REVIEW_CLAUDE_MODEL", "sonnet")
 TIMEOUT_S = 600
+LIMIT_BACKOFF_S = 3600      # usage-limit hit: try again hourly until the limit resets
+ERROR_RETRY_S = 6 * 3600    # non-limit failure: re-review that session after 6h
+
+# Substrings that mean "the Claude subscription/API is out of quota RIGHT NOW" — the
+# session must stay QUEUED (no report row) and be retried after the limit resets.
+_LIMIT_MARKERS = ("usage limit", "rate limit", "limit reached", "out of extra usage",
+                  "quota", "overloaded", "429", "exceeded")
+
+
+class UsageLimitError(RuntimeError):
+    pass
 
 SCRIPTS_ROOT = Path(os.environ.get("REVIEW_APP_SCRIPTS_ROOT", r"D:\Dynamic Languages\Scripts"))
 
@@ -120,14 +132,26 @@ INPUT:
 """
 
 
+def _looks_like_limit(*texts: str) -> bool:
+    blob = " ".join(t or "" for t in texts).lower()
+    return any(m in blob for m in _LIMIT_MARKERS)
+
+
 def call_claude(diff: dict) -> dict:
     prompt = PROMPT.format(level=diff["level"], diff=json.dumps(diff, ensure_ascii=False, indent=1))
     proc = subprocess.run(
         [CLAUDE_BIN, "-p", prompt, "--output-format", "json", "--model", MODEL],
         capture_output=True, text=True, timeout=TIMEOUT_S)
     if proc.returncode != 0:
+        if _looks_like_limit(proc.stdout, proc.stderr):
+            raise UsageLimitError(f"claude usage limit: {(proc.stderr or proc.stdout)[:200]}")
         raise RuntimeError(f"claude exited {proc.returncode}: {proc.stderr[:400]}")
     envelope = json.loads(proc.stdout)
+    if isinstance(envelope, dict) and envelope.get("is_error"):
+        msg = str(envelope.get("result") or envelope)[:400]
+        if _looks_like_limit(msg, str(envelope.get("api_error_status") or "")):
+            raise UsageLimitError(f"claude usage limit: {msg[:200]}")
+        raise RuntimeError(f"claude error envelope: {msg}")
     text = envelope.get("result") if isinstance(envelope, dict) else None
     if not text:
         raise RuntimeError(f"no result in claude output: {proc.stdout[:400]}")
@@ -167,12 +191,34 @@ def verify_fixes(report: dict, diff: dict, is_zh: bool) -> None:
 
 # ------------------------------------------------------------------ main
 def pending_sessions(con):
-    """Submitted sessions with no report newer than their last update."""
+    """Submitted sessions needing a review: no report newer than the last update, OR the
+    latest report is an ERROR older than ERROR_RETRY_S (errors are retried, not final).
+    Usage-limit failures write NO row at all, so those sessions simply stay pending here
+    and are reviewed automatically once the limit resets."""
+    now = time.time()
     rows = con.execute(
-        "SELECT s.id, s.trip_id, s.updated_at, "
-        " (SELECT MAX(created_at) FROM auto_reviews r WHERE r.session_id = s.id) last_report "
-        "FROM sessions s WHERE s.status='submitted'").fetchall()
-    return [r for r in rows if r["last_report"] is None or r["last_report"] < r["updated_at"]]
+        "SELECT s.id, s.trip_id, s.updated_at, r.created_at last_report, r.status last_status "
+        "FROM sessions s LEFT JOIN auto_reviews r ON r.id = "
+        " (SELECT id FROM auto_reviews WHERE session_id = s.id ORDER BY created_at DESC LIMIT 1) "
+        "WHERE s.status='submitted'").fetchall()
+    out = []
+    for r in rows:
+        if r["last_report"] is None or r["last_report"] < r["updated_at"]:
+            out.append(r)
+        elif r["last_status"] == "error" and (now - r["last_report"]) > ERROR_RETRY_S:
+            out.append(r)
+    return out
+
+
+def _load_state() -> dict:
+    try:
+        return json.loads(STATE_PATH.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def _save_state(state: dict) -> None:
+    STATE_PATH.write_text(json.dumps(state, indent=2), encoding="utf-8")
 
 
 def ensure_table(con):
@@ -191,6 +237,15 @@ def main() -> None:
     ap.add_argument("--sid", help="review this session even if already reported")
     ap.add_argument("--dry-run", action="store_true", help="print report, write nothing")
     args = ap.parse_args()
+
+    # Usage-limit backoff: after a limit hit we only re-attempt hourly (each attempt is
+    # one cheap failed call). Sessions stay queued; nothing is lost while limited.
+    state = _load_state()
+    now = time.time()
+    if not args.sid and state.get("backoff_until", 0) > now:
+        mins = int((state["backoff_until"] - now) / 60)
+        print(f"[auto-review] usage-limit backoff — next attempt in ~{mins} min.")
+        return
 
     con = sqlite3.connect(DB_PATH, timeout=15)
     con.row_factory = sqlite3.Row
@@ -218,6 +273,18 @@ def main() -> None:
             report = call_claude(diff)
             verify_fixes(report, diff, trip_id.endswith("_ZH"))
             status = "ok"
+            if state.get("backoff_until"):
+                state.pop("backoff_until", None)
+                _save_state(state)
+        except UsageLimitError as e:
+            # No report row (session stays queued for after the reset), hourly backoff,
+            # stop the whole run — every other session would hit the same wall.
+            state["backoff_until"] = time.time() + LIMIT_BACKOFF_S
+            state["last_limit_error"] = str(e)[:300]
+            _save_state(state)
+            print(f"[auto-review] {trip_id}: USAGE LIMIT — backing off 60 min, "
+                  f"session stays queued. ({e})")
+            break
         except Exception as e:  # noqa: BLE001 — fail open to the manual queue
             report = {"summary": f"auto-review FAILED: {e}", "fields": []}
             status = "error"
