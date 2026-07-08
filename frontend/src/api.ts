@@ -222,6 +222,45 @@ export interface ExternalReportsResponse {
   sync_error: string | null;
 }
 
+// --- Scene-structure editor (direct staging writes, admin-only) ---
+
+export interface StructureScene {
+  index: number;
+  scene_id: string | null;
+  video_url: string | null;
+  is_static_image: boolean;
+  has_audio: boolean;
+  title: string;
+  desc_snippet: string;
+  thumb_url: string | null;
+  static_images: string[];
+}
+
+export interface StructureOpRecord {
+  op: string;
+  by: string;
+  at: number;
+  payload: Record<string, unknown>;
+}
+
+export interface TripStructure {
+  trip_id: string;
+  title: string;
+  tripgroup_id: string;
+  categories: string[];
+  scenes: StructureScene[];
+  /** Concurrency fingerprint — echo back on every op; 409 state_changed on mismatch. */
+  base: string[];
+  localization_doc: boolean;
+  recent_ops: StructureOpRecord[];
+}
+
+export interface StructureOpResult {
+  ok: boolean;
+  warnings: string[];
+  structure: TripStructure;
+}
+
 // --- Pipeline (R2 review-bus publish handshake) ---
 
 /** A job on the R2 review bus. Queued by any admin; executed only on the workstation
@@ -829,6 +868,45 @@ export const api = {
   /** Admin only: open ANY staging trip (bypasses the manifest + completed exclusion). */
   adminOpenTrip: (tripId: string): Promise<Session> =>
     postJson('/api/admin/open', { trip_id: tripId }),
+
+  // --- Scene-structure editor (admin; immediate staging writes) ---
+  getStructure: (tripId: string): Promise<TripStructure> =>
+    getJson(`/api/admin/structure/${encodeURIComponent(tripId)}`),
+  structureReorder: (tripId: string, order: number[], base: string[]): Promise<StructureOpResult> =>
+    postJson(`/api/admin/structure/${encodeURIComponent(tripId)}/reorder`, { order, base }),
+  structureRemove: (tripId: string, index: number, base: string[]): Promise<StructureOpResult> =>
+    postJson(`/api/admin/structure/${encodeURIComponent(tripId)}/remove`, { index, base }),
+  structureAdd: (
+    tripId: string,
+    position: number,
+    base: string[],
+    opts: { video_url?: string; is_static?: boolean; scene_id?: string },
+  ): Promise<StructureOpResult> =>
+    postJson(`/api/admin/structure/${encodeURIComponent(tripId)}/add`, { position, base, ...opts }),
+  structureSwapVideo: (
+    tripId: string,
+    index: number,
+    videoUrl: string,
+    rekey: boolean,
+    base: string[],
+    sceneId?: string,
+  ): Promise<StructureOpResult> =>
+    postJson(`/api/admin/structure/${encodeURIComponent(tripId)}/swap-video`, {
+      index,
+      video_url: videoUrl,
+      rekey,
+      base,
+      ...(sceneId ? { scene_id: sceneId } : {}),
+    }),
+  structureStaticImages: (
+    tripId: string,
+    index: number,
+    filenames: string[],
+    base: string[],
+  ): Promise<StructureOpResult> =>
+    postJson(`/api/admin/structure/${encodeURIComponent(tripId)}/static-images`, { index, filenames, base }),
+  structureCategories: (tripId: string, categories: string[]): Promise<StructureOpResult> =>
+    postJson(`/api/admin/structure/${encodeURIComponent(tripId)}/categories`, { categories }),
 
   // --- Pipeline (publish bus) ---
   /** Admin only: queue a staging→prod TEXT publish request on the R2 bus. */

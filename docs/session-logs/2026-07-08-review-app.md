@@ -429,3 +429,33 @@ blocks-3-5 arc (unmerged); fix real defects, commit on the branch.
 - FE ignores `sync_error` from external-reports (silent stale cache).
 - `_staging_index` holds its lock through the full Firestore sweep (first search blocks
   concurrent ones for its duration).
+
+## BUILT: Block 4 phase 2 — direct scene-structure editor (main branch work continues)
+- Decisions (dave): DIRECT editor (immediate targeted staging writes, NOT session-
+  buffered — 409 active_session while any active session exists on the trip, so the
+  index-addressed field_edits/localization mappings can never desync); full scope
+  (reorder/remove/add/swap+re-key, videoUrl, overlays, categories); TripLocalizations
+  stays index-keyed with renumber-in-the-same-op (sceneId keying lands with the wire
+  compiler).
+- backend/app/structure.py: single re-key writer per the sceneId decision memo —
+  imports the shared `scene_ids` ruleset from the Scripts repo (sys.path, like
+  stage9.common; NEVER reimplemented). Ops carry ids on reorder; same-footage swap
+  keeps the id + registry gains the videoId; re-key mints/derives/reuses via
+  assign rules + releases the old registry use. Scenes registry (usedBy/videoIds/
+  currentVideoId) kept current on every op. Concurrency: per-op `base` fingerprint
+  (409 state_changed). Audit: new structure_ops table (+ read model shows last 10).
+  Positional-media warning returned on every structural op (audio must be re-staged).
+- routes_admin.py: GET/POST /api/admin/structure/* (admin-only). FE:
+  StructureEditorPage (/structure/:tripId — thumbs, move up/down, remove confirm,
+  add modal, video swap modal with the re-key choice, overlays + categories editors,
+  recent-ops audit) + Structure button on /staging rows. API_CONTRACT.md updated.
+- **Verified: 20/20 live checks against a DISPOSABLE synthetic staging trip**
+  (Fable_Structure_Test_EN + TripGroup + TripLocalizations + registry docs, all
+  deleted after): reorder carries ids + renumbers loc; stale-base 409; active-session
+  409; remove releases registry use + drops/renumbers loc; add mints (2099 stem
+  correctly deemed implausible by scene_ids → opaque mint; real 2024 stems derive);
+  swap keeps id + registry videoIds; re-key assigns new id + releases old; overlays;
+  categories on TG+Trip; audit trail exact. Backend import + FE build green.
+- Remaining phase-3 wire-up (not blockers): build_locstrings recompile hook on
+  approve/publish (bucket IAM grant still pending anyway) + sceneId-keyed
+  localization (with the compiler integration).

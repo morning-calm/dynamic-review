@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { api, ApiError, type AdminStagingList, type SessionStatus } from '../api';
 import NavBar from '../components/NavBar';
@@ -105,14 +105,23 @@ const StagingSearchPage = () => {
                     {t.folder_name ? ` · ${t.folder_name}` : ''}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  disabled={opening === t.trip_id}
-                  onClick={() => open(t.trip_id)}
-                  className="shrink-0 rounded bg-custom-green px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-                >
-                  {opening === t.trip_id ? 'Opening…' : t.has_session ? 'Resume' : 'Open'}
-                </button>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Link
+                    to={`/structure/${encodeURIComponent(t.trip_id)}`}
+                    className="rounded border border-gray-600 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700"
+                    title="Edit scene structure (add/remove/reorder/swap) — direct staging writes"
+                  >
+                    Structure
+                  </Link>
+                  <button
+                    type="button"
+                    disabled={opening === t.trip_id}
+                    onClick={() => open(t.trip_id)}
+                    className="rounded bg-custom-green px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                  >
+                    {opening === t.trip_id ? 'Opening…' : t.has_session ? 'Resume' : 'Open'}
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

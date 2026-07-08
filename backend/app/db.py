@@ -229,6 +229,18 @@ CREATE TABLE IF NOT EXISTS external_reports (
     synced_at       REAL NOT NULL
 );
 
+-- Audit trail of direct scene-structure edits (structure.py — admin-only, immediate
+-- staging writes outside the session model). Also the basis for the "this trip's
+-- positional audio needs re-staging" warning after add/remove/reorder.
+CREATE TABLE IF NOT EXISTS structure_ops (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    trip_id      TEXT NOT NULL,
+    op           TEXT NOT NULL,               -- reorder|remove|add|swap_rekey|set_video|…
+    payload_json TEXT NOT NULL DEFAULT '{}',
+    performed_by TEXT NOT NULL DEFAULT '',
+    performed_at REAL NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS auto_reviews (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     session_id   TEXT NOT NULL,
@@ -242,6 +254,7 @@ CREATE TABLE IF NOT EXISTS auto_reviews (
     report_json  TEXT NOT NULL DEFAULT '{}'     -- Gate-2 per-field verdicts (see claude_review.py)
 );
 
+CREATE INDEX IF NOT EXISTS ix_structops_trip ON structure_ops(trip_id, performed_at);
 CREATE INDEX IF NOT EXISTS ix_extreports_trip ON external_reports(trip_id, scene_index);
 CREATE INDEX IF NOT EXISTS ix_extreports_status ON external_reports(status, created_at);
 CREATE INDEX IF NOT EXISTS ix_presence_session ON presence(session_id, updated_at);

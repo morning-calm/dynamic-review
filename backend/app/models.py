@@ -34,6 +34,48 @@ class Recall(BaseModel):
     reason: str = ""
 
 
+class StructureReorder(BaseModel):
+    """`order[new_position] = old_index` — a permutation of the current scene indexes.
+    `base` is the fingerprint from GET /structure; a mismatch means someone else
+    changed the structure meanwhile (409 state_changed)."""
+    order: list[int]
+    base: list[str]
+
+
+class StructureRemove(BaseModel):
+    index: int
+    base: list[str]
+
+
+class StructureAdd(BaseModel):
+    position: int
+    base: list[str]
+    video_url: Optional[str] = None
+    is_static: bool = False
+    """Reuse an EXISTING atom's sceneId (registry lookup) instead of minting."""
+    scene_id: Optional[str] = None
+
+
+class StructureSwapVideo(BaseModel):
+    """rekey=False: same footage, new encode/URL (sceneId kept, registry gains the
+    videoId). rekey=True: genuinely different scene (new atom id assigned)."""
+    index: int
+    video_url: str
+    rekey: bool = False
+    base: list[str]
+    scene_id: Optional[str] = None
+
+
+class StructureStaticImages(BaseModel):
+    index: int
+    filenames: list[str]
+    base: list[str]
+
+
+class StructureCategories(BaseModel):
+    categories: list[str]
+
+
 class QueueJob(BaseModel):
     """Queue a review-bus job (currently only staging→prod text publish requests)."""
     trip_id: str

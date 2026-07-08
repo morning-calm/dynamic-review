@@ -11,6 +11,7 @@ import ReviewQueuePage from './pages/ReviewQueuePage';
 import CompletedPage from './pages/CompletedPage';
 import BugReportsPage from './pages/BugReportsPage';
 import StagingSearchPage from './pages/StagingSearchPage';
+import StructureEditorPage from './pages/StructureEditorPage';
 
 const App = () => (
   <BrowserRouter>
@@ -28,6 +29,7 @@ const App = () => (
             <Route element={<RequireAdmin />}>
               <Route path="/queue" element={<ReviewQueuePage />} />
               <Route path="/staging" element={<StagingSearchPage />} />
+              <Route path="/structure/:tripId" element={<StructureEditorPage />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

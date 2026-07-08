@@ -15,9 +15,11 @@ import time
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from . import audio_core, auth, db, review_bus, sessions
+from . import audio_core, auth, db, review_bus, sessions, structure
 from .config import SCRIPTS_ROOT
-from .models import CreateSession, QueueJob, RunJob
+from .models import (CreateSession, QueueJob, RunJob, StructureAdd,
+                     StructureCategories, StructureRemove, StructureReorder,
+                     StructureStaticImages, StructureSwapVideo)
 
 router = APIRouter(prefix="/api/admin")
 
@@ -87,6 +89,55 @@ def open_staging_trip(body: CreateSession, admin=Depends(auth.require_admin)):
     one (the reviewer flow 409s there; the admin editor is exactly for post-completion
     fixes). Seeding still requires resolvable MP3 masters (422 bad_folder otherwise)."""
     return sessions.create_or_resume(body.trip_id, admin, allow_completed=True)
+
+
+# --------------------------------------------------------------------------- #
+# Scene-structure editor (WS4 phases 2–3): direct STAGING writes, admin-only,
+# refused (409 active_session) while any active session exists on the trip.
+# --------------------------------------------------------------------------- #
+@router.get("/structure/{trip_id}")
+def get_structure(trip_id: str, admin=Depends(auth.require_admin)):
+    return structure.get_structure(trip_id)
+
+
+@router.post("/structure/{trip_id}/reorder")
+def post_structure_reorder(trip_id: str, body: StructureReorder,
+                           admin=Depends(auth.require_admin)):
+    return structure.reorder(trip_id, body.order, body.base, admin)
+
+
+@router.post("/structure/{trip_id}/remove")
+def post_structure_remove(trip_id: str, body: StructureRemove,
+                          admin=Depends(auth.require_admin)):
+    return structure.remove(trip_id, body.index, body.base, admin)
+
+
+@router.post("/structure/{trip_id}/add")
+def post_structure_add(trip_id: str, body: StructureAdd,
+                       admin=Depends(auth.require_admin)):
+    return structure.add(trip_id, body.position, body.base, admin,
+                         video_url=body.video_url, is_static=body.is_static,
+                         scene_id=body.scene_id)
+
+
+@router.post("/structure/{trip_id}/swap-video")
+def post_structure_swap_video(trip_id: str, body: StructureSwapVideo,
+                              admin=Depends(auth.require_admin)):
+    return structure.swap_video(trip_id, body.index, body.video_url, body.rekey,
+                                body.base, admin, scene_id=body.scene_id)
+
+
+@router.post("/structure/{trip_id}/static-images")
+def post_structure_static_images(trip_id: str, body: StructureStaticImages,
+                                 admin=Depends(auth.require_admin)):
+    return structure.set_static_images(trip_id, body.index, body.filenames,
+                                       body.base, admin)
+
+
+@router.post("/structure/{trip_id}/categories")
+def post_structure_categories(trip_id: str, body: StructureCategories,
+                              admin=Depends(auth.require_admin)):
+    return structure.set_categories(trip_id, body.categories, admin)
 
 
 # --------------------------------------------------------------------------- #
