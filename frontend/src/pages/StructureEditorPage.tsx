@@ -161,7 +161,7 @@ const StructureEditorPage = () => {
           </div>
 
           {st.scenes.map((s, i) => (
-            <div key={s.scene_id ?? `i${s.index}`} className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-700 bg-gray-800/60 p-3">
+            <div key={`${s.scene_id ?? 'noid'}-${s.index}`} className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-700 bg-gray-800/60 p-3">
               <div className="flex flex-col gap-1">
                 <button type="button" disabled={busy || i === 0} onClick={() => move(i, -1)} className="rounded border border-gray-600 px-2 py-0.5 text-xs text-gray-300 hover:bg-gray-700 disabled:opacity-30" title="Move up">▲</button>
                 <button type="button" disabled={busy || i === st.scenes.length - 1} onClick={() => move(i, 1)} className="rounded border border-gray-600 px-2 py-0.5 text-xs text-gray-300 hover:bg-gray-700 disabled:opacity-30" title="Move down">▼</button>
@@ -250,7 +250,18 @@ const StructureEditorPage = () => {
         <h2 className="mb-2 text-sm font-semibold">Add scene</h2>
         <label className="mb-2 block text-xs text-gray-400">
           Position (0–{st.scenes.length})
-          <input type="number" min={0} max={st.scenes.length} value={addPos} onChange={(e) => setAddPos(Number(e.target.value))} className="mt-1 w-24 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm" />
+          <input
+            type="number"
+            min={0}
+            max={st.scenes.length}
+            value={addPos}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              // NaN (cleared / 'e') would 422 at the API — clamp to a real position.
+              setAddPos(Number.isFinite(v) ? Math.max(0, Math.min(Math.trunc(v), st.scenes.length)) : 0);
+            }}
+            className="mt-1 w-24 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm"
+          />
         </label>
         <label className="mb-2 block text-xs text-gray-400">
           videoUrl
