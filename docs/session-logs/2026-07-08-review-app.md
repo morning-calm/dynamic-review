@@ -268,7 +268,19 @@ was started then stopped — Phase 3 stays deferred per dave until we have shado
   `auto_reviews` row (that data is on the laptop). **NOT deployed** — BE change needs a restart;
   branch left for review/merge (didn't push to main — cron auto-pulls main to the laptop).
 
+## MERGED + DEPLOYED (idle window, dave's go)
+- Merged `backlog/apply-fix-and-ab-prune` → main (no-ff, `d394b63`), pushed.
+- Laptop deploy at idle 144 min (last edit 13:58, 19 live tokens): `git pull` → `npm run build`
+  (bundle `index-liwrCf-b.js`, identical hash to the workstation build — deterministic) →
+  `systemctl restart review-app.service`.
+- **Verified:** service `active/running`, `ExecMainStatus=0` (clean boot ⇒ the full router set
+  imported, so the new `/auto-review/apply` route loaded and the A/B code is gone); `/api/trips`
+  → 401 (up); cloudflared still running (PID 100465); **data identical pre/post** — sessions
+  {approved 2, in_review 9, submitted 3}, field_edits 865, live_tokens 19 (reviewers stay in).
+  Route table proven locally (apply present / ab gone); an authenticated live click of the Apply
+  button still wants a real `_ZH` session with an `auto_reviews` row (do on next such submission).
+
 ## Next steps (updated)
-Merge `backlog/apply-fix-and-ab-prune` when reviewed, then deploy in an idle window (pull +
-`npm run build` + `systemctl restart`), and drive the Apply button against a real `_ZH` report.
-Everything else on BACKLOG.md is captured. Phase 3 remains OFF pending shadow-report results.
+Drive the Apply button against a real `_ZH` report when one next has a suggested fix (send the
+session back to `changes_requested` so it's editable). Everything else on BACKLOG.md is captured.
+Phase 3 remains OFF pending shadow-report results.
