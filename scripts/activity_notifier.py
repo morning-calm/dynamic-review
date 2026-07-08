@@ -42,7 +42,7 @@ BREAK_SECONDS = 90 * 60
 MAX_PER_HOUR_SECONDS = 60 * 60
 MAX_PER_DAY = 40
 # Event kinds that must reach dave IMMEDIATELY (skip the 1/hour gate, not the daily cap).
-IMMEDIATE_KINDS = {"login", "start", "finish"}
+IMMEDIATE_KINDS = {"login", "start", "finish", "auto_review"}
 
 # ---------------------------------------------------------------- attribution
 # field_edits has no user_id. Finishes use the exact submitted_by/approved_by/
@@ -98,6 +98,33 @@ def detect_logins(state, users, logins, now):
                 events.append({"ts": t, "kind": "login", "user": u["username"]})
     state["login_watermark"] = now
     events.sort(key=lambda e: e["ts"])
+    state["pending"].extend(events)
+    return events
+
+
+def detect_auto_reviews(state, con, now):
+    """One event per NEW auto_reviews row (Gate-2 Claude verdict, written by
+    scripts/claude_review.py). Watermark on the row id; table may not exist yet."""
+    wm = state.get("auto_review_watermark")
+    if wm is None:
+        try:
+            row = con.execute("SELECT MAX(id) m FROM auto_reviews").fetchone()
+            state["auto_review_watermark"] = row["m"] or 0
+        except sqlite3.OperationalError:
+            pass
+        return []
+    events = []
+    try:
+        rows = con.execute(
+            "SELECT id, trip_id, created_at, status, ok_count, warn_count, flag_count "
+            "FROM auto_reviews WHERE id > ? ORDER BY id", (wm,)).fetchall()
+    except sqlite3.OperationalError:
+        return []
+    for r in rows:
+        events.append({"ts": r["created_at"], "kind": "auto_review", "user": "auto-review",
+                       "trip": r["trip_id"], "status": r["status"], "ok": r["ok_count"],
+                       "warn": r["warn_count"], "flag": r["flag_count"]})
+        state["auto_review_watermark"] = r["id"]
     state["pending"].extend(events)
     return events
 
@@ -236,6 +263,13 @@ def compose(pending):
         u = e["user"]
         if e["kind"] == "login":
             lines.append(f"{t} — {u} logged in")
+        elif e["kind"] == "auto_review":
+            if e.get("status") == "error":
+                lines.append(f"{t} — auto-review of {e['trip']} FAILED — manual review needed")
+            else:
+                verdict = (f"{e.get('ok',0)} ok, {e.get('warn',0)} warning, "
+                           f"{e.get('flag',0)} needs human")
+                lines.append(f"{t} — auto-review: {e['trip']} — {verdict}")
         elif e["kind"] == "start":
             lines.append(f"{t} — {u} {e.get('verb','started')} {e['trip']} ({e['lang']})")
         elif e["kind"] == "finish":
@@ -353,6 +387,7 @@ def main():
         return
 
     new_events = detect_logins(state, users, logins, now)
+    new_events += detect_auto_reviews(state, con, now)
     new_events += detect(state, sess, completed, users, logins, now)
     for e in new_events:
         print(f"[event] {e['kind']:6} {fmt_time(e['ts'])} {e['user']} {e.get('trip','')}")

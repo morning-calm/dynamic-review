@@ -33,7 +33,7 @@ import numpy as np
 from fastapi import HTTPException
 
 from . import config  # noqa: F401  (ensures SCRIPTS_ROOT on sys.path) — keep first
-from . import (audio_core, audio_io, audio_splice, cjk_align, cjk_splice, db,
+from . import (audio_core, audio_io, audio_splice, auto_checks, cjk_align, cjk_splice, db,
                review_audio, thumbs)
 from .config import (COUNTRY_VOICE_GUESS, COVERAGE_DONE_FRACTION,
                      LANGUAGE_FALLBACK_VOICE, WORK_ROOT)
@@ -2661,6 +2661,12 @@ def validate(sid: str) -> tuple[list[dict], list[dict]]:
                      "issue": "pick a voice version (V2 or V3) before submitting — the "
                               "chosen take becomes the trip's working audio",
                      "severity": "block"})
+
+    # Gate 1 of the auto-review pipeline: deterministic script-consistency / format checks
+    # (docs/auto-review-proposal.md). Same issue shape; blocks ride `hard` like the rest.
+    ac_hard, ac_soft = auto_checks.run_checks(frows, _is_zh_session(sid))
+    hard += ac_hard
+    soft += ac_soft
 
     return hard, soft
 

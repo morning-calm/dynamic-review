@@ -248,6 +248,29 @@ export interface Scene {
 /** The reviewer's per-trip pick between the two temporary A/B ElevenLabs takes. */
 export type PreferredVersion = 'v2' | 'v3';
 
+/** One field's verdict inside a Gate-2 auto-review report (scripts/claude_review.py). */
+export interface AutoReviewField {
+  scene: number | null;
+  field: string;
+  option: number | null;
+  verdict: 'ok' | 'warning' | 'needs_human';
+  reasons: string[];
+  suggested_fix: Record<string, string> | null;
+  suggested_fix_verified?: boolean | null;
+}
+
+export interface AutoReviewReport {
+  id: number;
+  created_at: number;
+  model: string;
+  status: 'ok' | 'error';
+  ok: number;
+  warn: number;
+  flag: number;
+  summary: string;
+  fields: AutoReviewField[];
+}
+
 export interface Session {
   id: string;
   trip_id: string;
@@ -464,6 +487,11 @@ export const api = {
   /** `_ZH` only: autosave one script of the 4-script block (Hant/Hans/zhuyin/en). */
   putLocalization: (sid: string, fid: number, script: ZhScript, text: string): Promise<Field> =>
     putJson(field(sid, fid, '/localization'), { script, text }),
+
+  /** Gate 2 of the auto-review pipeline: the latest Claude report (null until the
+   * server-side runner has reviewed this session's submission). */
+  getAutoReview: (sid: string): Promise<{ report: AutoReviewReport | null }> =>
+    getJson(`/api/sessions/${encodeURIComponent(sid)}/auto-review`),
 
   regenerate: (
     sid: string,

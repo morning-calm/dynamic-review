@@ -170,6 +170,20 @@ CREATE TABLE IF NOT EXISTS bug_report_messages (
     FOREIGN KEY (report_id) REFERENCES bug_reports(id)
 );
 
+CREATE TABLE IF NOT EXISTS auto_reviews (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id   TEXT NOT NULL,
+    trip_id      TEXT NOT NULL DEFAULT '',
+    created_at   REAL NOT NULL,
+    model        TEXT NOT NULL DEFAULT '',
+    status       TEXT NOT NULL DEFAULT 'ok',    -- ok | error
+    ok_count     INTEGER NOT NULL DEFAULT 0,
+    warn_count   INTEGER NOT NULL DEFAULT 0,
+    flag_count   INTEGER NOT NULL DEFAULT 0,
+    report_json  TEXT NOT NULL DEFAULT '{}'     -- Gate-2 per-field verdicts (see claude_review.py)
+);
+
+CREATE INDEX IF NOT EXISTS ix_autoreviews_session ON auto_reviews(session_id, created_at);
 CREATE INDEX IF NOT EXISTS ix_bugreports_status ON bug_reports(status, created_at);
 CREATE INDEX IF NOT EXISTS ix_bugreports_reporter ON bug_reports(reporter, created_at);
 CREATE INDEX IF NOT EXISTS ix_bugmsgs_report ON bug_report_messages(report_id);

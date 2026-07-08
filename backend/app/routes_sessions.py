@@ -9,7 +9,9 @@ from __future__ import annotations
 from fastapi import APIRouter, UploadFile, File, Form, Depends
 from fastapi.concurrency import run_in_threadpool
 
-from . import auth, sessions
+import json
+
+from . import auth, db, sessions
 from .auth import scope_sid, scope_sid_editable
 from .models import (CreateSession, TextUpdate, SourceUpdate, Regenerate, Fallback,
                      PlayedRanges, FlagSet, CommentSet, NarrationSet,
@@ -188,6 +190,32 @@ async def post_undo(sid: str, fid: int):
 @router.post("/sessions/{sid}/fields/{fid}/redo", dependencies=_EDIT)
 async def post_redo(sid: str, fid: int):
     return await run_in_threadpool(sessions.redo_audio, sid, fid)
+
+
+# --- Auto-review (docs/auto-review-proposal.md) ---
+@router.get("/sessions/{sid}/auto-checks", dependencies=_SCOPE)
+def get_auto_checks(sid: str, user=Depends(auth.require_user)):
+    """Gate 1 live: the full pre-submit validation (incl. the deterministic
+    auto-checks) so the FE can show issues before the reviewer hits submit."""
+    hard, soft = sessions.validate(sid)
+    return {"hard": hard, "soft": soft}
+
+
+@router.get("/sessions/{sid}/auto-review", dependencies=_SCOPE)
+def get_auto_review(sid: str, user=Depends(auth.require_user)):
+    """Gate 2: the latest Claude review report for this session (written by
+    scripts/claude_review.py on the server host). 404-shaped null if none yet."""
+    row = db.query_one(
+        "SELECT * FROM auto_reviews WHERE session_id=? ORDER BY created_at DESC LIMIT 1",
+        (sid,))
+    if not row:
+        return {"report": None}
+    return {"report": {
+        "id": row["id"], "created_at": row["created_at"], "model": row["model"],
+        "status": row["status"], "ok": row["ok_count"], "warn": row["warn_count"],
+        "flag": row["flag_count"], "fields": json.loads(row["report_json"]).get("fields", []),
+        "summary": json.loads(row["report_json"]).get("summary", ""),
+    }}
 
 
 # --- Submit -> approve workflow ---

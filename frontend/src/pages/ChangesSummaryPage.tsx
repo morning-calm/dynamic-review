@@ -7,6 +7,7 @@ import {
   ApiError,
   isEditableStatus,
   type ApproveResponse,
+  type AutoReviewReport,
   type Field,
   type LocalizationBlock,
   type LocalizationScripts,
@@ -161,6 +162,7 @@ const ChangesSummaryPage = () => {
   const [sendBackOpen, setSendBackOpen] = useState(false);
   const [sendBackNote, setSendBackNote] = useState('');
   const [sendingBack, setSendingBack] = useState(false);
+  const [autoReview, setAutoReview] = useState<AutoReviewReport | null>(null);
 
   const isAdmin = user?.role === 'admin';
 
@@ -176,6 +178,11 @@ const ChangesSummaryPage = () => {
       .getSession(sid)
       .then((s) => !cancelled && setSession(s))
       .catch((e: unknown) => !cancelled && setError(e instanceof ApiError ? e.detail || e.code : 'Failed to load session'));
+    // Gate-2 auto-review report (best-effort; absent until the runner has seen the submit)
+    api
+      .getAutoReview(sid)
+      .then((r) => !cancelled && setAutoReview(r.report))
+      .catch(() => undefined);
     return () => {
       cancelled = true;
     };
@@ -367,6 +374,74 @@ const ChangesSummaryPage = () => {
         )}
 
         {result && <ResultPanel result={result} />}
+
+        {/* Gate-2 auto-review report (shadow mode: informational, approve stays manual) */}
+        {autoReview && (
+          <section className="rounded-lg border border-gray-700 bg-gray-800/60 p-4">
+            <h2 className="mb-1 flex flex-wrap items-center gap-2 text-sm font-semibold text-white">
+              Auto-review
+              {autoReview.status === 'error' ? (
+                <span className="rounded bg-red-700 px-2 py-0.5 text-xs font-medium">failed — review manually</span>
+              ) : (
+                <span
+                  className={`rounded px-2 py-0.5 text-xs font-medium text-white ${
+                    autoReview.flag > 0 ? 'bg-red-700' : autoReview.warn > 0 ? 'bg-amber-600' : 'bg-emerald-700'
+                  }`}
+                >
+                  {autoReview.ok} ok · {autoReview.warn} warning · {autoReview.flag} needs human
+                </span>
+              )}
+              <span className="text-xs font-normal text-gray-500">
+                {autoReview.model} · {new Date(autoReview.created_at * 1000).toLocaleString()}
+              </span>
+            </h2>
+            {autoReview.summary && <p className="mb-2 text-xs text-gray-300">{autoReview.summary}</p>}
+            <ul className="space-y-2">
+              {autoReview.fields
+                .filter((f) => f.verdict !== 'ok')
+                .map((f, i) => (
+                  <li
+                    key={i}
+                    className={`rounded border p-2 text-xs ${
+                      f.verdict === 'needs_human'
+                        ? 'border-red-700/60 bg-red-900/10 text-red-200'
+                        : 'border-amber-700/50 bg-amber-900/10 text-amber-200'
+                    }`}
+                  >
+                    <p className="font-medium">
+                      {f.verdict === 'needs_human' ? '⛔' : '⚠'} Scene {f.scene ?? '—'} · {f.field}
+                      {f.option != null ? `[${f.option}]` : ''}
+                    </p>
+                    {f.reasons.map((r, j) => (
+                      <p key={j} className="mt-0.5 text-gray-300">
+                        {r}
+                      </p>
+                    ))}
+                    {f.suggested_fix && (
+                      <div className="mt-1 rounded bg-gray-900/60 p-2 text-gray-300">
+                        <p className="mb-0.5 font-medium text-gray-400">
+                          Suggested fix{' '}
+                          {f.suggested_fix_verified === true
+                            ? '(machine-verified)'
+                            : f.suggested_fix_verified === false
+                              ? '(FAILED verification — do not use as-is)'
+                              : ''}
+                        </p>
+                        {Object.entries(f.suggested_fix).map(([k, v]) => (
+                          <p key={k} className="break-words">
+                            <span className="text-gray-500">{k}:</span> {v}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </li>
+                ))}
+            </ul>
+            {autoReview.status === 'ok' && autoReview.fields.every((f) => f.verdict === 'ok') && (
+              <p className="text-xs text-emerald-400">All changed fields passed — nothing flagged.</p>
+            )}
+          </section>
+        )}
 
         {/* Manual edit queue */}
         <section className="rounded-lg border border-gray-700 bg-gray-800/60 p-4">
