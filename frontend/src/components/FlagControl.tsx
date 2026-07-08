@@ -55,7 +55,7 @@ const FlagControl = ({ field, sid, onFieldUpdate }: FlagControlProps) => {
         disabled={doneDisabled}
         onClick={() => setFlag('done')}
         title={field.can_mark_done ? 'Mark this field done' : 'Working audio must be fully played first'}
-        className="rounded border border-custom-green px-2 py-1 text-xs text-custom-green enabled:hover:bg-custom-green enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+        className="rounded border border-custom-green px-3 py-2 text-xs text-custom-green enabled:hover:bg-custom-green enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:px-2 sm:py-1"
       >
         Mark done
       </button>
@@ -64,7 +64,7 @@ const FlagControl = ({ field, sid, onFieldUpdate }: FlagControlProps) => {
         type="button"
         disabled={busy}
         onClick={() => setFlag('edit_required')}
-        className="rounded border border-amber-600 px-2 py-1 text-xs text-amber-400 enabled:hover:bg-amber-600 enabled:hover:text-white disabled:opacity-40"
+        className="rounded border border-amber-600 px-3 py-2 text-xs text-amber-400 enabled:hover:bg-amber-600 enabled:hover:text-white disabled:opacity-40 sm:px-2 sm:py-1"
       >
         Edit required
       </button>
@@ -74,7 +74,7 @@ const FlagControl = ({ field, sid, onFieldUpdate }: FlagControlProps) => {
           type="button"
           disabled={busy}
           onClick={() => setFlag('none')}
-          className="rounded border border-gray-600 px-2 py-1 text-xs text-gray-300 enabled:hover:bg-gray-700 disabled:opacity-40"
+          className="rounded border border-gray-600 px-3 py-2 text-xs text-gray-300 enabled:hover:bg-gray-700 disabled:opacity-40 sm:px-2 sm:py-1"
         >
           Clear
         </button>

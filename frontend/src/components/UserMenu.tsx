@@ -42,7 +42,7 @@ const UserMenu = () => {
     'block whitespace-nowrap rounded px-3 py-1.5 text-left text-gray-200 hover:bg-gray-700';
 
   return (
-    <div className="flex shrink-0 items-center gap-3 text-xs">
+    <div className="flex flex-wrap items-center justify-end gap-2 gap-y-1 text-xs">
       <div className="relative">
         <button
           type="button"
@@ -97,7 +97,10 @@ const UserMenu = () => {
           Review queue
         </Link>
       )}
-      <span className="text-gray-400" title={user.role === 'admin' ? 'all languages' : user.languages.join(', ')}>
+      <span
+        className="hidden text-gray-400 sm:inline"
+        title={user.role === 'admin' ? 'all languages' : user.languages.join(', ')}
+      >
         {user.username} <span className="text-gray-600">·</span> {user.role}
       </span>
       <button type="button" onClick={logout} className="text-gray-400 underline hover:text-gray-200">

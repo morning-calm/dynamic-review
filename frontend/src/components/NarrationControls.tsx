@@ -25,6 +25,8 @@ const MODAL_STYLE: Modal.Styles = {
     borderRadius: '0.5rem',
     padding: '1rem',
     color: 'white',
+    maxHeight: '85vh',
+    overflow: 'auto',
   },
 };
 

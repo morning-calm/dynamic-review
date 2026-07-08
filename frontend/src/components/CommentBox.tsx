@@ -75,7 +75,7 @@ const CommentBox = ({ field, sid, onFieldUpdate }: CommentBoxProps) => {
         }}
         onBlur={() => save.flush()}
         rows={2}
-        className="mt-1 w-full resize-y rounded border border-gray-700 bg-gray-900 px-2 py-1 text-xs text-gray-200 outline-none focus:border-custom-green"
+        className="mt-1 w-full resize-y rounded border border-gray-700 bg-gray-900 px-2 py-1 text-base text-gray-200 outline-none focus:border-custom-green sm:text-xs"
       />
     </details>
   );

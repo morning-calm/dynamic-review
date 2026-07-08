@@ -20,6 +20,8 @@ const MODAL_STYLE: Modal.Styles = {
     borderRadius: '0.5rem',
     padding: '1rem',
     color: 'white',
+    maxHeight: '85vh',
+    overflow: 'auto',
   },
 };
 
@@ -224,7 +226,7 @@ const TripListPage = () => {
             </div>
             <ul className="divide-y divide-gray-700/60">
               {g.items.map((trip) => (
-                <li key={trip.trip_id} className="flex items-center justify-between gap-4 px-4 py-2.5">
+                <li key={trip.trip_id} className="flex flex-wrap items-center justify-between gap-4 gap-y-2 px-4 py-2.5">
                   <div className="flex min-w-0 items-center gap-2">
                     {trip.pinned && (
                       <span className="shrink-0 text-amber-400" title="Pinned to top">📌</span>
@@ -301,7 +303,7 @@ const TripListPage = () => {
           placeholder="Optional note (visible to admins)"
           rows={3}
           autoFocus
-          className="mb-3 w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm"
+          className="mb-3 w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-base sm:text-sm"
         />
         <div className="flex justify-end gap-2">
           <button

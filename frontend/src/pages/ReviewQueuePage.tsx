@@ -52,7 +52,7 @@ const ReviewQueuePage = () => {
         {items !== null && items.length > 0 && (
           <ul className="divide-y divide-gray-700/60 overflow-hidden rounded-lg border border-gray-700 bg-gray-800/60">
             {items.map((it) => (
-              <li key={it.sid} className="flex items-center justify-between gap-4 px-4 py-3">
+              <li key={it.sid} className="flex flex-wrap items-center justify-between gap-4 gap-y-2 px-4 py-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="truncate text-sm text-gray-200">{it.title || it.trip_id}</p>

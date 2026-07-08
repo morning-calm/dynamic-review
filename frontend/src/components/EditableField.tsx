@@ -151,7 +151,7 @@ const EditableField = ({
   const changed = value !== field.original_text;
 
   const baseClasses =
-    'w-full resize-y rounded border bg-gray-900 px-3 py-2 text-sm text-gray-100 outline-none focus:border-custom-green ' +
+    'w-full resize-y rounded border bg-gray-900 px-3 py-2 text-base sm:text-sm text-gray-100 outline-none focus:border-custom-green ' +
     (changed ? 'border-amber-600/60' : 'border-gray-700');
 
   return (

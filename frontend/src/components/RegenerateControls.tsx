@@ -42,6 +42,8 @@ const MODAL_STYLE: Modal.Styles = {
     borderRadius: '0.5rem',
     padding: '1rem',
     color: 'white',
+    maxHeight: '85vh',
+    overflow: 'auto',
   },
 };
 
@@ -289,7 +291,7 @@ const RegenerateControls = ({
   };
 
   const btn =
-    'rounded border px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40 enabled:hover:bg-gray-700';
+    'rounded border px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-40 enabled:hover:bg-gray-700 sm:px-2 sm:py-1';
 
   // Saved 'Create new' attachments (a note is what commits a take) → highlight the button.
   const savedClips = field.manual_clips.filter((c) => c.comment.trim()).length;
@@ -555,7 +557,7 @@ const RegenerateControls = ({
           placeholder={altWhole ? 'Text to speak for the whole block' : 'Text to speak in place of the highlighted words'}
           rows={2}
           autoFocus
-          className="mb-3 w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm"
+          className="mb-3 w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-base sm:text-sm"
         />
         <div className="flex justify-end gap-2">
           <button type="button" disabled={busy} onClick={() => setAltOpen(false)} className={`${btn} border-gray-600 text-gray-300`}>
@@ -585,7 +587,7 @@ const RegenerateControls = ({
           placeholder="What’s wrong? (any language)"
           rows={4}
           autoFocus
-          className="mb-3 w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm"
+          className="mb-3 w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-base sm:text-sm"
         />
         <div className="flex justify-end gap-2">
           <button type="button" disabled={busy} onClick={() => setBugOpen(false)} className={`${btn} border-gray-600 text-gray-300`}>

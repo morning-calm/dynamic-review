@@ -36,6 +36,8 @@ const MODAL_STYLE: Modal.Styles = {
     borderRadius: '0.5rem',
     padding: '1rem',
     color: 'white',
+    maxHeight: '85vh',
+    overflow: 'auto',
   },
 };
 
@@ -474,7 +476,7 @@ const ChangesSummaryPage = () => {
           placeholder="What needs to change?"
           rows={4}
           autoFocus
-          className="mb-3 w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm"
+          className="mb-3 w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-base sm:text-sm"
         />
         <div className="flex justify-end gap-2">
           <button
