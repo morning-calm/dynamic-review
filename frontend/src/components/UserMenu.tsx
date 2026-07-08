@@ -111,6 +111,15 @@ const UserMenu = () => {
       </Link>
       {user.role === 'admin' && (
         <Link
+          to="/staging"
+          className="rounded border border-gray-600 px-2 py-1 text-gray-200 hover:bg-gray-700"
+          title="Search & open any staging trip (admin)"
+        >
+          All trips
+        </Link>
+      )}
+      {user.role === 'admin' && (
+        <Link
           to="/queue"
           className="relative rounded border border-gray-600 px-2 py-1 text-gray-200 hover:bg-gray-700"
           title={recallBadge > 0 ? `${recallBadge} recall request${recallBadge === 1 ? '' : 's'} waiting` : undefined}

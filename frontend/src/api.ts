@@ -193,6 +193,26 @@ export interface RecallResponse {
   existing?: boolean;
 }
 
+/** One row of the admin staging-wide trip search (GET /api/admin/staging-trips). */
+export interface AdminStagingTrip {
+  trip_id: string;
+  title: string;
+  folder_name: string;
+  language: string;
+  has_session: boolean;
+  status: SessionStatus | null;
+  edit_required: boolean;
+  completed_method: CompletionMethod | null;
+  completed_by: string | null;
+}
+
+export interface AdminStagingList {
+  /** Matches before the 200-row cap. */
+  total: number;
+  shown: number;
+  trips: AdminStagingTrip[];
+}
+
 /** field_path values from the contract's field_path table. */
 export type FieldPath =
   | 'contentTitleKey'
@@ -737,6 +757,15 @@ export const api = {
   logout: (): Promise<void> => requestJson<void>('/api/logout', { method: 'POST', headers: authHeaders() }),
 
   me: (): Promise<AuthUser> => getJson('/api/me'),
+
+  // --- Admin staging-wide editor (search/open ANY staging trip) ---
+  /** Admin only: search the whole staging Trips collection by id/title substring. */
+  adminStagingTrips: (q: string, refresh = false): Promise<AdminStagingList> =>
+    getJson(`/api/admin/staging-trips?q=${encodeURIComponent(q)}${refresh ? '&refresh=1' : ''}`),
+
+  /** Admin only: open ANY staging trip (bypasses the manifest + completed exclusion). */
+  adminOpenTrip: (tripId: string): Promise<Session> =>
+    postJson('/api/admin/open', { trip_id: tripId }),
 
   // --- Presence + recall ---
   /** Presence ping (~30s while a session page is open): what this user is looking at.

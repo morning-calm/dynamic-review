@@ -659,7 +659,7 @@ def _list_trips_from_scan() -> list[dict]:
 # --------------------------------------------------------------------------- #
 # Seed / resume
 # --------------------------------------------------------------------------- #
-def create_or_resume(trip_id: str, user) -> dict:
+def create_or_resume(trip_id: str, user, *, allow_completed: bool = False) -> dict:
     # [P0-1] Language gate at the TOP — the create is keyed on trip_id, so the
     # per-{sid} scoping dependency structurally can't cover it. Admins bypass.
     from . import auth   # lazy import (auth imports sessions) — no module-load cycle
@@ -669,7 +669,9 @@ def create_or_resume(trip_id: str, user) -> dict:
             "detail": "this trip's narration language is not assigned to you"})
     # Completed trips are view-only — an admin must un-complete before it can be reviewed
     # again (checked before resume/seed so a leftover session can't reopen a done trip).
-    if db.query_one("SELECT 1 FROM completed_trips WHERE trip_id=?", (trip_id,)):
+    # allow_completed=True is the ADMIN staging-editor path (routes_admin.open) only.
+    if not allow_completed and db.query_one(
+            "SELECT 1 FROM completed_trips WHERE trip_id=?", (trip_id,)):
         raise HTTPException(409, detail={
             "error": "completed",
             "detail": "trip is completed — un-complete it to review"})
