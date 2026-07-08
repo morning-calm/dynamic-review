@@ -25,12 +25,20 @@
 - **Hardened `zh_writeback`** (backend/app/sessions.py): approve now **409s
   (`pinyin_regen_failed`)** when regenerated pinyin comes back empty on a phonetics-bearing
   field, instead of silently stripping pinyin. dry_run still returns the full plan.
-- **NOT yet done (needs go-ahead — auto-mode blocked remote installs):** install
-  `jieba pypinyin` into the laptop venv:
-  `ssh review-laptop "/home/dynamic-languages/Desktop/Server/Scripts/.venv/bin/pip install jieba pypinyin"`
-  Import is lazy per-writeback → **no backend restart needed** for this part.
+- **Laptop venv FIXED (dave approved):** `python -m ensurepip` (the venv had no pip!) then
+  `python -m pip install jieba pypinyin` into
+  `/home/dynamic-languages/Desktop/Server/Scripts/.venv`; verified `hsk_lib.zhuyin_to_pinyin`
+  works end-to-end there. Import is lazy per-writeback → no backend restart needed.
 
-### 2. Mobile UI review (analysis only, agent-produced; no code changes)
+### 2. Mobile UI review + QUICK WINS IMPLEMENTED (commit 1523a46, pushed)
+Dave chose "quick wins first; splice editing stays desktop/tablet". Implemented (sm: variants
+keep desktop identical): NavBar/UserMenu + trip-list/review-queue rows wrap at phone widths;
+all MODAL_STYLEs got maxHeight 85vh + overflow auto; reviewer-typed textareas 16px on phones
+(stops iOS zoom-on-focus); RegenerateControls/FlagControl touch-sized tap targets.
+`npm run build` (tsc -b + vite) green. NOT live yet — the laptop serves built dist; needs
+`npm run build` + restart there in a confirmed-idle window.
+
+Original review (analysis, agent-produced):
 Full report delivered in-conversation. Headlines: only ONE responsive breakpoint class in
 the whole app (BugReportsPage); NavBar/UserMenu and trip-list rows overflow at 375px
 (non-wrapping flex + shrink-0); 4 modal styles missing `maxHeight/overflow` (buttons
@@ -39,7 +47,7 @@ inputs trigger iOS zoom-on-focus; tap targets ~mouse-sized; **selection-driven s
 are mouse-shaped** — needs a product decision: touch-first selection UX vs phone=listen/
 flag/comment only. Quick wins are all Tailwind-class-level.
 
-### 3. Activity notifier rework (committed, push HELD)
+### 3. Activity notifier rework (commit c2e3005, PUSHED — dave approved)
 - New **login events**: exact, from `auth_sessions` rows past a stored watermark
   (`login_watermark`), reviewer-role only (admin logins skipped). Silent migration on first
   run (no historical blast).
@@ -63,13 +71,14 @@ flag/comment only. Quick wins are all Tailwind-class-level.
   approve; logic is a pre-APPLY check on the already-computed plan.)
 
 ## Open / carried forward
-- **Push to main + laptop deploy** — HELD until dave confirms no one is editing (laptop
-  auto-pulls main every 10 min; uvicorn restart needed for the sessions.py guard).
-- **Laptop venv**: `pip install jieba pypinyin` (blocked in auto mode).
+- **Idle-window laptop deploy**: `npm run build` in the laptop's frontend + uvicorn restart —
+  activates the mobile quick wins AND the zh_writeback pinyin guard. Confirm no one is
+  editing first. (Notifier needs neither — cron re-reads the script after git pull.)
 - Optional: tighten laptop notifier cron */15 → */5 so login emails land faster.
-- Mobile: decide scope (full touch splice UX vs phone=listen/flag only), then implement the
-  quick wins.
+- Mobile deeper work deferred: touch-first splice selection UX (or explicitly keep splice
+  desktop/tablet-only); sticky mini-player; collapsing the 17-button RegenerateControls row.
 - The `--test`/`--force` flags and MailWizz transport unchanged.
 
 ## Next steps
-Dave: confirm (a) laptop pip install, (b) push/deploy window, (c) mobile scope decision.
+Wait for an idle window → rebuild dist + restart uvicorn on the laptop; confirm the first
+immediate login email when a reviewer next logs in.
