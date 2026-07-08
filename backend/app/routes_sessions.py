@@ -17,7 +17,8 @@ from .models import (CreateSession, TextUpdate, SourceUpdate, Regenerate, Fallba
                      PlayedRanges, FlagSet, CommentSet, NarrationSet,
                      ClipCreate, ClipRegen, ClipComment, TrimNoise, TrimCandidate,
                      InsertSilence, RemoveSilence, RequestChanges, CompleteTrip,
-                     LocalizationUpdate, VersionSet, ApplySuggestedFix)
+                     LocalizationUpdate, VersionSet, ApplySuggestedFix,
+                     Heartbeat, Recall, RecallResolve)
 
 router = APIRouter(prefix="/api")
 
@@ -223,6 +224,48 @@ def post_apply_suggested_fix(sid: str, body: ApplySuggestedFix):
     """Apply one machine-verified suggested fix (from the latest Gate-2 report) to the
     identified _ZH field, then return the updated field + a fresh Gate-1 pass."""
     return sessions.apply_suggested_fix(sid, body.scene, body.field, body.option)
+
+
+# --- Presence + recall ---
+@router.post("/sessions/{sid}/heartbeat", dependencies=_SCOPE)
+def post_heartbeat(sid: str, body: Heartbeat, user=Depends(auth.require_user)):
+    # Any session state — an admin heartbeats while reviewing a SUBMITTED trip; that
+    # live presence is what turns a reviewer's recall into a request instead of a yank.
+    return sessions.heartbeat(sid, user, body.context)
+
+
+@router.get("/presence")
+def get_presence(user=Depends(auth.require_user)):
+    # Live users (language-filtered for reviewers inside) — trip-list/queue dots.
+    return sessions.presence_list(user)
+
+
+@router.get("/sessions/{sid}/recall", dependencies=_SCOPE)
+def get_recall_state(sid: str, user=Depends(auth.require_user)):
+    return sessions.recall_state(sid, user)
+
+
+@router.post("/sessions/{sid}/recall", dependencies=_SCOPE)
+def post_recall(sid: str, body: Recall, user=Depends(auth.require_user)):
+    # Submitter-only auto-grant (or admin); otherwise 409 reason_required -> the FE
+    # collects a reason and re-posts, creating a pinned request for the admin queue.
+    return sessions.recall(sid, user, body.reason)
+
+
+@router.get("/recall-requests")
+def get_recall_requests(status: str = "open", admin=Depends(auth.require_admin)):
+    return sessions.recall_requests_list(status)
+
+
+@router.get("/recall-requests/count")
+def get_recall_requests_count(admin=Depends(auth.require_admin)):
+    return sessions.recall_counts()
+
+
+@router.post("/recall-requests/{rid}/resolve")
+def post_recall_resolve(rid: int, body: RecallResolve,
+                        admin=Depends(auth.require_admin)):
+    return sessions.resolve_recall(rid, admin, body.action, body.note)
 
 
 # --- Submit -> approve workflow ---

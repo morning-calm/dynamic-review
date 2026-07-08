@@ -136,6 +136,63 @@ export interface BugCounts {
   unread?: number;
 }
 
+// --- Presence + recall ---
+
+/** One live user (heartbeat within the server's live window) and what they're doing. */
+export interface PresenceEntry {
+  username: string;
+  role: Role;
+  /** Human-readable context, e.g. "Scene 4 · SceneDesc — editing". */
+  context: string;
+  updated_at: number;
+  sid: string;
+  trip_id: string;
+  session_status: SessionStatus;
+}
+
+export type RecallRequestStatus = 'open' | 'granted' | 'declined';
+
+export interface RecallRequest {
+  id: number;
+  sid: string;
+  trip_id: string;
+  requested_by: string;
+  reason: string;
+  status: RecallRequestStatus;
+  created_at: number;
+  resolved_by: string | null;
+  resolved_at: number | null;
+  resolution_note: string;
+  /** Present on the admin list fetch only. */
+  session_status?: SessionStatus | null;
+  completed_method?: CompletionMethod | null;
+  title?: string;
+  language?: string;
+}
+
+/** What the Recall button should offer right now (GET /sessions/{sid}/recall). */
+export interface RecallState {
+  status: SessionStatus;
+  /** This user may recall (submitter or admin) from the current status. */
+  can_recall: boolean;
+  /** A recall would be granted immediately (no admin live, not approved). */
+  auto: boolean;
+  /** Why auto-recall isn't available: already approved / an admin is mid-review. */
+  blocker: 'approved' | 'admin_reviewing' | null;
+  /** Latest request for this session (any status) — drives the waiting/declined banners. */
+  request: RecallRequest | null;
+}
+
+export interface RecallResponse {
+  ok: boolean;
+  /** true = auto-granted, the session is editable again (`status` says which state). */
+  recalled: boolean;
+  status?: SessionStatus;
+  request_id?: number;
+  /** true when an open request already existed (no duplicate was created). */
+  existing?: boolean;
+}
+
 /** field_path values from the contract's field_path table. */
 export type FieldPath =
   | 'contentTitleKey'
@@ -214,6 +271,9 @@ export interface Field {
   localization: LocalizationBlock | null;
   flag: FlagValue;
   comment: string;
+  /** Who last changed this field (best-effort audit) — the approve page badges
+   * fields touched by someone other than the submitter (i.e. admin touch-ups). */
+  edited_by: string | null;
   splice_confidence: number | null;
   played_coverage: Array<[number, number]>;
   original_played_coverage: Array<[number, number]>;
@@ -677,6 +737,41 @@ export const api = {
   logout: (): Promise<void> => requestJson<void>('/api/logout', { method: 'POST', headers: authHeaders() }),
 
   me: (): Promise<AuthUser> => getJson('/api/me'),
+
+  // --- Presence + recall ---
+  /** Presence ping (~30s while a session page is open): what this user is looking at.
+   * Allowed in any session state — an admin's heartbeat on a submitted trip is what
+   * turns a reviewer's recall into a request instead of a silent yank. */
+  heartbeat: (sid: string, context: string): Promise<{ ok: boolean }> =>
+    postJson(`/api/sessions/${encodeURIComponent(sid)}/heartbeat`, { context }),
+
+  /** Everyone live right now (reviewers see their languages only, like the trip list). */
+  presence: (): Promise<PresenceEntry[]> => getJson('/api/presence'),
+
+  /** What the Recall button should offer for this session right now. */
+  recallState: (sid: string): Promise<RecallState> =>
+    getJson(`/api/sessions/${encodeURIComponent(sid)}/recall`),
+
+  /** Recall a submitted trip. Without a reason: auto-grants when possible, else 409
+   * `reason_required` — re-call with the reason to file a pinned admin request. */
+  recall: (sid: string, reason = ''): Promise<RecallResponse> =>
+    postJson(`/api/sessions/${encodeURIComponent(sid)}/recall`, { reason }),
+
+  /** Admin only: recall requests (default the open ones, pinned atop the queue). */
+  recallRequests: (status: RecallRequestStatus = 'open'): Promise<RecallRequest[]> =>
+    getJson(`/api/recall-requests?status=${encodeURIComponent(status)}`),
+
+  /** Admin only: open recall-request count for the nav badge. */
+  recallCounts: (): Promise<{ open: number }> => getJson('/api/recall-requests/count'),
+
+  /** Admin only: grant (send back to reviewer; un-completes an approved trip first)
+   * or decline a recall request. */
+  resolveRecall: (
+    rid: number,
+    action: 'grant' | 'decline',
+    note = '',
+  ): Promise<{ ok: boolean; session_status: SessionStatus | null }> =>
+    postJson(`/api/recall-requests/${rid}/resolve`, { action, note }),
 
   // --- Bug reports ---
   createBugReport: (sid: string, fid: number, body: string): Promise<BugReport> =>

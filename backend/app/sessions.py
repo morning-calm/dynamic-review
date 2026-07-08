@@ -849,17 +849,24 @@ def trip_id_for_session(sid: str) -> str:
     return row["trip_id"]
 
 
-def assert_editable(sid: str) -> None:
+def assert_editable(sid: str, user=None) -> None:
     """403 while a session is locked (submitted/approving/approved). Called by the
-    scope_sid_editable dependency to gate every editing route once a trip is submitted."""
+    scope_sid_editable dependency to gate every editing route once a trip is submitted.
+    EXCEPTION: an ADMIN may edit while 'submitted' — final touch-ups on the approve page
+    (the whole toolbox rides on this one gate). `approving` (mid-approve claim) and
+    `approved` (terminal) stay read-only for everyone."""
     row = db.query_one("SELECT status FROM sessions WHERE id=?", (sid,))
     if not row:
         raise HTTPException(404, detail={"error": "no_session", "detail": sid})
-    if row["status"] not in _EDITABLE_STATUSES:
-        raise HTTPException(403, detail={
-            "error": "locked",
-            "detail": f"session is '{row['status']}' and read-only; it is awaiting "
-                      "admin approval (or already approved)"})
+    status = row["status"]
+    if status in _EDITABLE_STATUSES:
+        return
+    if status == "submitted" and user is not None and getattr(user, "is_admin", False):
+        return
+    raise HTTPException(403, detail={
+        "error": "locked",
+        "detail": f"session is '{status}' and read-only; it is awaiting "
+                  "admin approval (or already approved)"})
 
 
 def _working_duration(sid: str, frow) -> float:
@@ -969,6 +976,9 @@ def serialize_field(sid: str, frow) -> dict:
         "original_source": frow["original_source"] or "",
         "flag": frow["flag"],
         "comment": frow["comment"],
+        # Best-effort audit hint: who last changed this field (stamped by db.update_fields
+        # from the request context) — the approve page badges fields the ADMIN touched.
+        "edited_by": _srow_get(frow, "edited_by"),
         "splice_confidence": frow["splice_confidence"],
         "played_coverage": ranges,
         "original_played_coverage": (
@@ -3142,6 +3152,223 @@ def request_changes(sid: str, user, note: str) -> dict:
         "UPDATE sessions SET status='changes_requested', review_note=?, updated_at=? "
         "WHERE id=?", (note or "", time.time(), sid))
     return {"ok": True}
+
+
+# --------------------------------------------------------------------------- #
+# Presence (who's live on which session) + recall (reviewer takes a submission back)
+# --------------------------------------------------------------------------- #
+PRESENCE_LIVE_SECONDS = 120       # heartbeat within this window = "live on the session"
+_PRESENCE_PRUNE_SECONDS = 3600    # rows older than this are deleted opportunistically
+
+
+def heartbeat(sid: str, user, context: str = "") -> dict:
+    """Upsert the caller's presence on a session (FE pings every ~30s with what they're
+    looking at). Allowed in ANY session state — an admin heartbeats on a submitted trip
+    while reviewing it, which is exactly what blocks a silent recall."""
+    _session_row(sid)   # 404 if unknown
+    now = time.time()
+    db.execute(
+        "INSERT INTO presence(username,session_id,role,context,updated_at) "
+        "VALUES(?,?,?,?,?) "
+        "ON CONFLICT(username,session_id) DO UPDATE SET "
+        "role=excluded.role, context=excluded.context, updated_at=excluded.updated_at",
+        (user.username, sid, user.role, (context or "")[:200], now))
+    db.execute("DELETE FROM presence WHERE updated_at<?",
+               (now - _PRESENCE_PRUNE_SECONDS,))
+    return {"ok": True}
+
+
+def presence_list(user) -> list[dict]:
+    """Everyone live right now (heartbeat within PRESENCE_LIVE_SECONDS), joined to their
+    session's trip. Reviewers are filtered to their languages (admins see all) — same
+    visibility rule as the trip list itself."""
+    from . import auth   # lazy (auth imports sessions) — no module-load cycle
+    cutoff = time.time() - PRESENCE_LIVE_SECONDS
+    rows = db.query(
+        "SELECT p.username, p.role, p.context, p.updated_at, p.session_id, "
+        "s.trip_id, s.status FROM presence p JOIN sessions s ON s.id=p.session_id "
+        "WHERE p.updated_at>=? ORDER BY p.updated_at DESC", (cutoff,))
+    out: list[dict] = []
+    for r in rows:
+        if not auth.language_allowed(user, r["trip_id"]):
+            continue
+        out.append({
+            "username": r["username"], "role": r["role"], "context": r["context"],
+            "updated_at": r["updated_at"], "sid": r["session_id"],
+            "trip_id": r["trip_id"], "session_status": r["status"],
+        })
+    return out
+
+
+def _admin_live_on(sid: str, exclude_username: str | None = None):
+    """The most recent live ADMIN presence row on a session (excluding the caller), or
+    None. This is the recall "admin is mid-review" check."""
+    cutoff = time.time() - PRESENCE_LIVE_SECONDS
+    rows = db.query(
+        "SELECT username, context, updated_at FROM presence "
+        "WHERE session_id=? AND role='admin' AND updated_at>=? "
+        "ORDER BY updated_at DESC", (sid, cutoff))
+    for r in rows:
+        if r["username"] != exclude_username:
+            return r
+    return None
+
+
+def _recall_request_dict(row) -> dict:
+    return {
+        "id": row["id"], "sid": row["session_id"], "trip_id": row["trip_id"],
+        "requested_by": row["requested_by"], "reason": row["reason"],
+        "status": row["status"], "created_at": row["created_at"],
+        "resolved_by": row["resolved_by"], "resolved_at": row["resolved_at"],
+        "resolution_note": row["resolution_note"] or "",
+    }
+
+
+def recall_state(sid: str, user) -> dict:
+    """What the Recall button should offer right now: whether this user may recall,
+    whether it would auto-grant, what blocks it otherwise, and the latest request (so
+    the FE can show 'waiting for admin' / 'declined: <note>' banners)."""
+    srow = _session_row(sid)
+    status = srow["status"]
+    submitter = _srow_get(srow, "submitted_by")
+    is_submitter = user.is_admin or (submitter and user.username == submitter)
+    can_recall = bool(status in ("submitted", "approving", "approved") and is_submitter)
+    blocker = None
+    if status in ("approving", "approved"):
+        blocker = "approved" if status == "approved" else "admin_reviewing"
+    elif status == "submitted" and not user.is_admin:
+        live = _admin_live_on(sid, exclude_username=user.username)
+        if live:
+            blocker = "admin_reviewing"
+    req = db.query_one(
+        "SELECT * FROM recall_requests WHERE session_id=? ORDER BY created_at DESC LIMIT 1",
+        (sid,))
+    return {"status": status, "can_recall": can_recall,
+            "auto": can_recall and blocker is None, "blocker": blocker,
+            "request": _recall_request_dict(req) if req else None}
+
+
+def recall(sid: str, user, reason: str = "") -> dict:
+    """Reviewer takes a SUBMITTED trip back ("Recall submission").
+    Auto-grant (submitter or admin; no live admin on the session): CAS back to
+    in_review — the approve CAS makes the race safe (one side 409s cleanly).
+    Otherwise (admin mid-review / approving / already approved): a reason is required
+    and an open recall_requests row is created for the admin queue."""
+    srow = _session_row(sid)
+    status = srow["status"]
+    if status in _EDITABLE_STATUSES:
+        raise HTTPException(409, detail={
+            "error": "bad_state",
+            "detail": f"session is '{status}' — already editable, nothing to recall"})
+    if status not in ("submitted", "approving", "approved"):
+        raise HTTPException(409, detail={
+            "error": "bad_state", "detail": f"cannot recall from '{status}'"})
+    submitter = _srow_get(srow, "submitted_by")
+    if not (user.is_admin or (submitter and user.username == submitter)):
+        raise HTTPException(403, detail={
+            "error": "forbidden",
+            "detail": "only the submitter (or an admin) can recall this submission"})
+
+    if status == "submitted":
+        live = None if user.is_admin else _admin_live_on(sid, exclude_username=user.username)
+        if live is None:
+            claimed = db.execute_rowcount(
+                "UPDATE sessions SET status='in_review', updated_at=? "
+                "WHERE id=? AND status='submitted'", (time.time(), sid))
+            if claimed:
+                # any open request for this session is now moot — close it as granted
+                db.execute(
+                    "UPDATE recall_requests SET status='granted', resolved_by=?, "
+                    "resolved_at=?, resolution_note='auto-granted (recall)' "
+                    "WHERE session_id=? AND status='open'",
+                    (user.username, time.time(), sid))
+                return {"ok": True, "recalled": True, "status": "in_review"}
+            # lost a race (approve claimed it / admin sent it back) — re-read and fall
+            # through to the request path on the new state
+            srow = _session_row(sid)
+            status = srow["status"]
+            if status in _EDITABLE_STATUSES:
+                return {"ok": True, "recalled": True, "status": status}
+
+    reason = (reason or "").strip()
+    if not reason:
+        blocker = ("it is already approved (staging written, masters promoted)"
+                   if status == "approved"
+                   else "an admin is currently reviewing it")
+        raise HTTPException(409, detail={
+            "error": "reason_required",
+            "detail": f"cannot auto-recall — {blocker}; state the reason for the request"})
+    existing = db.query_one(
+        "SELECT id FROM recall_requests WHERE session_id=? AND status='open'", (sid,))
+    if existing:
+        return {"ok": True, "recalled": False, "request_id": existing["id"],
+                "existing": True}
+    rid = db.execute(
+        "INSERT INTO recall_requests(session_id,trip_id,requested_by,reason,created_at) "
+        "VALUES(?,?,?,?,?)",
+        (sid, srow["trip_id"], user.username, reason, time.time()))
+    return {"ok": True, "recalled": False, "request_id": rid, "existing": False}
+
+
+def recall_requests_list(status: str = "open") -> list[dict]:
+    """ADMIN: recall requests (default: the open ones, pinned atop the review queue).
+    Each carries the session's current status + the trip's completed method so the FE
+    can warn how far downstream an approved trip got before granting."""
+    rows = db.query(
+        "SELECT * FROM recall_requests WHERE status=? ORDER BY created_at", (status,))
+    out: list[dict] = []
+    for r in rows:
+        d = _recall_request_dict(r)
+        srow = db.query_one("SELECT status FROM sessions WHERE id=?", (r["session_id"],))
+        crow = db.query_one("SELECT method FROM completed_trips WHERE trip_id=?",
+                            (r["trip_id"],))
+        meta = _trip_meta(r["trip_id"])
+        d["session_status"] = srow["status"] if srow else None
+        d["completed_method"] = crow["method"] if crow else None
+        d["title"] = meta.get("title") or r["trip_id"]
+        d["language"] = audio_core.language_of(r["trip_id"])
+        out.append(d)
+    return out
+
+
+def recall_counts() -> dict:
+    """ADMIN: open recall-request count for the nav badge (bug-reports pattern)."""
+    row = db.query_one("SELECT COUNT(*) AS n FROM recall_requests WHERE status='open'")
+    return {"open": int(row["n"] if row else 0)}
+
+
+def resolve_recall(rid: int, admin, action: str, note: str = "") -> dict:
+    """ADMIN resolves a pinned recall request.
+    grant  — send the trip back to the reviewer: `changes_requested` with the reason
+             (or the admin's note) as the review_note banner; an APPROVED trip is
+             un-completed first (Stage 9 stops seeing it; re-approval later re-writes).
+    decline — keep the submission; the note is shown to the requester."""
+    row = db.query_one("SELECT * FROM recall_requests WHERE id=?", (rid,))
+    if not row:
+        raise HTTPException(404, detail={"error": "no_request", "detail": str(rid)})
+    if row["status"] != "open":
+        raise HTTPException(409, detail={
+            "error": "bad_state", "detail": f"request is already '{row['status']}'"})
+    sid = row["session_id"]
+    session_status = None
+    if action == "grant":
+        srow = _session_row(sid)
+        status = srow["status"]
+        msg = (note or "").strip() or f"Recall granted: {row['reason']}"
+        if status == "approved":
+            uncomplete_trip(admin, srow["trip_id"])
+        if status in ("submitted", "approving", "approved"):
+            db.execute(
+                "UPDATE sessions SET status='changes_requested', review_note=?, "
+                "updated_at=? WHERE id=?", (msg, time.time(), sid))
+        session_status = "changes_requested" if status not in _EDITABLE_STATUSES else status
+    now = time.time()
+    db.execute(
+        "UPDATE recall_requests SET status=?, resolved_by=?, resolved_at=?, "
+        "resolution_note=? WHERE id=?",
+        ("granted" if action == "grant" else "declined",
+         getattr(admin, "username", None), now, note or "", rid))
+    return {"ok": True, "session_status": session_status}
 
 
 def review_queue() -> list[dict]:

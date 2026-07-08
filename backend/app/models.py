@@ -21,6 +21,26 @@ class CompleteTrip(BaseModel):
     note: str = ""   # optional admin note for a manual (old-system) completion
 
 
+class Heartbeat(BaseModel):
+    """Presence ping: what the user is looking at right now (free text shown to admins,
+    e.g. "Scene 4 · SceneDesc — editing"). Sent every ~30s while a session page is open."""
+    context: str = ""
+
+
+class Recall(BaseModel):
+    """Reviewer asks for their submitted trip back. `reason` is required when the recall
+    can't be auto-granted (admin mid-review / already approved) and becomes the pinned
+    request's message to the admin."""
+    reason: str = ""
+
+
+class RecallResolve(BaseModel):
+    """Admin resolves a pinned recall request: grant = send the trip back to the reviewer
+    (changes_requested; un-completes first if it was approved), decline = keep it."""
+    action: Literal["grant", "decline"]
+    note: str = ""
+
+
 class CreateSession(BaseModel):
     trip_id: str
 

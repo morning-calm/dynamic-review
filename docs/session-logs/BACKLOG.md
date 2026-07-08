@@ -110,3 +110,10 @@ chore next time SSH'd in (password-gated).
   BE change needs a restart in an idle window). Verified: py_compile + import + `vite build`
   green; NOT end-to-end driven (needs a live `_ZH` session with an `auto_reviews` row on the
   laptop). #1 and #4 above stay listed until this branch is merged + deployed.
+
+## Workflow-features build (proposal agreed 2026-07-08 — docs/workflow-features-proposal.md)
+- [x] Block 1: presence heartbeat (reviewers+admins) + Recall submission + queue pinning/badge — BUILT 2026-07-08 (branch feature/recall-presence-admin-edit; verified 22/22 local e2e; awaiting merge+deploy)
+- [x] Block 2: admin inline editing on approve page — BUILT 2026-07-08 (same branch; gate + Edit-inline section + edited_by audit; awaiting merge+deploy)
+- [ ] Block 3: stage-4b bug intake — structured submitReport fields (backend+web), review-app ingest of staging UserReports next to SceneDesc; VR payload = Chris ask
+- [ ] Block 4: staging-wide trip search/open (routes_admin.py) + non-text field editors
+- [ ] Block 5: R2 review-bus job bus + publisher-mode instance (workstation, local prod key) + prod snapshot→R2 drift indicator — off-hours, NO real prod writes during build
