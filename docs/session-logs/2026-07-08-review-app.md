@@ -382,3 +382,50 @@ then Blocks 3–5 per docs/workflow-features-proposal.md.
 3. Chris ask: VR payload (discrete contentId/sceneIndex keys) + deploy of the
    backend-functions branch (check he's not mid-Belo-release).
 4. Dedicated window: Block 4 phases 2–3 (non-text editors + sceneId writer).
+
+---
+
+## Red-team review of `91d2041..HEAD` (feature/blocks-3-5) — later same day
+
+**Goal:** adversarial review of the recall/presence/admin-edit arc (deployed) and the
+blocks-3-5 arc (unmerged); fix real defects, commit on the branch.
+
+### Fixed (this session's commit)
+- **`sessions.resolve_recall` race (DEPLOYED arc-1):** granting a recall while an
+  approve was mid-flight (`approving`) set `changes_requested` only to have approve's
+  unconditional final/revert UPDATE clobber it — request marked granted, session
+  approved anyway. Now: `409 approve_in_progress` on `approving`, and the grant is a
+  CAS on the status just read (`409 state_changed` on conflict).
+- **`routes_admin.run_pipeline_job`:** a subprocess timeout left the job `queued` with
+  a raw 500; now TimeoutExpired/OSError mark the job `failed` with a log. Subprocess
+  decoding pinned to utf-8 (locale cp1252 garbles/raises on CJK diffs). trip_id argv
+  guard (defence in depth).
+- **`review_bus`:** `list_jobs` no longer GETs every job object ever (keys sorted
+  newest-first, bounded fetch); `queue_job` validates trip_id shape.
+- **`external_reports`:** `createdOn` now parsed from Timestamp/epoch-number/ms/ISO
+  string forms (was silently None for non-Timestamp); leaving `resolved` clears
+  `resolved_by/at` (stale stamp survived re-open).
+- **FE `RecallControl`:** polls recall state every 30s and re-fetches the session when
+  the server status diverges — a granted/declined recall now shows without a reload.
+- **Structure:** `AdminInlineEdit` extracted out of ChangesSummaryPage to
+  `components/AdminInlineEdit.tsx`; `fieldChanged`/`zhChangedScripts` → `fieldDiff.ts`;
+  shared `modalStyle.ts` (new usages migrated; pre-existing 5 copies left alone).
+- **API_CONTRACT.md:** all arc-2 endpoints documented (external-reports, admin
+  staging-trips/open, pipeline queue/jobs/run, drift).
+- **Scripts repo `publish_inbox.py`** (separate commit there): utf-8 subprocess decode +
+  console reconfigure (CJK logs on cp1252 consoles), trip_id argv guard.
+
+### Verified
+- `py_compile` all backend modules + `import app.main` — OK. `npm run build` — green.
+- Live server on :8124 with throwaway users: presence blocker → `409 reason_required`;
+  request → grant CAS → `changes_requested` + review_note; `approving` grant → `409
+  approve_in_progress`; auto-grant CAS → `in_review`; reviewer edit while submitted →
+  403, admin edit → 200 with `edited_by` stamped through the middleware contextvar +
+  threadpool (confirmed live). All mutated rows restored; test users/tokens deleted.
+
+### Noted, not fixed (deliberate design or owner call needed)
+- `request_changes` also allows `approving` (same clobber shape, pre-existing).
+- `_session_row`/`_session_meta` cross-module private use is a pre-existing idiom.
+- FE ignores `sync_error` from external-reports (silent stale cache).
+- `_staging_index` holds its lock through the full Firestore sweep (first search blocks
+  concurrent ones for its duration).

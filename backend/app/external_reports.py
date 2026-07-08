@@ -56,6 +56,30 @@ def _scene_ids_for(trip: dict | None) -> dict[int, str]:
     return out
 
 
+def _epoch_of(created) -> float | None:
+    """Best-effort epoch seconds from the several shapes ``createdOn`` shows up in:
+    a Firestore Timestamp / datetime (has .timestamp()), a numeric epoch (seconds, or
+    JS-style milliseconds), or an ISO-8601 string. None when unparseable/absent."""
+    if created is None:
+        return None
+    ts_fn = getattr(created, "timestamp", None)
+    if callable(ts_fn):                      # Firestore Timestamp / datetime
+        try:
+            return float(ts_fn())
+        except Exception:  # noqa: BLE001
+            return None
+    if isinstance(created, (int, float)):
+        v = float(created)
+        return v / 1000.0 if v > 1e12 else v   # ms-epoch heuristic (>= year 33658 in s)
+    if isinstance(created, str):
+        from datetime import datetime
+        try:
+            return datetime.fromisoformat(created.replace("Z", "+00:00")).timestamp()
+        except ValueError:
+            return None
+    return None
+
+
 def sync_trip(trip_id: str, trip: dict | None = None) -> int:
     """Pull staging UserReports rows for one trip (equality on context.contentId) into
     external_reports. INSERTs new docs only — local triage state is never overwritten.
@@ -75,8 +99,7 @@ def sync_trip(trip_id: str, trip: dict | None = None) -> int:
             scene_index = int(scene_index) if scene_index is not None else None
         except (TypeError, ValueError):
             scene_index = None
-        created = d.get("createdOn")
-        created_ts = getattr(created, "timestamp", lambda: None)()
+        created_ts = _epoch_of(d.get("createdOn"))
         cats = d.get("categories") or []
         if not isinstance(cats, list):
             cats = []
@@ -129,10 +152,12 @@ def set_status(report_id: str, user, status: str) -> dict:
         raise HTTPException(404, detail={"error": "no_report", "detail": report_id})
     now = time.time()
     resolved = status == "resolved"
+    # resolved → stamp who/when; leaving resolved (re-open/acknowledge) → clear the
+    # stamp so a stale "resolved by X at T" can't survive on a non-resolved row.
     db.execute(
         "UPDATE external_reports SET status=?, resolved_by=?, resolved_at=? WHERE id=?",
-        (status, getattr(user, "username", None) if resolved else row["resolved_by"],
-         now if resolved else row["resolved_at"], report_id))
+        (status, getattr(user, "username", None) if resolved else None,
+         now if resolved else None, report_id))
     try:
         from .staging import db as fb_db
         fb_db().collection("UserReports").document(report_id).update({

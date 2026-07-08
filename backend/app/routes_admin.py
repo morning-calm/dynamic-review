@@ -153,15 +153,34 @@ def run_pipeline_job(body: RunJob, admin=Depends(auth.require_admin)):
     job = review_bus.get_job(body.job_id)
     if job.get("kind") != "publish":
         raise HTTPException(422, detail={"error": "bad_kind", "detail": job.get("kind")})
+    trip_id = str(job.get("trip_id") or "")
+    if not trip_id or trip_id.startswith("-"):
+        # Defence in depth (queue_job validates too): never pass an argv that argparse
+        # could read as a flag on the production-writing script.
+        raise HTTPException(422, detail={"error": "bad_trip_id", "detail": trip_id})
     apply_write = bool(body.apply and body.i_am_sure)
-    cmd = [sys.executable, str(SCRIPTS_ROOT / "publish_trip_text.py"), job["trip_id"]]
+    cmd = [sys.executable, str(SCRIPTS_ROOT / "publish_trip_text.py"), trip_id]
     if apply_write:
         cmd += ["--apply", "--i-am-sure"]
-    proc = subprocess.run(cmd, cwd=str(SCRIPTS_ROOT), capture_output=True,
-                          text=True, timeout=300)
-    log = (proc.stdout or "") + (("\n" + proc.stderr) if proc.stderr else "")
-    status = ("failed" if proc.returncode != 0
-              else ("done" if apply_write else "dry_run"))
+    try:
+        # utf-8 explicitly: text=True alone decodes with the Windows locale codepage,
+        # which garbles/raises on the script's CJK diff output.
+        proc = subprocess.run(cmd, cwd=str(SCRIPTS_ROOT), capture_output=True,
+                              text=True, encoding="utf-8", errors="replace",
+                              timeout=300)
+        log = (proc.stdout or "") + (("\n" + proc.stderr) if proc.stderr else "")
+        status = ("failed" if proc.returncode != 0
+                  else ("done" if apply_write else "dry_run"))
+    except subprocess.TimeoutExpired as e:
+        # Don't leave the job looking 'queued' after a hung run — surface the failure
+        # on the job object itself (the bus is deliberately not silent-best-effort).
+        log = ((e.stdout or b"").decode("utf-8", "replace") if isinstance(e.stdout, bytes)
+               else (e.stdout or ""))
+        log += f"\n!! publish_trip_text.py timed out after {e.timeout:.0f}s"
+        status = "failed"
+    except OSError as e:
+        log = f"!! could not launch publish_trip_text.py: {e}"
+        status = "failed"
     return review_bus.update_job(
         body.job_id, status=status, log=log[-8000:],
         resolved_by=getattr(admin, "username", None) or "",

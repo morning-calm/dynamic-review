@@ -18,6 +18,7 @@ explicit admin action, so R2 failures surface as HTTP errors."""
 from __future__ import annotations
 
 import json
+import re
 import secrets
 import time
 
@@ -27,6 +28,11 @@ from .review_audio import BUCKET, _r2
 
 JOBS_PREFIX = "_bus/jobs/"
 SNAPSHOT_PREFIX = "_bus/prod-snapshot/"
+
+# Trip ids are Firestore doc ids like Taipei101_HSK12_ZH — enforce that shape at queue
+# time so a job never carries an id that breaks the key layout or (defence in depth)
+# could be mistaken for a CLI flag by the workstation executors.
+_TRIP_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_\-]{0,99}$")
 
 
 def _client():
@@ -45,6 +51,8 @@ def _job_key(job_id: str) -> str:
 def queue_job(kind: str, trip_id: str, user, note: str = "") -> dict:
     if kind != "publish":
         raise HTTPException(422, detail={"error": "bad_kind", "detail": kind})
+    if not _TRIP_ID_RE.fullmatch(trip_id or ""):
+        raise HTTPException(422, detail={"error": "bad_trip_id", "detail": trip_id})
     job = {
         "id": f"{time.strftime('%Y%m%d-%H%M%S')}-{secrets.token_hex(3)}",
         "kind": kind,
@@ -79,22 +87,31 @@ def update_job(job_id: str, **patch) -> dict:
     return job
 
 
-def list_jobs(trip_id: str | None = None, limit: int = 100) -> list[dict]:
+def list_jobs(trip_id: str | None = None, limit: int = 100,
+              fetch_cap: int = 300) -> list[dict]:
+    """Newest jobs on the bus (optionally one trip's). Job ids start with a UTC-ish
+    timestamp, so KEYS sort chronologically — list the keys (cheap), walk them newest
+    first, and stop at `limit` matches / `fetch_cap` object GETs. Older jobs than the
+    cap can horizon out of a trip-filtered view; the bus is an inbox, not an archive."""
     s3 = _client()
-    out: list[dict] = []
+    keys: list[str] = []
     paginator = s3.get_paginator("list_objects_v2")
     for page in paginator.paginate(Bucket=BUCKET, Prefix=JOBS_PREFIX):
-        for obj in page.get("Contents", []):
-            try:
-                body = s3.get_object(Bucket=BUCKET, Key=obj["Key"])["Body"].read()
-                job = json.loads(body.decode("utf-8"))
-            except Exception:  # noqa: BLE001 — skip a malformed object, don't fail the list
-                continue
-            if trip_id and job.get("trip_id") != trip_id:
-                continue
-            out.append(job)
+        keys.extend(obj["Key"] for obj in page.get("Contents", []))
+    out: list[dict] = []
+    for key in sorted(keys, reverse=True)[:fetch_cap]:
+        if len(out) >= limit:
+            break
+        try:
+            body = s3.get_object(Bucket=BUCKET, Key=key)["Body"].read()
+            job = json.loads(body.decode("utf-8"))
+        except Exception:  # noqa: BLE001 — skip a malformed object, don't fail the list
+            continue
+        if trip_id and job.get("trip_id") != trip_id:
+            continue
+        out.append(job)
     out.sort(key=lambda j: j.get("requested_at") or 0, reverse=True)
-    return out[:limit]
+    return out
 
 
 def prod_snapshot(trip_id: str) -> dict | None:
