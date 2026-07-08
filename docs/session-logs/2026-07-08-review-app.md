@@ -139,10 +139,39 @@ pattern, fix everything, write it up for Ted, add a soft UI warning.
 - **Mobile:** TripListPage action group (Lane/Status/Pin/Mark complete/Open-Resume) now
   wraps on phones — Resume/Open were clipped off-screen at 375px (dave's screenshot).
 
+## Evening 2 — audio availability + attribution + retirements (Ted LIVE, no restarts)
+- **Rule in force: Ted editing → NO backend restart / review.db writes.** All fixes below
+  are restart-free (notifier = separate process via git pull; manifest = re-read per
+  request; R2 = data-side).
+- **"admin started Taipei101_HSK12_ZH" (13:12) misattribution #2:** Ted holds a days-old
+  persistent token → no fresh login row → the 12h specialist-login rule missed → fell to
+  most-recent-login (admin). Fixed: specialist wins when they hold a VALID token at the
+  activity time (`live_tokens_by_user` on auth_sessions.expires_at). Pushed, self-deployed.
+- **"no local audio" (Taiwan EN, Tokyo_06-10 EN/JP) root cause:** the backend ALREADY has
+  an R2 seed-cache fallback in resolve_audio_dir (migration Phase 2) and `reviewable`
+  includes it — but those trips joined the manifest AFTER the last bulk R2 upload, so
+  `review-audio/` simply had no objects for them. The laptop's Audio Generation tree is
+  ~empty (1 MB) by design; R2 is the transport. **Fix: re-ran
+  `upload_review_audio_r2.py --manifest` → 125 trips / 6,208 files / 0 errors.** Verified
+  on the laptop: Taipei101_EN + Tokyo_06_HieShrine (EN & N4_JP) now resolve via
+  work/_r2_seed_cache. no_audio leftovers all expected (HSK3 ZH = _voice_test sourced;
+  Caerphilly_Castle_B1 not yet generated; Tokyo_08_EN already approved).
+  ⚠ OPERATIONAL RULE: when new audio is generated on the workstation for manifest trips,
+  re-run the bulk upload (CEFR EN has the stage-5c hook; JP/Taiwan flows have NO hook yet).
+- **Retired from review queue:** Canterbury_B1_EN + Lake_District2_B1_EN added to EXCLUDE
+  in Trello/export_review_trips.py (committed to dynamic-content) + manifest re-exported/
+  pushed (129 trips, both gone). Sticks across future exports.
+- (A tar-sync of audio onto the laptop was attempted then found unnecessary — R2 was the
+  designed path all along; the auto-mode classifier rightly blocked host writes anyway.)
+
 ## Open / carried forward
 - **Auto-review Phase 3** (auto-approve clean reports) — NOT enabled; needs dave's shadow-
   mode confidence first. Also possible: "apply suggested fix" button; level_check.py vocab
   reuse for a deterministic HSK-level gate; JP-specific Gate-1 checks.
+- **JP/Taiwan audio-generation flows have no R2 upload hook** — new audio for manifest
+  trips needs a manual `upload_review_audio_r2.py --manifest` (or add hooks like 5c).
+- **Exact start/break attribution** — stamp user_id on field_edits (backend change; next
+  restart window).
 - Mobile deeper work deferred: touch-first splice selection UX (or explicitly keep splice
   desktop/tablet-only); sticky mini-player; collapsing the 17-button RegenerateControls row.
 - systemd `daemon-reload` on the laptop (see note above).
