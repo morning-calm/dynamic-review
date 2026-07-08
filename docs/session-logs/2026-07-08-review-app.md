@@ -127,6 +127,18 @@ pattern, fix everything, write it up for Ted, add a soft UI warning.
   first verdicts email goes out next cron tick).
 - Deployed: pull + dist rebuild + service restart (idle 892 min). All verified live.
 
+## Late follow-ups (dave's questions, commit 611d260, deployed)
+- **Gate-1 blocking softened per dave:** submit NEVER hard-blocks — Gate-1 blockers show as
+  "[will block approval]" warnings; approve keeps them hard (staging protection).
+  validate() gained mode="submit"|"approve". Punct-only Hant/Hans diff = warn not block
+  (scene-24 regression test). Word-level mismatch still blocks at approve.
+- **Runner limit-awareness (real bug found by dave's question):** an error report row used
+  to permanently silence a session. Now: usage-limit failure → NO row, hourly backoff via
+  backend/autoreview_state.json (gitignored), session stays queued and auto-reviews when
+  the subscription limit resets; other errors → one error row, 6h retry.
+- **Mobile:** TripListPage action group (Lane/Status/Pin/Mark complete/Open-Resume) now
+  wraps on phones — Resume/Open were clipped off-screen at 375px (dave's screenshot).
+
 ## Open / carried forward
 - **Auto-review Phase 3** (auto-approve clean reports) — NOT enabled; needs dave's shadow-
   mode confidence first. Also possible: "apply suggested fix" button; level_check.py vocab
