@@ -330,6 +330,11 @@ def remove(trip_id: str, index: int, base: list[str], user) -> dict:
     def mutate(qt: list[dict]):
         if not (0 <= index < len(qt)):
             raise HTTPException(422, detail={"error": "bad_index", "detail": str(index)})
+        if len(qt) == 1:
+            raise HTTPException(422, detail={
+                "error": "last_scene",
+                "detail": "cannot remove the trip's only remaining scene — an empty "
+                          "quickTrips breaks readers; swap its video instead"})
         removed = qt.pop(index)
         index_map: dict[int, int | None] = {index: None}
         for old in range(index + 1, len(qt) + 1):
@@ -527,12 +532,29 @@ def set_categories(trip_id: str, categories: list[str], user) -> dict:
     including the non-semantic level tags, so the FE shows the full live list."""
     clean = [c.strip() for c in categories if c and c.strip()]
     trip, _qt = _fetch(trip_id)       # 404 for a bogus trip BEFORE any write
+    warnings: list[str] = []
+    row = _active_session_row(trip_id)
+    if row:
+        # Not a desync risk (categories aren't index-addressed), so warn instead of
+        # 409: that session's submit re-derives tripCategories from the description
+        # and may overwrite this verbatim edit.
+        warnings.append(
+            f"Session {row['id']} is '{row['status']}' on this trip — its submit "
+            "re-derives tripCategories from the description and may overwrite this "
+            "edit.")
+    client = fb_db()
     tg_id = tripgroup_id_for(trip_id)
-    tg_ref = fb_db().collection("TripGroups").document(tg_id)
+    tg_ref = client.collection("TripGroups").document(tg_id)
+    batch = client.batch()            # TG + Trip land atomically (or not at all)
+    dirty = False
     if tg_ref.get().exists:
-        tg_ref.update({"tripCategories": clean})
+        batch.update(tg_ref, {"tripCategories": clean})
+        dirty = True
     if "tripCategories" in trip:
-        fb_db().collection("Trips").document(trip_id).update(
-            {"tripCategories": clean})
+        batch.update(client.collection("Trips").document(trip_id),
+                     {"tripCategories": clean})
+        dirty = True
+    if dirty:
+        batch.commit()
     _audit(trip_id, "set_categories", {"categories": clean}, user)
-    return {"ok": True, "warnings": [], "structure": get_structure(trip_id)}
+    return {"ok": True, "warnings": warnings, "structure": get_structure(trip_id)}
