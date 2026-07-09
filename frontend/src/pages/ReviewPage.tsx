@@ -195,6 +195,17 @@ const ReviewBody = () => {
       />
 
       <main className="mx-auto max-w-review space-y-6 px-4 py-6">
+        {session.audio_unavailable && (
+          <div className="rounded border border-amber-700 bg-amber-900/20 p-3 text-sm text-amber-200">
+            <p className="font-medium">Audio unavailable for this trip.</p>
+            <p className="mt-1 text-amber-300/80">
+              Its MP3 masters couldn’t be found locally or on R2, so this session is text-only —
+              playback, regenerate and splice tools are disabled. Text edits work normally and can
+              be submitted/approved as usual.
+            </p>
+          </div>
+        )}
+
         {session.status === 'changes_requested' && (
           <div className="rounded border border-amber-700 bg-amber-900/20 p-3 text-sm text-amber-200">
             <p className="font-medium">Changes requested by the admin.</p>

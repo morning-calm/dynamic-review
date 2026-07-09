@@ -659,7 +659,9 @@ def _list_trips_from_scan() -> list[dict]:
 # --------------------------------------------------------------------------- #
 # Seed / resume
 # --------------------------------------------------------------------------- #
-def create_or_resume(trip_id: str, user, *, allow_completed: bool = False) -> dict:
+def create_or_resume(trip_id: str, user, *,
+                     allow_completed: bool = False,
+                     allow_no_audio: bool = False) -> dict:
     # [P0-1] Language gate at the TOP — the create is keyed on trip_id, so the
     # per-{sid} scoping dependency structurally can't cover it. Admins bypass.
     from . import auth   # lazy import (auth imports sessions) — no module-load cycle
@@ -709,10 +711,14 @@ def create_or_resume(trip_id: str, user, *, allow_completed: bool = False) -> di
     # Quicktrips masters); otherwise the normal masters (incl. a finalised _ZH trip).
     mp3_dir = v3_set if v3_set else resolve_audio_dir(trip_id, trip)
     if not _has_scene_mp3(mp3_dir):
-        raise HTTPException(status_code=422, detail={
-            "error": "bad_folder",
-            "detail": f"{trip_id}: no MP3 masters under the Quicktrips tree or "
-                      f"Audio Generation/{trip_id}"})
+        # allow_no_audio (admin staging editor): seed anyway — every audio field
+        # degrades to text-only via the per-field master.exists() fallback below, and
+        # get_session surfaces `audio_unavailable` so the FE shows a soft warning.
+        if not allow_no_audio:
+            raise HTTPException(status_code=422, detail={
+                "error": "bad_folder",
+                "detail": f"{trip_id}: no MP3 masters under the Quicktrips tree or "
+                          f"Audio Generation/{trip_id}"})
 
     voice = resolve_voice(trip_id, country)
     voice_id, voice_settings = audio_core.VOICES[voice]
@@ -1071,6 +1077,14 @@ def get_session(sid: str) -> dict:
         # line is what's voiced). is_zh stays the Mandarin A/B-audition flag.
         "language": audio_core.language_of(srow["trip_id"]),
         "preferred_version": _srow_get(srow, "preferred_version"),
+        # True when the trip EXPECTS narration audio but the session seeded with none
+        # (masters unresolvable locally/R2 — the admin text-only editing path). A trip
+        # that genuinely has no audio fields stays False.
+        "audio_unavailable": (
+            any((s or {}).get("hasAudio") or ((s or {}).get("questionKey") or "").strip()
+                or (s or {}).get("questionOptionKeys")
+                for s in trip.get("quickTrips") or [])
+            and not any(fr["has_audio"] for fr in frows)),
         "trip_fields": trip_fields,
         "scenes": scenes_out,
     }

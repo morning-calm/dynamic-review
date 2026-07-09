@@ -462,6 +462,10 @@ export interface Session {
   approved_by: string | null;
   /** Set by admin request-changes; the reason to show the reviewer. */
   review_note: string | null;
+  /** True when the trip expects narration audio but the session seeded with none
+   * (masters unresolvable locally/R2 — admin text-only editing). Soft warning only;
+   * audio tools are already disabled per-field. */
+  audio_unavailable: boolean;
   voice: string;
   voice_display: string;
   speed: number;

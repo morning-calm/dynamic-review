@@ -167,8 +167,10 @@ def staging_trips(q: str = "", location: str = "", country: str = "", refresh: i
 def open_staging_trip(body: CreateSession, admin=Depends(auth.require_admin)):
     """Open (create or resume) a session for ANY staging trip — including a COMPLETED
     one (the reviewer flow 409s there; the admin editor is exactly for post-completion
-    fixes). Seeding still requires resolvable MP3 masters (422 bad_folder otherwise)."""
-    return sessions.create_or_resume(body.trip_id, admin, allow_completed=True)
+    fixes). Unresolvable MP3 masters no longer 422: the session seeds TEXT-ONLY and
+    the FE shows a soft `audio_unavailable` warning (audio tools disabled per-field)."""
+    return sessions.create_or_resume(body.trip_id, admin, allow_completed=True,
+                                     allow_no_audio=True)
 
 
 # --------------------------------------------------------------------------- #
