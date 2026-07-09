@@ -142,5 +142,45 @@ Trip ids; `locationName`/`locationCountry` on the TripLocation doc.
   both London AND UK Theme, Japan=116/tokyo=29/taipei+Taiwan=7 spot filters,
   countries list exact.
 
-**Deploy note:** NOT deployed — commits stay local (laptop cron auto-pulls
-main; BE change needs a restart + FE a rebuild there in an idle window).
+**Deploy note (superseded same day):** initially left local; dave then asked
+for a live deploy — see the deploy section below.
+
+## FEATURE: text-only editing when audio is unavailable (dave's ask)
+
+Admin `/api/admin/open` no longer 422s (`bad_folder`) when no MP3 masters
+resolve locally or on R2: the session seeds TEXT-ONLY (each audio field
+degrades via the existing per-field `master.exists()` fallback) and the
+Session payload gains `audio_unavailable: true`; ReviewPage shows a soft
+amber banner (playback/regenerate/splice disabled per-field, text edits +
+submit/approve work normally). The reviewer flow keeps the hard 422.
+Verified live with a disposable synthetic staging trip: reviewer 422
+preserved, admin seed text-only + flag, text edit works, flag persists,
+real sessions with audio stay unflagged; all test docs/rows cleaned.
+
+## DEPLOYED to the laptop (dave's explicit go — "I want to test them live")
+
+All 7 commits pushed to origin/main (`61efb1d..c172604`) and deployed:
+- **Idle verified first:** last field_edit 2026-07-08 21:23 (785 min), live
+  presence 0.
+- **⚠ Incident during restart:** service crash-looped —
+  `ModuleNotFoundError: scene_ids` (structure.py's Scripts-repo import; first
+  laptop deploy of the structure editor). Root cause: the laptop's
+  `dynamic-content` checkout was months behind and **has NO auto-pull cron**
+  (only the review-app repo does). Fix: verified `scene_ids.py` is
+  stdlib-only + committed on origin, laptop tree clean → `git pull --ff-only`
+  in `~/Desktop/Server/Scripts` → restart → healthy. RULE: deploying
+  review-app code that imports NEW Scripts modules needs a manual
+  dynamic-content pull on the laptop first.
+- **Verified:** service `active`, `/api/trips` 401 (up), new admin routes
+  loaded (401 not 404), FE bundle `index-lPdzXmwL.js` (hash identical to the
+  workstation build), cloudflared runs as systemd `review-tunnel.service`
+  (untouched), public `https://review.dynamiclanguages.org/` → 200 SPA +
+  401 API. **Data identical pre/post:** sessions {approved 3, in_review 10,
+  submitted 2}, field_edits 906, live tokens 19 — reviewers stay logged in.
+- Still pending on the laptop: interactive `systemctl daemon-reload`
+  (unit-file-changed warning persists; harmless, backlogged).
+
+**Now live for testing:** All-trips Location/Country filters, text-only
+admin editing of audio-less trips (soft warning), structure editor
+(/structure/:tripId via the All-trips Structure button), atomic
+set_categories + last-scene guard, and the earlier structure-editor arc.
