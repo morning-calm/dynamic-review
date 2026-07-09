@@ -18,10 +18,16 @@ const STATUS_LABEL: Record<SessionStatus, string> = {
 const StagingSearchPage = () => {
   const navigate = useNavigate();
   const [q, setQ] = useState('');
+  const [location, setLocation] = useState('');
+  const [country, setCountry] = useState('');
   const [result, setResult] = useState<AdminStagingList | null>(null);
   const [loading, setLoading] = useState(false);
   const [opening, setOpening] = useState<string | null>(null);
   const debounce = useRef<number | undefined>(undefined);
+  // Dropdown option lists are kept stable from the latest response — they shouldn't
+  // shrink/reflow just because a filter narrowed the current result set.
+  const [locations, setLocations] = useState<string[]>([]);
+  const [countries, setCountries] = useState<string[]>([]);
 
   // Debounced search-as-you-type against the server's cached index.
   useEffect(() => {
@@ -29,15 +35,19 @@ const StagingSearchPage = () => {
     debounce.current = window.setTimeout(() => {
       setLoading(true);
       api
-        .adminStagingTrips(q)
-        .then(setResult)
+        .adminStagingTrips(q, false, location, country)
+        .then((r) => {
+          setResult(r);
+          setLocations(r.locations);
+          setCountries(r.countries);
+        })
         .catch((e: unknown) =>
           toast.error(`Search failed: ${e instanceof ApiError ? e.detail : 'network error'}`),
         )
         .finally(() => setLoading(false));
     }, 300);
     return () => window.clearTimeout(debounce.current);
-  }, [q]);
+  }, [q, location, country]);
 
   const open = (tripId: string) => {
     setOpening(tripId);
@@ -63,6 +73,30 @@ const StagingSearchPage = () => {
             autoFocus
             className="w-full max-w-md rounded border border-gray-700 bg-gray-900 px-3 py-2 text-base sm:text-sm"
           />
+          <select
+            value={country}
+            onChange={(e) => setCountry(e.target.value)}
+            className="rounded border border-gray-700 bg-gray-900 px-3 py-2 text-base sm:text-sm"
+          >
+            <option value="">All countries</option>
+            {countries.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+          <select
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            className="rounded border border-gray-700 bg-gray-900 px-3 py-2 text-base sm:text-sm"
+          >
+            <option value="">All locations</option>
+            {locations.map((l) => (
+              <option key={l} value={l}>
+                {l}
+              </option>
+            ))}
+          </select>
           {result && (
             <span className="text-xs text-gray-500">
               {result.total} match{result.total === 1 ? '' : 'es'}
@@ -103,6 +137,8 @@ const StagingSearchPage = () => {
                   <p className="truncate text-[11px] text-gray-500">
                     {t.trip_id} · {t.language}
                     {t.folder_name ? ` · ${t.folder_name}` : ''}
+                    {t.location ? ` · ${t.location}` : ''}
+                    {t.country ? ` · ${t.country}` : ''}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">

@@ -39,14 +39,78 @@ def _staging_index(force: bool = False) -> list[dict]:
         if not force and _index["rows"] and time.time() - _index["at"] < _INDEX_TTL_SECONDS:
             return _index["rows"]
         from .staging import db as fb_db   # lazy: Firestore init on first use
+        fs = fb_db()
+
+        # TripLocations: locationName/locationCountry keyed by the TripGroup ids it
+        # lists. Some TGs appear in SEVERAL TripLocations (a city AND a theme location,
+        # e.g. London + "UK Theme") — keep ALL pairs, deduped, in encounter order.
+        # Stale-duplicate guard: when several docs share the same effective
+        # locationName AND country, only the one with the most trips is authoritative
+        # (staging has a leftover 'JapaneseTrips' doc duplicating JPHistory's
+        # "Discover_Past_Series" name but listing the Spanish 'Cuevas_Trip' — it would
+        # mislabel Cuevas as Japan). Keyed on (name, country), NOT name alone: the
+        # three Alps docs legitimately share a name across Germany/France/Italy and
+        # must all survive even if their trip counts diverge.
+        loc_docs: list[tuple[str, str, list]] = []   # (name, country, tg_ids)
+        biggest: dict[tuple[str, str], int] = {}     # (name, country) -> max n_trips
+        for snap in fs.collection("TripLocations").stream():
+            d = snap.to_dict() or {}
+            name = d.get("locationName") or snap.id
+            country = d.get("locationCountry") or ""
+            tg_ids = d.get("trips") or []
+            loc_docs.append((name, country, tg_ids))
+            biggest[(name, country)] = max(biggest.get((name, country), 0), len(tg_ids))
+        # tg_id -> [(location_name, country), …]
+        tg_to_locs: dict[str, list[tuple[str, str]]] = {}
+        for name, country, tg_ids in loc_docs:
+            if len(tg_ids) < biggest[(name, country)]:
+                continue   # stale duplicate of a bigger same-name+country location
+            loc = (name, country)
+            for tg_id in tg_ids:
+                if isinstance(tg_id, str) and tg_id:
+                    pairs = tg_to_locs.setdefault(tg_id, [])
+                    if loc not in pairs:
+                        pairs.append(loc)
+
+        # TripGroups: trips[].tripId -> the TripGroup's (location, country) pairs.
+        trip_to_locs: dict[str, list[tuple[str, str]]] = {}
+        for snap in fs.collection("TripGroups").select(["trips"]).stream():
+            locs = tg_to_locs.get(snap.id)
+            if not locs:
+                continue
+            d = snap.to_dict() or {}
+            for entry in (d.get("trips") or []):
+                if isinstance(entry, dict):
+                    tid = entry.get("tripId")
+                elif isinstance(entry, str):
+                    tid = entry
+                else:
+                    tid = None
+                if tid:
+                    pairs = trip_to_locs.setdefault(tid, [])
+                    for loc in locs:
+                        if loc not in pairs:
+                            pairs.append(loc)
+
+        def _dedup(vals) -> list[str]:
+            return list(dict.fromkeys(v for v in vals if v))
+
         rows: list[dict] = []
-        for snap in fb_db().collection("Trips").select(
+        for snap in fs.collection("Trips").select(
                 ["contentTitleKey", "folderName"]).stream():
             d = snap.to_dict() or {}
+            pairs = trip_to_locs.get(snap.id, [])
+            locations = _dedup(p[0] for p in pairs)
+            countries = _dedup(p[1] for p in pairs)
             rows.append({
                 "trip_id": snap.id,
                 "title": d.get("contentTitleKey") or snap.id,
                 "folder_name": d.get("folderName") or "",
+                "locations": locations,     # all values, for any-match filtering
+                "countries": countries,
+                # ", "-joined display strings (the FE row meta shows these as-is)
+                "location": ", ".join(locations),
+                "country": ", ".join(countries),
             })
         rows.sort(key=lambda r: r["trip_id"].lower())
         _index["rows"] = rows
@@ -55,16 +119,31 @@ def _staging_index(force: bool = False) -> list[dict]:
 
 
 @router.get("/staging-trips")
-def staging_trips(q: str = "", refresh: int = 0,
+def staging_trips(q: str = "", location: str = "", country: str = "", refresh: int = 0,
                   admin=Depends(auth.require_admin)):
     """Search the WHOLE staging Trips collection by id/title substring (admin only).
     Every row also says where the trip sits in the review workflow, so the admin can
-    see at a glance whether opening it resumes a session or seeds a fresh one."""
-    rows = _staging_index(force=bool(refresh))
+    see at a glance whether opening it resumes a session or seeds a fresh one.
+    `location`/`country` are independent case-insensitive filters matching ANY of a
+    row's `locations`/`countries` (a trip can sit in several TripLocations)."""
+    full = _staging_index(force=bool(refresh))
+    locations = sorted({l for r in full for l in r["locations"]}, key=str.lower)
+    countries = sorted({c for r in full for c in r["countries"]}, key=str.lower)
+
+    rows = full
     needle = (q or "").strip().lower()
     if needle:
         rows = [r for r in rows
                 if needle in r["trip_id"].lower() or needle in r["title"].lower()]
+    loc_needle = (location or "").strip().lower()
+    if loc_needle:
+        rows = [r for r in rows
+                if any(l.lower() == loc_needle for l in r["locations"])]
+    country_needle = (country or "").strip().lower()
+    if country_needle:
+        rows = [r for r in rows
+                if any(c.lower() == country_needle for c in r["countries"])]
+
     out: list[dict] = []
     for r in rows[:200]:   # hard cap — the FE asks for narrower queries, not paging
         tid = r["trip_id"]
@@ -80,7 +159,8 @@ def staging_trips(q: str = "", refresh: int = 0,
             "completed_method": crow["method"] if crow else None,
             "completed_by": crow["completed_by"] if crow else None,
         })
-    return {"total": len(rows), "shown": len(out), "trips": out}
+    return {"total": len(rows), "shown": len(out), "trips": out,
+            "locations": locations, "countries": countries}
 
 
 @router.post("/open")

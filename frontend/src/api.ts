@@ -291,6 +291,12 @@ export interface AdminStagingTrip {
   trip_id: string;
   title: string;
   folder_name: string;
+  /** ", "-joined display strings of `locations`/`countries` (a trip can sit in several TripLocations). */
+  location: string;
+  country: string;
+  /** All values, deduped — the server's location/country filters match ANY of these. */
+  locations: string[];
+  countries: string[];
   language: string;
   has_session: boolean;
   status: SessionStatus | null;
@@ -304,6 +310,9 @@ export interface AdminStagingList {
   total: number;
   shown: number;
   trips: AdminStagingTrip[];
+  /** Distinct, sorted, non-empty values from the FULL index (not the filtered rows). */
+  locations: string[];
+  countries: string[];
 }
 
 /** field_path values from the contract's field_path table. */
@@ -862,8 +871,10 @@ export const api = {
 
   // --- Admin staging-wide editor (search/open ANY staging trip) ---
   /** Admin only: search the whole staging Trips collection by id/title substring. */
-  adminStagingTrips: (q: string, refresh = false): Promise<AdminStagingList> =>
-    getJson(`/api/admin/staging-trips?q=${encodeURIComponent(q)}${refresh ? '&refresh=1' : ''}`),
+  adminStagingTrips: (q: string, refresh = false, location = '', country = ''): Promise<AdminStagingList> =>
+    getJson(`/api/admin/staging-trips?q=${encodeURIComponent(q)}${refresh ? '&refresh=1' : ''}`
+      + (location ? `&location=${encodeURIComponent(location)}` : '')
+      + (country ? `&country=${encodeURIComponent(country)}` : '')),
 
   /** Admin only: open ANY staging trip (bypasses the manifest + completed exclusion). */
   adminOpenTrip: (tripId: string): Promise<Session> =>
