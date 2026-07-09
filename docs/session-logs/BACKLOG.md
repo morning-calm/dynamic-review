@@ -81,7 +81,18 @@ alignment / format only — no level check (it's a Phase-1 TODO `level_vocab_che
 vocab-lookup in-process (or porting the band tables) is a genuine new integration. JP Gate-1
 checks are greenfield.
 
-### 6. Mobile deeper work — **needs a product decision first**
+### 6. S3-ogg last-resort audio fallback (only if the case ever bites)
+**What:** when a published trip is opened in the admin editor and its mp3 masters resolve
+NOWHERE (local trees gone AND no `review-audio/<cid>/` R2 objects), optionally fall back to
+Stage 9's ogg outputs on AWS S3 as seed audio.
+**Why parked:** today the backend never reads S3 by design — S3 holds Stage 9's *outputs*
+(ogg + subtitles), not the mp3 masters, and splicing a lossy ogg re-encode degrades quality
+(`resolve_audio_dir`: local → Audio Generation → R2 seed cache, `sessions.py:236`). The gap
+is only trips published long ago that never passed through the review app and whose local
+masters are gone → `422 bad_folder` on admin open. Preferred fix when it bites: restore the
+masters to R2, not S3-read plumbing. Raised by dave 2026-07-09.
+
+### 7. Mobile deeper work — **needs a product decision first**
 Touch-first splice-selection UX **or** explicitly declare splice desktop/tablet-only; sticky
 mini-player; collapse the 17-button `RegenerateControls` row. Quick wins already shipped
 (2026-07-08), so phones aren't broken — this is enhancement, blocked on the selection-UX call.
@@ -90,14 +101,22 @@ mini-player; collapse the 17-button `RegenerateControls` row. Quick wins already
 
 ## P4 — Deferred / gated
 
-### 7. Phase 3 auto-approve — **DEFERRED, needs Dave's explicit go + shadow-report track record**
+### 8. Phase 3 auto-approve — **DEFERRED, needs Dave's explicit go + shadow-report track record**
 Not to be built until we have results: enough shadow verdicts agreeing with Dave's manual
 decisions to trust it. Design exists (`docs/auto-review-proposal.md:106-113`): opt-in config flag
 **`AUTO_APPROVE_CLEAN=1`**; a session with clean Gate-1 AND an all-`ok` Claude report auto-approves
 via the existing `approve()` path with `approved_by='auto'`. Flag not implemented anywhere yet.
 When built: shadow/dry-run mode + kill-switch + per-language rollout before it writes for real.
 
-### 8. Laptop `systemctl daemon-reload`
+### 9. Delete the stale `TripLocations/JapaneseTrips` staging doc
+A leftover duplicate of `TripLocations/JPHistory` (same displayed name
+"Discover_Past_Series", country Japan) whose `trips` list wrongly contains only the
+Spanish `Cuevas_Trip` — it would mislabel Cuevas as Japan. The All-trips
+location/country index (routes_admin.py `_staging_index`, 2026-07-09) works around it
+with a same-name+country stale-duplicate guard; deleting the doc makes the guard
+dead weight. One-line Firestore delete, verify Cuevas still maps to Spain after.
+
+### 10. Laptop `systemctl daemon-reload`
 Unit file changed on disk (warned 2026-07-08); restart works regardless. 10-second interactive
 chore next time SSH'd in (password-gated).
 
