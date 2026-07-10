@@ -82,9 +82,13 @@ tool button is tapped, so every highlight/pause tool aborted at the `start === e
 4. Desktop: toolbar renders as the same single row; one splice op end-to-end.
 5. Ops: confirm `REVIEW_APP_COOKIE_SECURE=1` on the laptop.
 
-### Deploy
-FE-only: `git pull` + `npm run build` on the laptop in an idle window
-(`field_edits.updated_at`). No backend restart needed.
+### Deploy — DONE (same day)
+Committed `ae5dfcc` + pushed. Laptop: idle window confirmed (1310 min since last field
+edit), cron had already pulled; `npm run build` produced the identical bundle hash
+(`index-OY8OwmuA.js`); `review-app.service` + `review-tunnel.service` both active; live
+site + new asset both HTTP 200 through the tunnel. No backend restart (FE-only —
+StaticFiles serves the new dist per-request). `REVIEW_APP_COOKIE_SECURE=1` confirmed in
+the systemd unit (ops checklist item closed).
 
 ### Red-team (clean-context Fable pass, independently verified)
 Two genuine wake-lock re-entrancy bugs found & fixed in `AudioReview.tsx`:
