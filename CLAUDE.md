@@ -235,8 +235,9 @@ the tunnel — uvicorn-only means they're locked out.
    in-progress candidates (pre-combine) still come from the backend.
 
 ## Open items / TODO
-- **3 trips have no audio yet** (`Blaenavon_B1_EN`, `Caerphilly_Castle_B1_EN`,
-  `Lake_District2_B1_EN`) — they upload when their 5c runs.
+- **`Blaenavon_B1_EN` has no audio yet** — uploads when its 5c runs. (`Caerphilly_Castle_B1_EN`
+  + `York_I_B2_EN` retired 2026-07-10 as added-in-error — in the export `EXCLUDE` set;
+  `Lake_District2_B1_EN` retired earlier.)
 - **Voice/voice_settings** are a best-effort guess (per-trip `voice_overrides.json` >
   `staging_choices.json` > country default) — the human listen is the backstop.
 - Stale-on-resume: a long-paused session diffs against its seed snapshot (no "staging changed"

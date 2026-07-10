@@ -81,6 +81,13 @@ THUMB_KEY_PREFIX = "scene-thumbs/"
 THUMB_PUBLIC_BASE = "https://thumbs.dynamiclanguages.org/"
 THUMB_UPLOAD_CACHE = BACKEND_ROOT / "thumb_upload_cache.json"
 
+# Static-360 stills + flat overlays are served locally from the source-audio trees
+# (OVERLAY_SEARCH_DIRS etc.), which don't exist on the hosted/laptop deployment — so
+# they're ALSO mirrored to R2 (same thumbs bucket, distinct prefix) and served publicly
+# when the local file is absent. Keyed by the canonical (reduced `_EN`) base trip id so
+# every level/language sibling of a group shares one copy.
+OVERLAY_KEY_PREFIX = "review-overlays/"
+
 # --- Review audio (mp3) -> Cloudflare R2 'review-audio', one folder per contentID ---
 # The bulk stage-6/7 uploader (upload_review_audio_r2.py), stage 5c (run_levels.py),
 # and the review app's combine/import/fallback all push here; served publicly at

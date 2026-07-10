@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../authContext';
-import { api } from '../api';
+import { api, type AuthUser } from '../api';
 
 /** Current user + logout, the "Completed" link (both roles), the "Bug reports" link
  * (both roles, with an unread/open badge), the admin-only "Review queue" link, and the
@@ -62,7 +62,18 @@ const UserMenu = () => {
     'block whitespace-nowrap rounded px-3 py-1.5 text-left text-gray-200 hover:bg-gray-700';
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2 gap-y-1 text-xs">
+    <>
+      {/* Mobile: everything folds into a single ⋮ popout so the banner stays short and
+          leaves the screen to the editing surface. Desktop keeps the inline row below. */}
+      <MobileMenu
+        user={user}
+        logout={logout}
+        nativeLabel={nativeLabel}
+        bugBadge={bugBadge}
+        recallBadge={recallBadge}
+      />
+
+      <div className="hidden flex-wrap items-center justify-end gap-2 gap-y-1 text-xs sm:flex">
       <div className="relative">
         <button
           type="button"
@@ -141,6 +152,100 @@ const UserMenu = () => {
       <button type="button" onClick={logout} className="text-gray-400 underline hover:text-gray-200">
         Log out
       </button>
+      </div>
+    </>
+  );
+};
+
+/** Mobile-only (`sm:hidden`) condensed nav: a single ⋮ button opening a popout with
+ * every link the desktop row shows, so the sticky banner stays one short line on phones. */
+const MobileMenu = ({
+  user,
+  logout,
+  nativeLabel,
+  bugBadge,
+  recallBadge,
+}: {
+  user: AuthUser;
+  logout: () => void;
+  nativeLabel: string | null;
+  bugBadge: number;
+  recallBadge: number;
+}) => {
+  const [open, setOpen] = useState(false);
+  const close = () => setOpen(false);
+  // Unseen-activity dot on the closed ⋮ (the recall badge only counts for admins).
+  const totalBadge = bugBadge + (user.role === 'admin' ? recallBadge : 0);
+  const item = 'flex items-center justify-between gap-3 rounded px-3 py-2 text-left text-sm text-gray-200 hover:bg-gray-700';
+  const badge = (n: number, cls: string) =>
+    n > 0 ? <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${cls}`}>{n}</span> : null;
+
+  return (
+    <div className="relative sm:hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="Menu"
+        className="relative rounded border border-gray-600 px-2 py-1.5 text-lg leading-none text-gray-200 hover:bg-gray-700"
+      >
+        ⋮
+        {!open && totalBadge > 0 && (
+          <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-rose-600" />
+        )}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={close} />
+          <div className="absolute right-0 z-40 mt-1 w-56 rounded border border-gray-700 bg-gray-900 p-1 shadow-lg">
+            <div className="border-b border-gray-800 px-3 py-2 text-xs text-gray-400">
+              {user.username} <span className="text-gray-600">·</span> {user.role}
+            </div>
+            <Link to="/bugs" className={item} onClick={close}>
+              <span>Bug reports</span>
+              {badge(bugBadge, 'bg-rose-600 text-white')}
+            </Link>
+            <Link to="/completed" className={item} onClick={close}>
+              Completed
+            </Link>
+            {user.role === 'admin' && (
+              <Link to="/staging" className={item} onClick={close}>
+                All trips
+              </Link>
+            )}
+            {user.role === 'admin' && (
+              <Link to="/queue" className={item} onClick={close}>
+                <span>Review queue</span>
+                {badge(recallBadge, 'bg-amber-500 text-gray-900')}
+              </Link>
+            )}
+            <div className="my-1 border-t border-gray-800" />
+            <a href="/help/quick" target="_blank" rel="noreferrer" className={item} onClick={close}>
+              Quick reference
+            </a>
+            <a href="/help/guide" target="_blank" rel="noreferrer" className={item} onClick={close}>
+              User guide
+            </a>
+            {nativeLabel && (
+              <a href="/help/guide-native" target="_blank" rel="noreferrer" className={item} onClick={close}>
+                {nativeLabel}
+              </a>
+            )}
+            <div className="my-1 border-t border-gray-800" />
+            <button
+              type="button"
+              onClick={() => {
+                close();
+                logout();
+              }}
+              className={`${item} w-full`}
+            >
+              Log out
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 };

@@ -36,6 +36,7 @@ __all__ = [
     "get_tripgroup",
     "update_trip_text",
     "update_tripgroup",
+    "get_enrichment_categories",
 ]
 
 
@@ -66,6 +67,39 @@ def update_tripgroup(tg_id: str, description: str, categories: list) -> None:
     db().collection("TripGroups").document(tg_id).update(
         {"descriptionTarget": description, "tripCategories": categories}
     )
+
+
+def get_enrichment_categories(trip_id: str) -> dict:
+    """Best-effort read of content-enrichment category proposals from the staging
+    ``ContentEnrichment`` sidecar (written by the enrich pipeline, keyed by trip
+    contentId, camelCase fields ``applicableCategories`` / ``newCategorySuggestions``).
+    Tried on the trip id then its TripGroup id. Never raises — returns empty lists so
+    the review-app just shows no suggestions when nothing is on staging.
+
+    ``applicable`` = enrichment picks from the controlled vocabulary; ``suggestions`` =
+    genuinely-new categories the model proposed (not yet in the vocabulary)."""
+    applicable: list = []
+    suggestions: list = []
+    try:
+        d = db()
+        tried: list = []
+        for doc_id in (trip_id, tripgroup_id_for(trip_id)):
+            if not doc_id or doc_id in tried:
+                continue
+            tried.append(doc_id)
+            snap = d.collection("ContentEnrichment").document(doc_id).get()
+            if not snap.exists:
+                continue
+            data = snap.to_dict() or {}
+            for c in (data.get("applicableCategories") or []):
+                if c and c not in applicable:
+                    applicable.append(c)
+            for c in (data.get("newCategorySuggestions") or []):
+                if c and c not in suggestions:
+                    suggestions.append(c)
+    except Exception as e:  # noqa: BLE001 - best effort, display only
+        print(f"[staging] enrichment categories read failed for {trip_id}: {e}")
+    return {"applicable": applicable, "suggestions": suggestions}
 
 
 def merge_categories(old_desc: str, new_desc: str, live_categories: list) -> list:

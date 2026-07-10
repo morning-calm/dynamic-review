@@ -13,6 +13,8 @@ import NarrationControls from '../components/NarrationControls';
 import ZhFieldBlock from '../components/ZhFieldBlock';
 import RecallControl from '../components/RecallControl';
 import ExternalReports from '../components/ExternalReports';
+import CategoryEditor from '../components/CategoryEditor';
+import { useAuth } from '../authContext';
 import { useHeartbeat } from '../usePresence';
 
 /** Scroll the first not-yet-done field into view (document order, read from the DOM
@@ -36,6 +38,7 @@ interface FieldLocation {
 const ReviewBody = () => {
   const { sid = '' } = useParams<{ sid: string }>();
   const { state: saveState } = useSaveCoordinator();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [session, setSession] = useState<Session | null>(null);
@@ -277,17 +280,25 @@ const ReviewBody = () => {
               </div>
             )
           )}
-          <div>
-            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-400">Trip categories (read-only)</p>
-            <div className="flex flex-wrap gap-2">
-              {session.trip_categories.length === 0 && <span className="text-xs text-gray-500">none</span>}
-              {session.trip_categories.map((c) => (
-                <span key={c} className="rounded bg-gray-700 px-2 py-0.5 text-xs text-gray-200">
-                  {c}
-                </span>
-              ))}
+          {user?.role === 'admin' ? (
+            <CategoryEditor
+              tripId={session.trip_id}
+              categories={session.trip_categories}
+              onChange={(cats) => setSession((s) => (s ? { ...s, trip_categories: cats } : s))}
+            />
+          ) : (
+            <div>
+              <p className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-400">Trip categories (read-only)</p>
+              <div className="flex flex-wrap gap-2">
+                {session.trip_categories.length === 0 && <span className="text-xs text-gray-500">none</span>}
+                {session.trip_categories.map((c) => (
+                  <span key={c} className="rounded bg-gray-700 px-2 py-0.5 text-xs text-gray-200">
+                    {c}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </section>
 
         {/* Trip-level field reports (no scene index) */}

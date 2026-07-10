@@ -923,6 +923,12 @@ export const api = {
   structureCategories: (tripId: string, categories: string[]): Promise<StructureOpResult> =>
     postJson(`/api/admin/structure/${encodeURIComponent(tripId)}/categories`, { categories }),
 
+  /** Admin only: content-enrichment category proposals for a trip (one-tap add
+   * suggestions on the review-page category editor). Best-effort; empty when the trip
+   * has no ContentEnrichment sidecar on staging. */
+  enrichmentCategories: (tripId: string): Promise<{ applicable: string[]; suggestions: string[] }> =>
+    getJson(`/api/admin/enrichment-categories/${encodeURIComponent(tripId)}`),
+
   // --- Pipeline (publish bus) ---
   /** Admin only: queue a staging→prod TEXT publish request on the R2 bus. */
   queuePublish: (tripId: string, note = ''): Promise<BusJob> =>

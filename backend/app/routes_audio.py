@@ -10,7 +10,7 @@ import zipfile
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import FileResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, RedirectResponse, Response, StreamingResponse
 
 from . import db, sessions
 from .auth import scope_sid
@@ -89,6 +89,10 @@ def get_audio(sid: str, fid: int, which: str, request: Request):
 def get_overlay(sid: str, filename: str, request: Request):
     path = sessions.overlay_path(sid, filename)
     if not path:
+        # No local file (hosted/laptop has no source trees) — fall back to the R2 mirror.
+        url = sessions.overlay_r2_url(sid, filename)
+        if url:
+            return RedirectResponse(url, status_code=302)
         return Response(status_code=404)
     ext = path.suffix.lower()
     media = "image/png" if ext == ".png" else "image/jpeg"

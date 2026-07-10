@@ -106,3 +106,92 @@ capture can drift after earlier-in-text edits — same weakness as the old live 
 - BACKLOG P3 "Mobile deeper work" — the selection-UX product decision is now made
   (touch-capture shipped); item updated. Sticky mini-player still deferred.
 - D3 (`preload="none"` on phones) deferred pending device check.
+
+## Session 2: mobile bug-fix pass (dave testing as admin)
+
+**Goal:** fix 7 issues dave hit testing the mobile build as admin; each also verified as a
+non-issue on desktop or fixed there too.
+
+### Done this checkpoint (frontend; build + eslint green)
+- **#7 Mark-done stays green after tap (sticky :hover on touch).** Root cause: touch leaves
+  the element in `:hover` until you tap elsewhere, so `hover:bg-*` sticks. Fix: enabled
+  Tailwind `future.hoverOnlyWhenSupported` (`tailwind.config.js`) — wraps every `hover:`
+  in `@media(hover:hover)`. Global; desktop unchanged, touch no longer sticks. (Fixes the
+  same class of stickiness on every button, not just Mark done.)
+- **#4 Audio rewind / re-listen.** Replaced native `<audio controls>` (fully seekable →
+  the skip-ahead the Done-gate fights) with a custom `Transport` in `AudioReview.tsx`:
+  back-10s (double chevron), back-5s (single chevron), restart (loop arrow), play/pause,
+  and a **display-only** position bar (no forward seek). Same `<audio>` element kept (minus
+  `controls`) via a merged callback ref, so ALL coverage/wake-lock wiring is unchanged
+  (handlers passed straight through). Used for original/working (gated) + candidate/
+  fallback/versions (`AudioRow` now wraps `Transport`). Auxiliary players (bug-report
+  snapshots, clip previews) left native.
+- **#6 Banner space.** `UserMenu` folds every nav item into a single ⋮ popout on mobile
+  (`sm:hidden`, badge dot when counts>0); desktop keeps the exact inline row (`hidden
+  sm:flex`). SceneDesc narration box → 6 rows on phones (fewer if the text is short) via new
+  `useMediaQuery` hook (`hooks.ts`) in `SceneCard`; desktop stays 4.
+- **#1 (pipeline side).** Wrote `D:\Dynamic Languages\Scripts\REVIEW_APP_TODO_stage5a_descriptions.md`
+  (dynamic-content, uncommitted — dave commits via GitHub Desktop): stage 5a must write the
+  **advanced** description in target + English for ALL levels (identical across levels).
+  Review-app side already supports this (shows `descriptionTarget` + `descriptionHome`
+  English sibling via `SourceEditor`, has a Mark-done flag) — no app change needed once the
+  data lands.
+
+### Done after dave's calls (build + eslint + py_compile + import smoke all green)
+- **#5 (call: only the English source of a non-English group).** New backend
+  `sessions._is_en_source_of_nonenglish_group(trip_id, tg)` — True when a `_EN` trip's
+  TripGroup `trips` array has a `_JP`/`_ZH`/… member. When true the seed **skips** the
+  `questionKey`/`questionOption` fields entirely, so the Question block vanishes (no
+  fields) AND neither the FE all-done gate nor the backend `not_done` check (sessions.py
+  ~2734) counts them. Narration/titles still reviewed. Verified: EN-in-JP-group→hide,
+  EN-in-EN-group→keep, JP-trip→keep. ⚠️ Only affects **new** sessions — an already-seeded
+  session on such a trip keeps its question fields until re-seeded.
+- **#2 (call: inline edit + enrichment suggestions).** New `CategoryEditor.tsx` on the
+  review page (admin only; reviewers keep read-only): current categories as removable
+  chips, free-form add, and one-tap "from content enrichment" suggestion chips. Writes via
+  the existing `structureCategories` staging endpoint; `onChange` updates `session.trip_categories`.
+  Suggestions come from a new best-effort backend read `staging.get_enrichment_categories`
+  (staging `ContentEnrichment/{cid|group}` sidecar → `applicableCategories` +
+  `newCategorySuggestions`), exposed at `GET /api/admin/enrichment-categories/{trip_id}`.
+  Safe vs approve: `merge_categories` preserves manually-added cats (only the Trip-Type
+  delta moves); the existing "session active" warning still surfaces.
+- **#3 (call: upload to R2 + backend fallback).** New `app/images_r2.py` mirrors static-360
+  stills + overlays to the thumbs bucket under `review-overlays/<canonical_base>/<file>`
+  (base = `sessions._overlay_base` = reduced `_EN` id, so every level/language sibling
+  shares one copy). Backend now: advertises `image_url` when the still is local **or on
+  R2**; mirrors local hits to R2 on resolve (`overlay_path`); and the `/overlays` route
+  302-redirects to the R2 public URL when the local file is absent (`overlay_r2_url` +
+  `RedirectResponse`). New workstation uploader `scripts/upload_review_images_r2.py`
+  (dry-run default, `--apply`) — **verified** resolving `Tokyo_03_Beg_N4_JP`'s 7 stills →
+  `review-overlays/Tokyo_03_EN/`.
+
+### #3 go-live steps (NOT yet done — needs the workstation + a laptop deploy)
+1. On the **workstation** (has the source image trees): `py -3.12 scripts/upload_review_images_r2.py --apply`
+   to populate R2 for all manifest trips. (Idempotent, display-only, additive.)
+2. **Deploy** the new backend to the laptop (git pull + restart uvicorn) so it serves the
+   R2 fallback. Rebuild `frontend/dist` for #2/#4/#5/#6/#7. Until deployed, the laptop still
+   serves images the old (local-only) way. Mirror-on-serve covers new trips going forward
+   from any host that has the files.
+
+### Session-2 caveats to carry
+- #5 existing-session re-seed (above).
+- #3 backend deploy still needed to fix the LIVE images (upload is now done — see below).
+- #1 stays a dynamic-content pipeline TODO (`REVIEW_APP_TODO_stage5a_descriptions.md`).
+
+### Red-fable pass (clean-context Fable, independently re-verified)
+Quality-only refactor of this session's edits; touched AudioReview.tsx (Transport internals —
+coverage/wake-lock untouched; `src` tightened to non-null, dead guard + `a()` helper removed,
+`svg`→`iconCls`), UserMenu.tsx (`MobileMenu` typed `AuthUser`, `totalBadge` computed internally),
+sessions.py (get_session static-360 branch collapsed — **mirror still fires only on a local hit**;
+dead `overlay_r2_url` guard removed). I re-traced each by hand + ran tsc/eslint/build/py_compile/
+import — all green. No correctness bugs introduced. Deferred (trivial): stale `dur` flash after a
+combine; 1px `640px` query-vs-`sm` boundary. **Plus a real bug I fixed in the uploader** (out of
+Fable's scope): `staging.get_trip` calls `sys.exit()` on a missing trip, so `except Exception`
+didn't catch it and the batch aborted — now `except (Exception, SystemExit)`.
+
+### #3 R2 upload — DONE 2026-07-10 (dave approved)
+`py -3.12 scripts/upload_review_images_r2.py --apply` on the workstation: **423/423 images uploaded**
+across 129 trips, 0 missing. 2 trips skipped (absent on staging): Caerphilly_Castle_B1_EN,
+York_I_B2_EN. Verified public HTTP 200 on sample URLs (Tokyo_03_EN/5.jpg 1.85 MB,
+Tokyo_07_Olympic_EN/asahi_main.jpg, Taichung_EN/suncake.jpg). ⚠️ Laptop still needs the new
+backend deployed to actually SERVE from R2 (BACKLOG #11).

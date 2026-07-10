@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import type { Field, Scene } from '../api';
-import { useTextSelection } from '../hooks';
+import { useTextSelection, useMediaQuery } from '../hooks';
 import EditableField from './EditableField';
 import AudioReview from './AudioReview';
 import RegenerateControls from './RegenerateControls';
@@ -84,6 +84,12 @@ const SceneCard = ({ scene, fields, sid, onFieldUpdate, readOnly = false, isZh =
     if (descCurrent !== undefined) setDescLive(descCurrent);
   }, [descCurrent]);
 
+  // Narration box: taller (6 rows) on phones so there's room to read/edit without a
+  // cramped scroll, but shrink toward the text when there isn't enough to fill it.
+  // Desktop keeps the compact 4 rows.
+  const isMobile = useMediaQuery('(max-width: 640px)');
+  const descRows = isMobile ? Math.min(6, Math.max(3, Math.ceil((descLive.length || 1) / 40))) : 4;
+
   // Persists the narration highlight/caret across blur for the audio selection tools
   // (iOS collapses a textarea selection when a tool button is tapped) and invalidates
   // it if the live text or the working take changes.
@@ -152,7 +158,7 @@ const SceneCard = ({ scene, fields, sid, onFieldUpdate, readOnly = false, isZh =
                     textareaRef={descTextareaRef}
                     selectionBind={descSelectionBind}
                     flushRef={descFlushRef}
-                    rows={4}
+                    rows={descRows}
                   />
                 </div>
                 {isJp && (

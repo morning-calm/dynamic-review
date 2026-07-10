@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type RefObject, type SyntheticEvent } from 'react';
 import { api, ApiError, flushPlayedBeacon, type Field } from '../api';
 import { useDebouncedCallback } from '../hooks';
 
@@ -29,24 +29,189 @@ const mergeRanges = (ranges: Range[]): Range[] => {
 const coveredSeconds = (ranges: Range[]): number =>
   ranges.reduce((sum, [s, e]) => sum + Math.max(0, e - s), 0);
 
-/**
- * Plain audio row that reloads itself whenever its src URL changes. The backend
- * appends `?v=<hash>` that changes with content, so this guarantees a second
- * candidate/fallback take is never auditioned from a cached response.
- */
-const AudioRow = ({ label, src }: { label: string; src: string | null }) => {
-  const ref = useRef<HTMLAudioElement | null>(null);
+// ---- Custom transport ----------------------------------------------------
+// The native <audio controls> bar is fully seekable, so a take can be dragged
+// past without listening — the exact skip the Done-gate exists to prevent. This
+// transport replaces it: play/pause, restart, and back-5s/back-10s buttons to
+// RE-listen, but the position bar is display-only (no forward seek). All the
+// coverage/wake-lock bookkeeping is unchanged — the same <audio> element is kept
+// (just without `controls`) and every event handler is passed straight through.
+
+type AudioEvt = SyntheticEvent<HTMLAudioElement>;
+
+const fmtTime = (s: number): string => {
+  if (!isFinite(s) || s < 0) s = 0;
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${sec.toString().padStart(2, '0')}`;
+};
+
+const iconCls = 'inline-block align-middle';
+const ChevronLeft = ({ double = false }: { double?: boolean }) => (
+  <svg className={iconCls} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    {double ? (
+      <>
+        <path d="M11 18l-6-6 6-6" />
+        <path d="M18 18l-6-6 6-6" />
+      </>
+    ) : (
+      <path d="M15 18l-6-6 6-6" />
+    )}
+  </svg>
+);
+const IconRestart = () => (
+  <svg className={iconCls} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 12a9 9 0 1 0 2.6-6.3" />
+    <path d="M3 3v4h4" />
+  </svg>
+);
+const IconPlay = () => (
+  <svg className={iconCls} width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M8 5v14l11-7z" />
+  </svg>
+);
+const IconPause = () => (
+  <svg className={iconCls} width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
+  </svg>
+);
+
+interface TransportProps {
+  label: string;
+  /** Always non-null — every call site conditions the render on the URL existing. */
+  src: string;
+  /** Parent-owned ref to the underlying <audio> — the coverage bookkeeping reads it. */
+  elRef?: RefObject<HTMLAudioElement | null>;
+  preload?: 'none' | 'metadata' | 'auto';
+  onTimeUpdate?: (e: AudioEvt) => void;
+  onPlay?: () => void;
+  onPause?: () => void;
+  onEnded?: () => void;
+  onSeeking?: () => void;
+  onSeeked?: () => void;
+  onLoadedMetadata?: (e: AudioEvt) => void;
+}
+
+const Transport = ({
+  label, src, elRef, preload = 'none',
+  onTimeUpdate, onPlay, onPause, onEnded, onSeeking, onSeeked, onLoadedMetadata,
+}: TransportProps) => {
+  const internal = useRef<HTMLAudioElement | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [cur, setCur] = useState(0);
+  const [dur, setDur] = useState(0);
+
+  // Callback ref: keep the element in our internal ref AND the parent's (so the
+  // caller's coverage handlers can read currentTime/duration off the same node).
+  const setRef = useCallback(
+    (el: HTMLAudioElement | null) => {
+      internal.current = el;
+      if (elRef) elRef.current = el;
+    },
+    [elRef],
+  );
+
+  // The backend appends `?v=<hash>` that changes with content, so a changed src is a
+  // new take — reload and reset the transport UI (position must not carry over).
   useEffect(() => {
-    ref.current?.load();
+    internal.current?.load();
+    setPlaying(false);
+    setCur(0);
   }, [src]);
-  if (!src) return null;
+
+  const toggle = () => {
+    const el = internal.current;
+    if (!el) return;
+    if (el.paused) void el.play().catch(() => {});
+    else el.pause();
+  };
+  const rewind = (s: number) => {
+    const el = internal.current;
+    if (el) el.currentTime = Math.max(0, (el.currentTime || 0) - s);
+  };
+  const restart = () => {
+    const el = internal.current;
+    if (!el) return;
+    el.currentTime = 0;
+    void el.play().catch(() => {});
+  };
+
+  const pct = dur > 0 ? Math.min(100, (cur / dur) * 100) : 0;
+  const btn =
+    'flex items-center gap-0.5 rounded px-1.5 py-1 text-gray-300 enabled:hover:bg-gray-600 enabled:hover:text-white';
+
   return (
     <div className="flex items-center gap-2">
-      <span className="w-20 shrink-0 text-xs text-gray-400">{label}</span>
-      <audio ref={ref} controls preload="none" src={src} className="h-8 w-full" />
+      <span className="w-16 shrink-0 text-xs text-gray-400 sm:w-20">{label}</span>
+      <audio
+        ref={setRef}
+        preload={preload}
+        src={src}
+        className="hidden"
+        onTimeUpdate={(e) => {
+          setCur(e.currentTarget.currentTime);
+          onTimeUpdate?.(e);
+        }}
+        onDurationChange={(e) => setDur(e.currentTarget.duration || 0)}
+        onLoadedMetadata={(e) => {
+          setDur(e.currentTarget.duration || 0);
+          onLoadedMetadata?.(e);
+        }}
+        onPlay={() => {
+          setPlaying(true);
+          onPlay?.();
+        }}
+        onPause={() => {
+          setPlaying(false);
+          onPause?.();
+        }}
+        onEnded={() => {
+          setPlaying(false);
+          onEnded?.();
+        }}
+        onSeeking={() => onSeeking?.()}
+        onSeeked={() => onSeeked?.()}
+      />
+      <div className="flex flex-1 items-center gap-0.5 rounded-full bg-gray-700 px-2 py-1">
+        <button type="button" className={btn} onClick={() => rewind(10)} aria-label="Back 10 seconds" title="Back 10 seconds">
+          <ChevronLeft double />
+          <span className="text-[10px] tabular-nums">10</span>
+        </button>
+        <button type="button" className={btn} onClick={() => rewind(5)} aria-label="Back 5 seconds" title="Back 5 seconds">
+          <ChevronLeft />
+          <span className="text-[10px] tabular-nums">5</span>
+        </button>
+        <button type="button" className={btn} onClick={restart} aria-label="Restart from the beginning" title="Restart from the beginning">
+          <IconRestart />
+        </button>
+        <button
+          type="button"
+          className={`${btn} ml-0.5 text-custom-green`}
+          onClick={toggle}
+          aria-label={playing ? 'Pause' : 'Play'}
+          title={playing ? 'Pause' : 'Play'}
+        >
+          {playing ? <IconPause /> : <IconPlay />}
+        </button>
+        {/* Position bar is DISPLAY-ONLY — forward-seeking is intentionally disabled so a
+            take can't be skipped past; the rewind buttons above are how you re-listen. */}
+        <div className="mx-1 h-1.5 flex-1 overflow-hidden rounded-full bg-gray-600">
+          <div className="h-full rounded-full bg-gray-300" style={{ width: `${pct}%` }} />
+        </div>
+        <span className="shrink-0 text-[10px] tabular-nums text-gray-400">
+          {fmtTime(cur)}&thinsp;/&thinsp;{dur ? fmtTime(dur) : '—'}
+        </span>
+      </div>
     </div>
   );
 };
+
+/** Auxiliary take (candidate / fallback / archived version) — the same transport,
+ * no coverage wiring. Reloads on src change via the transport's own effect. */
+const AudioRow = ({ label, src }: { label: string; src: string | null }) =>
+  src ? <Transport label={label} src={src} /> : null;
 
 /**
  * Players for original / working / candidate / fallback. Tracks contiguous
@@ -240,27 +405,23 @@ const AudioReview = ({ field, sid, onFieldUpdate }: AudioReviewProps) => {
   return (
     <div className="space-y-2 rounded border border-gray-700 bg-gray-900/40 p-2">
       {field.audio.original && (
-        <div className="flex items-center gap-2">
-          <span className="w-20 shrink-0 text-xs text-gray-400">Original</span>
-          <audio
-            ref={origEl}
-            controls
-            preload="none"
-            src={field.audio.original}
-            onTimeUpdate={handleOrigTimeUpdate}
-            onPlay={acquireWakeLock}
-            onPause={releaseWakeLockIfIdle}
-            onEnded={releaseWakeLockIfIdle}
-            onSeeking={() => {
-              origSeeking.current = true;
-            }}
-            onSeeked={() => {
-              if (origEl.current) origLast.current = origEl.current.currentTime;
-            }}
-            onLoadedMetadata={() => setOrigDuration(origEl.current?.duration ?? 0)}
-            className="h-8 w-full"
-          />
-        </div>
+        <Transport
+          label="Original"
+          src={field.audio.original}
+          elRef={origEl}
+          preload="none"
+          onTimeUpdate={handleOrigTimeUpdate}
+          onPlay={acquireWakeLock}
+          onPause={releaseWakeLockIfIdle}
+          onEnded={releaseWakeLockIfIdle}
+          onSeeking={() => {
+            origSeeking.current = true;
+          }}
+          onSeeked={() => {
+            if (origEl.current) origLast.current = origEl.current.currentTime;
+          }}
+          onLoadedMetadata={() => setOrigDuration(origEl.current?.duration ?? 0)}
+        />
       )}
 
       {untouched && field.audio.original && (
@@ -276,27 +437,23 @@ const AudioReview = ({ field, sid, onFieldUpdate }: AudioReviewProps) => {
       )}
 
       {workingUrl && (
-        <div className="flex items-center gap-2">
-          <span className="w-20 shrink-0 text-xs text-gray-400">Working</span>
-          <audio
-            ref={workingEl}
-            controls
-            preload="metadata"
-            src={workingUrl}
-            onTimeUpdate={handleTimeUpdate}
-            onPlay={acquireWakeLock}
-            onPause={releaseWakeLockIfIdle}
-            onEnded={releaseWakeLockIfIdle}
-            onSeeking={() => {
-              seeking.current = true;
-            }}
-            onSeeked={() => {
-              if (workingEl.current) lastTime.current = workingEl.current.currentTime;
-            }}
-            onLoadedMetadata={() => setDuration(workingEl.current?.duration ?? 0)}
-            className="h-8 w-full"
-          />
-        </div>
+        <Transport
+          label="Working"
+          src={workingUrl}
+          elRef={workingEl}
+          preload="metadata"
+          onTimeUpdate={handleTimeUpdate}
+          onPlay={acquireWakeLock}
+          onPause={releaseWakeLockIfIdle}
+          onEnded={releaseWakeLockIfIdle}
+          onSeeking={() => {
+            seeking.current = true;
+          }}
+          onSeeked={() => {
+            if (workingEl.current) lastTime.current = workingEl.current.currentTime;
+          }}
+          onLoadedMetadata={() => setDuration(workingEl.current?.duration ?? 0)}
+        />
       )}
 
       <AudioRow label="Candidate" src={field.audio.candidate} />

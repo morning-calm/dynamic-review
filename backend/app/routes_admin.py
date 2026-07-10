@@ -15,7 +15,7 @@ import time
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from . import audio_core, auth, db, review_bus, sessions, structure
+from . import audio_core, auth, db, review_bus, sessions, staging, structure
 from .config import SCRIPTS_ROOT
 from .models import (CreateSession, QueueJob, RunJob, StructureAdd,
                      StructureCategories, StructureRemove, StructureReorder,
@@ -220,6 +220,13 @@ def post_structure_static_images(trip_id: str, body: StructureStaticImages,
 def post_structure_categories(trip_id: str, body: StructureCategories,
                               admin=Depends(auth.require_admin)):
     return structure.set_categories(trip_id, body.categories, admin)
+
+
+@router.get("/enrichment-categories/{trip_id}")
+def enrichment_categories(trip_id: str, admin=Depends(auth.require_admin)):
+    """Content-enrichment category proposals for a trip (staging ContentEnrichment
+    sidecar) — one-tap add suggestions for the review-page category editor."""
+    return staging.get_enrichment_categories(trip_id)
 
 
 # --------------------------------------------------------------------------- #

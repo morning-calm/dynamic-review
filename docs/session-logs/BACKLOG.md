@@ -124,6 +124,26 @@ dead weight. One-line Firestore delete, verify Cuevas still maps to Spain after.
 Unit file changed on disk (warned 2026-07-08); restart works regardless. 10-second interactive
 chore next time SSH'd in (password-gated).
 
+### 11. Deploy the overlay/still R2 fallback backend (#3, 2026-07-10)
+R2 mirror + backend fallback shipped for static-360 stills + overlays (app/images_r2.py; served
+under `review-overlays/<base>_EN/` in the thumbs bucket). **Upload DONE 2026-07-10** from the
+workstation: 423/423 images uploaded across 129 trips (2 absent-on-staging trips skipped:
+Caerphilly_Castle_B1_EN, York_I_B2_EN); public URLs verified HTTP 200. **Remaining: deploy the new
+backend to the laptop** (git pull + restart uvicorn) so it advertises/redirects to R2 when the
+local file is absent — until then the laptop still 404s these images. Mirror-on-serve keeps R2 in
+sync for new trips from any host with the files.
+
+### 12. #5 re-seed existing _EN-source sessions (2026-07-10)
+Seed now skips English quiz questions for a `_EN` trip that's only the source of a non-English
+group. Existing sessions already seeded on such trips keep their question fields until re-seeded
+(delete + re-open). Low urgency — only matters for the handful of already-opened affected trips.
+
+### 13. #1 stage-5a description change (dynamic-content, 2026-07-10)
+`D:\Dynamic Languages\Scripts\REVIEW_APP_TODO_stage5a_descriptions.md` — stage 5a must write the
+advanced description in target + English for ALL levels (identical across levels) so the review-app
+TG-description confirm has real data. Review-app side already displays + flags it. dave commits the
+Scripts note via GitHub Desktop.
+
 ---
 
 ## Done

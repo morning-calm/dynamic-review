@@ -34,7 +34,7 @@ from fastapi import HTTPException
 
 from . import config  # noqa: F401  (ensures SCRIPTS_ROOT on sys.path) — keep first
 from . import (audio_core, audio_io, audio_splice, auto_checks, cjk_align, cjk_splice, db,
-               review_audio, thumbs)
+               images_r2, review_audio, thumbs)
 from .config import (COUNTRY_VOICE_GUESS, COVERAGE_DONE_FRACTION,
                      LANGUAGE_FALLBACK_VOICE, WORK_ROOT)
 from .locks import WHISPER_LOCK
@@ -659,6 +659,22 @@ def _list_trips_from_scan() -> list[dict]:
 # --------------------------------------------------------------------------- #
 # Seed / resume
 # --------------------------------------------------------------------------- #
+def _is_en_source_of_nonenglish_group(trip_id: str, tg: dict | None) -> bool:
+    """True when this is an English (`_EN`) trip that is only the SOURCE member of a
+    non-English TripGroup (i.e. the group also has `_JP`/`_ZH`/… member trips). Such a
+    trip's quiz questions/options are English-only artefacts that never ship in the
+    target-language product, so they aren't reviewed (dave, 2026-07-10). Detected from
+    the TripGroup `trips` array (already fetched at seed): any member whose id resolves
+    to a non-English language means the English member is a translation source."""
+    if not trip_id.endswith("_EN"):
+        return False
+    for m in (tg or {}).get("trips") or []:
+        mid = str(m.get("tripId") or "")
+        if mid and audio_core.language_of(mid) != "English":
+            return True
+    return False
+
+
 def create_or_resume(trip_id: str, user, *,
                      allow_completed: bool = False,
                      allow_no_audio: bool = False) -> dict:
@@ -724,6 +740,7 @@ def create_or_resume(trip_id: str, user, *,
     voice_id, voice_settings = audio_core.VOICES[voice]
     voice_settings = {**voice_settings, "speed": audio_core.speed_for_trip(trip_id)}
     tg_id, tg = get_tripgroup(trip_id)
+    skip_en_questions = _is_en_source_of_nonenglish_group(trip_id, tg)
     categories = (tg or {}).get("tripCategories") or trip.get("tripCategories") or []
     # Prefer the TripGroup description; fall back to the Trip doc's own descriptionTarget
     # (leveled English trips — Bath1_A12_EN — nest in the base group, so their TripGroup
@@ -800,13 +817,17 @@ def create_or_resume(trip_id: str, user, *,
         if desc or has_a:
             add_field(i, "SceneDesc", s.get("SceneDesc") or "", has_a,
                       source_text=s.get("SceneDescEn") or "")
-        if (s.get("questionKey") or "").strip():
-            add_field(i, "questionKey", s.get("questionKey") or "", True,
-                      source_text=s.get("questionKeyEn") or "")
-        opts_en = s.get("questionOptionKeysEn") or []
-        for k, opt in enumerate(s.get("questionOptionKeys") or []):
-            add_field(i, "questionOption", opt or "", True, option_index=k,
-                      source_text=(opts_en[k] if k < len(opts_en) else ""))
+        # English quiz questions on a translation-source `_EN` trip never ship in the
+        # target-language product — don't seed them (so they're neither reviewed nor
+        # counted by the all-done gate). Narration/titles are still reviewed.
+        if not skip_en_questions:
+            if (s.get("questionKey") or "").strip():
+                add_field(i, "questionKey", s.get("questionKey") or "", True,
+                          source_text=s.get("questionKeyEn") or "")
+            opts_en = s.get("questionOptionKeysEn") or []
+            for k, opt in enumerate(s.get("questionOptionKeys") or []):
+                add_field(i, "questionOption", opt or "", True, option_index=k,
+                          source_text=(opts_en[k] if k < len(opts_en) else ""))
 
     # Mandarin is V3-only: pin the session to eleven_v3 @ speed 1.0 and record the version
     # so regenerate/combine match the seeded take (no V2/V3 audition or pick step).
@@ -1036,13 +1057,18 @@ def get_session(sid: str) -> dict:
             if fn:
                 overlays.append({"filename": fn,
                                  "url": f"/overlays/{sid}/{fn}"})
-        # S9: only advertise a static-360 image_url when the {i}.jpg actually resolves
-        # locally (the 360 still isn't under Research and Writing/data) — else null,
-        # never a URL that 404s.
+        # S9: only advertise a static-360 image_url when the {i}.jpg actually resolves —
+        # locally OR on R2 (the hosted/laptop case has no local source trees) — else
+        # null, never a URL that 404s. A local hit is mirrored to R2 for other hosts.
         image_url = None
-        if s.get("isStaticImage") and _resolve_overlay_file(
-                trip_id, mp3_dir, ogg_dir, f"{i}.jpg", srow["folder_name"] or ""):
-            image_url = f"/overlays/{sid}/{i}.jpg"
+        if s.get("isStaticImage"):
+            still = f"{i}.jpg"
+            local_still = _resolve_overlay_file(
+                trip_id, mp3_dir, ogg_dir, still, srow["folder_name"] or "")
+            if local_still is not None:
+                images_r2.ensure_uploaded(_overlay_base(trip_id), still, local_still)
+            if local_still is not None or images_r2.exists(_overlay_base(trip_id), still):
+                image_url = f"/overlays/{sid}/{still}"
         scenes_out.append({
             "index": i,
             "video_id": _vimeo_id(s.get("videoUrl")),
@@ -3649,8 +3675,17 @@ def _resolve_overlay_file(trip_id: str, mp3_dir: Path | None, ogg_dir: Path | No
     return None
 
 
+def _overlay_base(trip_id: str) -> str:
+    """Canonical R2 base for a trip's overlay/static images: the most-reduced base id
+    (``<base>_EN``) — every level/language sibling of a group reduces to it, so one R2
+    copy is shared. `_image_base_ids` always includes trip_id itself, so [-1] is safe."""
+    return _image_base_ids(trip_id)[-1]
+
+
 def overlay_path(sid: str, filename: str) -> Path | None:
-    """Best-effort overlay/static-360 image resolution for display only."""
+    """Best-effort overlay/static-360 image resolution for display only. When the local
+    file resolves it is ALSO mirrored to R2 (best-effort) so hosts without the source
+    trees (the Ubuntu laptop) can serve it via the R2 fallback."""
     srow = _session_row(sid)
     trip_id = srow["trip_id"]
     try:
@@ -3658,5 +3693,16 @@ def overlay_path(sid: str, filename: str) -> Path | None:
         mp3_dir, ogg_dir = _p["mp3_dir"], _p["ogg_dir"]
     except SystemExit:
         mp3_dir = ogg_dir = None
-    return _resolve_overlay_file(trip_id, mp3_dir, ogg_dir, filename,
-                                 srow["folder_name"] or "")
+    local = _resolve_overlay_file(trip_id, mp3_dir, ogg_dir, filename,
+                                  srow["folder_name"] or "")
+    if local is not None:
+        images_r2.ensure_uploaded(_overlay_base(trip_id), filename, local)
+    return local
+
+
+def overlay_r2_url(sid: str, filename: str) -> str | None:
+    """Public R2 URL for an overlay/static image when it isn't resolvable locally (the
+    hosted/laptop case). Returns None unless the object is present on R2."""
+    srow = _session_row(sid)          # 404s on an unknown session, like overlay_path
+    base = _overlay_base(srow["trip_id"])
+    return images_r2.public_url(base, filename) if images_r2.exists(base, filename) else None

@@ -807,20 +807,6 @@
       "pos": 140737488420864
     },
     {
-      "trip_id": "Caerphilly_Castle_B1_EN",
-      "lane": "7",
-      "level": "B1",
-      "family": "Caerphilly_Castle_B1",
-      "voice": "",
-      "gender": "",
-      "title": "Caerphilly_Castle_B1_EN",
-      "labels": [
-        "EN"
-      ],
-      "card_url": "https://trello.com/c/ILTvOC0V",
-      "pos": 140737488433152
-    },
-    {
       "trip_id": "Fowey_A12_EN",
       "lane": "7",
       "level": "A12",
@@ -1965,20 +1951,6 @@
       "voice": "andrea",
       "gender": "female",
       "title": "York_I_A12_EN",
-      "labels": [
-        "EN"
-      ],
-      "card_url": "https://trello.com/c/5UyAj6vG",
-      "pos": 140737489502208
-    },
-    {
-      "trip_id": "York_I_B2_EN",
-      "lane": "7",
-      "level": "B2",
-      "family": "York_I",
-      "voice": "andrea",
-      "gender": "female",
-      "title": "York_I_B2_EN",
       "labels": [
         "EN"
       ],
