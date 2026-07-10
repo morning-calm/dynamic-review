@@ -1021,6 +1021,29 @@ export const flushCommentBeacon = (sid: string, fid: number, text: string): void
   }
 };
 
+/** Best-effort flush of un-POSTed playback coverage when the tab hides (mobile
+ * backgrounding/screen-lock lands mid-debounce). Same `/played` body the normal
+ * debounced POST sends; the server merges ranges idempotently, so a redundant
+ * flush is harmless. */
+export const flushPlayedBeacon = (
+  sid: string,
+  fid: number,
+  ranges: Array<[number, number]>,
+  track: 'working' | 'original' = 'working',
+): void => {
+  try {
+    void fetch(field(sid, fid, '/played'), {
+      method: 'POST',
+      keepalive: true,
+      credentials: 'include',
+      headers: jsonHeaders(),
+      body: JSON.stringify({ ranges, track }),
+    });
+  } catch {
+    /* nothing else we can do during unload */
+  }
+};
+
 /** Best-effort flush of a single `_ZH` script on page unload (mirrors flushFieldBeacon). */
 export const flushLocalizationBeacon = (sid: string, fid: number, script: ZhScript, text: string): void => {
   try {

@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { api, ApiError, type Field } from '../api';
+import { api, ApiError, flushPlayedBeacon, type Field } from '../api';
 import { useDebouncedCallback } from '../hooks';
 
 interface AudioReviewProps {
@@ -77,7 +77,12 @@ const AudioReview = ({ field, sid, onFieldUpdate }: AudioReviewProps) => {
   const [origCoverage, setOrigCoverage] = useState<Range[]>(origRanges.current);
   const [origDuration, setOrigDuration] = useState<number>(0);
 
+  // True while coverage sits in the debounce window un-POSTed — flushed via a
+  // keepalive beacon if the tab hides first (mobile screen-lock/backgrounding).
+  const origDirty = useRef(false);
+
   const { call: postOrigCall } = useDebouncedCallback((ranges: Range[]) => {
+    origDirty.current = false;
     api
       .postPlayed(sid, field.fid, ranges, 'original')
       .then((res) => {
@@ -102,6 +107,7 @@ const AudioReview = ({ field, sid, onFieldUpdate }: AudioReviewProps) => {
     if (t > origLast.current && t - origLast.current < MAX_STEP) {
       origRanges.current = mergeRanges([...origRanges.current, [origLast.current, t]]);
       setOrigCoverage(origRanges.current);
+      origDirty.current = true;
       postOrigCall(origRanges.current);
     }
     origLast.current = t;
@@ -117,7 +123,10 @@ const AudioReview = ({ field, sid, onFieldUpdate }: AudioReviewProps) => {
   const playedCoverageRef = useRef(field.played_coverage);
   playedCoverageRef.current = field.played_coverage;
 
+  const workingDirty = useRef(false);
+
   const { call: postPlayedCall, cancel: postPlayedCancel } = useDebouncedCallback((ranges: Range[]) => {
+    workingDirty.current = false;
     api
       .postPlayed(sid, field.fid, ranges)
       .then((res) => {
@@ -139,6 +148,7 @@ const AudioReview = ({ field, sid, onFieldUpdate }: AudioReviewProps) => {
   const workingUrl = field.audio.working;
   useEffect(() => {
     postPlayedCancel(); // S1: stop an in-flight debounce reposting stale ranges
+    workingDirty.current = false;
     coveredRanges.current = mergeRanges(playedCoverageRef.current as Range[]);
     setCoverage(coveredRanges.current);
     lastTime.current = 0;
@@ -159,6 +169,7 @@ const AudioReview = ({ field, sid, onFieldUpdate }: AudioReviewProps) => {
     if (t > lastTime.current && t - lastTime.current < MAX_STEP) {
       coveredRanges.current = mergeRanges([...coveredRanges.current, [lastTime.current, t]]);
       setCoverage(coveredRanges.current);
+      workingDirty.current = true;
       postPlayedCall(coveredRanges.current);
     }
     lastTime.current = t;
@@ -168,6 +179,63 @@ const AudioReview = ({ field, sid, onFieldUpdate }: AudioReviewProps) => {
     if (!duration) return 0;
     return Math.min(100, Math.round((coveredSeconds(coverage) / duration) * 100));
   }, [coverage, duration]);
+
+  // ---- Mobile coverage hardening ----
+  // Screen Wake Lock (progressive enhancement, failure-silent): phones stop firing
+  // `timeupdate` when the screen locks, stalling the Done-gate coverage — hold the
+  // screen awake while a gated track is actually playing.
+  const wakeLock = useRef<{ release: () => Promise<void> } | null>(null);
+  const wakeLockPending = useRef(false); // guards a double request while one is in flight
+  const anyTrackPlaying = () => [workingEl.current, origEl.current].some((el) => el && !el.paused && !el.ended);
+  const acquireWakeLock = () => {
+    type WakeLockApi = { request: (type: 'screen') => Promise<{ release: () => Promise<void> }> };
+    const wl = (navigator as Navigator & { wakeLock?: WakeLockApi }).wakeLock;
+    if (!wl || wakeLock.current || wakeLockPending.current) return;
+    wakeLockPending.current = true;
+    wl.request('screen')
+      .then((lock) => {
+        wakeLockPending.current = false;
+        wakeLock.current = lock;
+        releaseWakeLockIfIdle(); // playback may have stopped while the request was in flight
+      })
+      .catch(() => {
+        /* denied/unsupported — playback still works, the screen may just sleep */
+        wakeLockPending.current = false;
+      });
+  };
+  const releaseWakeLockIfIdle = () => {
+    if (anyTrackPlaying() || !wakeLock.current) return;
+    void wakeLock.current.release().catch(() => {});
+    wakeLock.current = null;
+  };
+
+  // When the tab hides, the wake lock is auto-released by the browser and any
+  // coverage still inside the 700ms debounce window would be lost with the tab —
+  // flush it via a keepalive beacon (the server merges idempotently).
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        wakeLock.current = null; // browsers auto-release on hide
+        if (workingDirty.current) {
+          workingDirty.current = false;
+          flushPlayedBeacon(sid, field.fid, coveredRanges.current);
+        }
+        if (origDirty.current) {
+          origDirty.current = false;
+          flushPlayedBeacon(sid, field.fid, origRanges.current, 'original');
+        }
+      } else {
+        if (anyTrackPlaying()) acquireWakeLock();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      void wakeLock.current?.release().catch(() => {});
+      wakeLock.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sid, field.fid]);
 
   return (
     <div className="space-y-2 rounded border border-gray-700 bg-gray-900/40 p-2">
@@ -180,6 +248,9 @@ const AudioReview = ({ field, sid, onFieldUpdate }: AudioReviewProps) => {
             preload="none"
             src={field.audio.original}
             onTimeUpdate={handleOrigTimeUpdate}
+            onPlay={acquireWakeLock}
+            onPause={releaseWakeLockIfIdle}
+            onEnded={releaseWakeLockIfIdle}
             onSeeking={() => {
               origSeeking.current = true;
             }}
@@ -193,7 +264,7 @@ const AudioReview = ({ field, sid, onFieldUpdate }: AudioReviewProps) => {
       )}
 
       {untouched && field.audio.original && (
-        <div className="flex items-center gap-2 pl-[5.5rem] text-[11px] text-gray-400">
+        <div className="flex items-center gap-2 pl-0 text-[11px] text-gray-400 sm:pl-[5.5rem]">
           <div className="h-1.5 flex-1 overflow-hidden rounded bg-gray-700">
             <div
               className={`h-full ${field.can_mark_done ? 'bg-custom-green' : 'bg-sky-500'}`}
@@ -213,6 +284,9 @@ const AudioReview = ({ field, sid, onFieldUpdate }: AudioReviewProps) => {
             preload="metadata"
             src={workingUrl}
             onTimeUpdate={handleTimeUpdate}
+            onPlay={acquireWakeLock}
+            onPause={releaseWakeLockIfIdle}
+            onEnded={releaseWakeLockIfIdle}
             onSeeking={() => {
               seeking.current = true;
             }}

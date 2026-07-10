@@ -1,5 +1,6 @@
 import { useRef, type ReactNode } from 'react';
 import type { Field } from '../api';
+import { useTextSelection } from '../hooks';
 import EditableField from './EditableField';
 import AudioReview from './AudioReview';
 import RegenerateControls from './RegenerateControls';
@@ -29,13 +30,15 @@ interface AudioFieldBlockProps {
 const AudioFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine, rows, readOnly = false }: AudioFieldBlockProps) => {
   const flushRef = useRef<(() => Promise<void>) | null>(null);
   // The field's own textarea — "Trim highlighted noise" reads the reviewer's highlight
-  // from it (a textarea keeps its selection after blur, so the button click still sees it).
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const getSelectionRange = () => {
-    const el = textareaRef.current;
-    if (!el) return null;
-    return { start: el.selectionStart, end: el.selectionEnd };
-  };
+  // from it. The hook persists the capture across blur (iOS collapses the selection when
+  // a tool button is tapped) and invalidates it if the text or working take changes.
+  const {
+    ref: textareaRef,
+    bind: selectionBind,
+    getSelectionRange,
+    selection,
+    clearSelection,
+  } = useTextSelection(field.current_text, field.audio.working);
 
   return (
     <div className="space-y-2">
@@ -49,6 +52,7 @@ const AudioFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine,
           singleLine={singleLine}
           rows={rows}
           textareaRef={textareaRef}
+          selectionBind={selectionBind}
           flushRef={flushRef}
         />
       </div>
@@ -63,6 +67,8 @@ const AudioFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine,
               hasTextChange={false}
               wholeOnly
               getSelectionRange={getSelectionRange}
+              capturedSelection={selection}
+              onClearSelection={clearSelection}
               surfaceLabel="the text above"
               onBeforeRegenerate={async () => {
                 await flushRef.current?.();

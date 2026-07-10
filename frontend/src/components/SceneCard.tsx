@@ -1,5 +1,6 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import type { Field, Scene } from '../api';
+import { useTextSelection } from '../hooks';
 import EditableField from './EditableField';
 import AudioReview from './AudioReview';
 import RegenerateControls from './RegenerateControls';
@@ -73,7 +74,6 @@ const SceneCard = ({ scene, fields, sid, onFieldUpdate, readOnly = false, isZh =
   const options = fields.filter((f) => optionIndex(f.field_path) !== null);
 
   // Live SceneDesc text + textarea ref, for "Generate from edit" + highlight mode.
-  const descTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const descFlushRef = useRef<(() => Promise<void>) | null>(null);
   const [descLive, setDescLive] = useState(sceneDesc?.current_text ?? '');
 
@@ -84,11 +84,16 @@ const SceneCard = ({ scene, fields, sid, onFieldUpdate, readOnly = false, isZh =
     if (descCurrent !== undefined) setDescLive(descCurrent);
   }, [descCurrent]);
 
-  const getSelectionRange = () => {
-    const el = descTextareaRef.current;
-    if (!el) return null;
-    return { start: el.selectionStart, end: el.selectionEnd };
-  };
+  // Persists the narration highlight/caret across blur for the audio selection tools
+  // (iOS collapses a textarea selection when a tool button is tapped) and invalidates
+  // it if the live text or the working take changes.
+  const {
+    ref: descTextareaRef,
+    bind: descSelectionBind,
+    getSelectionRange,
+    selection: descSelection,
+    clearSelection: clearDescSelection,
+  } = useTextSelection(descLive, sceneDesc?.audio.working);
 
   return (
     <section className="rounded-lg border border-gray-700 bg-gray-800/60 p-4 shadow-sm">
@@ -145,6 +150,7 @@ const SceneCard = ({ scene, fields, sid, onFieldUpdate, readOnly = false, isZh =
                     onLocalChange={setDescLive}
                     label="Narration (SceneDesc)"
                     textareaRef={descTextareaRef}
+                    selectionBind={descSelectionBind}
                     flushRef={descFlushRef}
                     rows={4}
                   />
@@ -175,6 +181,8 @@ const SceneCard = ({ scene, fields, sid, onFieldUpdate, readOnly = false, isZh =
                             : descLive !== sceneDesc.original_text
                         }
                         getSelectionRange={getSelectionRange}
+                        capturedSelection={descSelection}
+                        onClearSelection={clearDescSelection}
                         // The selection ops work for JP too now (the CJK backend maps the kana
                         // selection via the MMS aligner; a kanji-line selection gets a 409 hint).
                         surfaceLabel={isJp ? 'the narration kana line' : 'the narration'}

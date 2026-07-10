@@ -92,10 +92,14 @@ is only trips published long ago that never passed through the review app and wh
 masters are gone → `422 bad_folder` on admin open. Preferred fix when it bites: restore the
 masters to R2, not S3-read plumbing. Raised by dave 2026-07-09.
 
-### 7. Mobile deeper work — **needs a product decision first**
-Touch-first splice-selection UX **or** explicitly declare splice desktop/tablet-only; sticky
-mini-player; collapse the 17-button `RegenerateControls` row. Quick wins already shipped
-(2026-07-08), so phones aren't broken — this is enhancement, blocked on the selection-UX call.
+### 7. Mobile deeper work — **mostly DONE 2026-07-10** (decision: full review on mobile)
+Shipped (see `2026-07-10-review-app.md`): selection persistence (`useTextSelection` — iOS
+blur-collapse fixed, chip UI), grouped `<details>` toolbar on phones + "?" help, wake lock +
+coverage beacon flush, remaining 16px inputs, admin-page touch targets. Still open:
+- **Real-iPhone verification pass** (checklist in the 07-10 log) before calling it done.
+- Sticky mini-player (deferred, unchanged).
+- `preload="none"` for working tracks on phones (D3) — only after device check confirms
+  duration still resolves on first play.
 
 ---
 

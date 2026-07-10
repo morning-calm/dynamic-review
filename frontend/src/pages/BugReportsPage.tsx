@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { api, ApiError, type BugReport, type BugStatusValue } from '../api';
 import { useAuth } from '../authContext';
@@ -29,6 +29,15 @@ const BugReportsPage = () => {
   const [sel, setSel] = useState<BugReport | null>(null);
   const [reply, setReply] = useState('');
   const [busy, setBusy] = useState(false);
+  // On phones the grid stacks list-over-detail, so a tapped report opens below the whole
+  // list; scroll it into view (desktop's side-by-side layout never needs this).
+  const detailRef = useRef<HTMLElement | null>(null);
+  const selId = sel?.id;
+  useEffect(() => {
+    if (selId == null) return;
+    if (!window.matchMedia('(max-width: 767px)').matches) return;
+    detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [selId]);
 
   const refreshList = useCallback(() => {
     api
@@ -117,7 +126,7 @@ const BugReportsPage = () => {
         </section>
 
         {/* Detail */}
-        <section className="min-w-0">
+        <section ref={detailRef} className="min-w-0 scroll-mt-16">
           {!sel && <p className="text-gray-500">Select a report to view it.</p>}
           {sel && (
             <div className="space-y-4 rounded-lg border border-gray-700 bg-gray-800/60 p-4">
@@ -214,7 +223,7 @@ const BugReportsPage = () => {
                   onChange={(e) => setReply(e.target.value)}
                   placeholder={isAdmin ? 'Reply to the reporter (any language)…' : 'Add a reply (any language)…'}
                   rows={3}
-                  className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm"
+                  className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-base sm:text-sm"
                 />
                 <div className="mt-2 flex justify-end">
                   <button

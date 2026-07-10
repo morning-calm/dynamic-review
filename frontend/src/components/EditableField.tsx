@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { toast } from 'react-toastify';
 import { api, ApiError, flushFieldBeacon, type Field } from '../api';
-import { useDebouncedCallback } from '../hooks';
+import { useDebouncedCallback, type SelectionBind } from '../hooks';
 import { useSaveCoordinator } from '../saveStatusContext';
 import InlineDiff from './InlineDiff';
 import SourceEditor from './SourceEditor';
@@ -18,6 +18,9 @@ interface EditableFieldProps {
   singleLine?: boolean;
   /** Attach the underlying textarea (so the parent can read selectionStart/End). */
   textareaRef?: RefObject<HTMLTextAreaElement | null>;
+  /** Selection-capture handlers (useTextSelection.bind) — persists the reviewer's
+   * highlight/caret for the audio tools; iOS collapses it on blur otherwise. */
+  selectionBind?: SelectionBind;
   rows?: number;
   /**
    * The parent sets this to a function that flushes any pending save and resolves
@@ -43,6 +46,7 @@ const EditableField = ({
   placeholder,
   singleLine = false,
   textareaRef,
+  selectionBind,
   rows,
   flushRef,
 }: EditableFieldProps) => {
@@ -159,6 +163,7 @@ const EditableField = ({
       {label && <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400">{label}</label>}
       <textarea
         ref={textareaRef}
+        {...selectionBind}
         value={value}
         placeholder={placeholder}
         onChange={(e) => handleChange(e.target.value)}

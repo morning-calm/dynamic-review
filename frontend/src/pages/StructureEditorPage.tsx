@@ -163,8 +163,8 @@ const StructureEditorPage = () => {
           {st.scenes.map((s, i) => (
             <div key={`${s.scene_id ?? 'noid'}-${s.index}`} className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-700 bg-gray-800/60 p-3">
               <div className="flex flex-col gap-1">
-                <button type="button" disabled={busy || i === 0} onClick={() => move(i, -1)} className="rounded border border-gray-600 px-2 py-0.5 text-xs text-gray-300 hover:bg-gray-700 disabled:opacity-30" title="Move up">▲</button>
-                <button type="button" disabled={busy || i === st.scenes.length - 1} onClick={() => move(i, 1)} className="rounded border border-gray-600 px-2 py-0.5 text-xs text-gray-300 hover:bg-gray-700 disabled:opacity-30" title="Move down">▼</button>
+                <button type="button" disabled={busy || i === 0} onClick={() => move(i, -1)} className="rounded border border-gray-600 px-3 py-2 text-xs text-gray-300 hover:bg-gray-700 disabled:opacity-30 sm:px-2 sm:py-0.5" title="Move up">▲</button>
+                <button type="button" disabled={busy || i === st.scenes.length - 1} onClick={() => move(i, 1)} className="rounded border border-gray-600 px-3 py-2 text-xs text-gray-300 hover:bg-gray-700 disabled:opacity-30 sm:px-2 sm:py-0.5" title="Move down">▼</button>
               </div>
               {s.thumb_url ? (
                 <img src={s.thumb_url} alt="" loading="lazy" className="h-16 w-28 rounded border border-gray-700 object-cover" />
@@ -260,19 +260,19 @@ const StructureEditorPage = () => {
               // NaN (cleared / 'e') would 422 at the API — clamp to a real position.
               setAddPos(Number.isFinite(v) ? Math.max(0, Math.min(Math.trunc(v), st.scenes.length)) : 0);
             }}
-            className="mt-1 w-24 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm"
+            className="mt-1 w-24 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-base sm:text-sm"
           />
         </label>
         <label className="mb-2 block text-xs text-gray-400">
           videoUrl
-          <input type="text" value={addUrl} onChange={(e) => setAddUrl(e.target.value)} placeholder="https://player.vimeo.com/… or file stem" className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm" />
+          <input type="text" value={addUrl} onChange={(e) => setAddUrl(e.target.value)} placeholder="https://player.vimeo.com/… or file stem" className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-base sm:text-sm" />
         </label>
         <label className="mb-2 flex items-center gap-2 text-xs text-gray-400">
           <input type="checkbox" checked={addStatic} onChange={(e) => setAddStatic(e.target.checked)} /> static 360 still (no video)
         </label>
         <label className="mb-3 block text-xs text-gray-400">
           Existing sceneId (optional — reuse a registry atom instead of minting)
-          <input type="text" value={addSceneId} onChange={(e) => setAddSceneId(e.target.value)} placeholder="s20240824-140508" className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm" />
+          <input type="text" value={addSceneId} onChange={(e) => setAddSceneId(e.target.value)} placeholder="s20240824-140508" className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-base sm:text-sm" />
         </label>
         <div className="flex justify-end gap-2">
           <button type="button" disabled={busy} onClick={() => setAddOpen(false)} className="rounded border border-gray-600 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700">Cancel</button>
@@ -301,7 +301,7 @@ const StructureEditorPage = () => {
         <h2 className="mb-2 text-sm font-semibold">Scene #{swapTarget} video</h2>
         <label className="mb-3 block text-xs text-gray-400">
           videoUrl
-          <input type="text" value={swapUrl} onChange={(e) => setSwapUrl(e.target.value)} autoFocus className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm" />
+          <input type="text" value={swapUrl} onChange={(e) => setSwapUrl(e.target.value)} autoFocus className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-base sm:text-sm" />
         </label>
         <label className="mb-1 flex items-start gap-2 text-xs text-gray-300">
           <input type="checkbox" checked={swapRekey} onChange={(e) => setSwapRekey(e.target.checked)} className="mt-0.5" />
@@ -333,7 +333,7 @@ const StructureEditorPage = () => {
           Comma-separated JPG filenames. These are references — the files must exist in the trip’s image trees to
           render in the app.
         </p>
-        <input type="text" value={imagesText} onChange={(e) => setImagesText(e.target.value)} placeholder="a.jpg, suncake.jpg" autoFocus className="mb-3 w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm" />
+        <input type="text" value={imagesText} onChange={(e) => setImagesText(e.target.value)} placeholder="a.jpg, suncake.jpg" autoFocus className="mb-3 w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-base sm:text-sm" />
         <div className="flex justify-end gap-2">
           <button type="button" disabled={busy} onClick={() => setImagesTarget(null)} className="rounded border border-gray-600 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700">Cancel</button>
           <button

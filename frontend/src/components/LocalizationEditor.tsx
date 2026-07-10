@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { toast } from 'react-toastify';
 import { api, ApiError, flushLocalizationBeacon, type Field, type ZhScript } from '../api';
-import { useDebouncedCallback } from '../hooks';
+import { useDebouncedCallback, type SelectionBind } from '../hooks';
 import { useSaveCoordinator } from '../saveStatusContext';
 import InlineDiff from './InlineDiff';
 
@@ -29,6 +29,9 @@ interface ScriptRowProps {
   /** Exposes this row's textarea (the Hans row only) so the audio selection tools can
    * read the reviewer's highlight/caret from the voiced script. */
   textareaRef?: RefObject<HTMLTextAreaElement | null>;
+  /** Selection-capture handlers (useTextSelection.bind), Hans row only — persists the
+   * highlight/caret for the audio tools; iOS collapses it on blur otherwise. */
+  selectionBind?: SelectionBind;
 }
 
 /**
@@ -38,7 +41,7 @@ interface ScriptRowProps {
  * single `{script, text}` PUT against the localization endpoint, so the 4
  * scripts on a field save independently of one another.
  */
-const ScriptRow = ({ sid, fid, script, cur, orig, rows, onFieldUpdate, registerFlush, textareaRef }: ScriptRowProps) => {
+const ScriptRow = ({ sid, fid, script, cur, orig, rows, onFieldUpdate, registerFlush, textareaRef, selectionBind }: ScriptRowProps) => {
   const [value, setValue] = useState(cur);
   const savedRef = useRef(cur);
   const valueRef = useRef(value); // read latest value without re-binding the hide/unload listener
@@ -136,6 +139,7 @@ const ScriptRow = ({ sid, fid, script, cur, orig, rows, onFieldUpdate, registerF
       </label>
       <textarea
         ref={textareaRef}
+        {...selectionBind}
         value={value}
         onChange={(e) => {
           setValue(e.target.value);
@@ -144,7 +148,7 @@ const ScriptRow = ({ sid, fid, script, cur, orig, rows, onFieldUpdate, registerF
         onBlur={() => save.flush()}
         rows={rows}
         spellCheck={script === 'en'}
-        className={`w-full resize-y rounded border bg-gray-900 px-3 py-2 text-sm text-gray-100 outline-none focus:border-custom-green ${
+        className={`w-full resize-y rounded border bg-gray-900 px-3 py-2 text-base text-gray-100 outline-none focus:border-custom-green sm:text-sm ${
           changed ? 'border-amber-600/60' : 'border-gray-700'
         }`}
       />
@@ -164,6 +168,8 @@ interface LocalizationEditorProps {
   /** Parent-owned ref to the Simplified (Hans) textarea — the VOICED script — so the
    * audio selection tools (highlight/alt/trim/pause) can read the reviewer's selection. */
   hansTextareaRef?: RefObject<HTMLTextAreaElement | null>;
+  /** Selection-capture handlers for the Hans textarea (see ScriptRow.selectionBind). */
+  hansSelectionBind?: SelectionBind;
 }
 
 /**
@@ -176,7 +182,7 @@ interface LocalizationEditorProps {
  * approve. Renders nothing if the field has no localization data (the caller
  * should fall back to the plain editor in that case).
  */
-const LocalizationEditor = ({ field, sid, onFieldUpdate, label, rows = 3, flushRef, hansTextareaRef }: LocalizationEditorProps) => {
+const LocalizationEditor = ({ field, sid, onFieldUpdate, label, rows = 3, flushRef, hansTextareaRef, hansSelectionBind }: LocalizationEditorProps) => {
   const loc = field.localization;
   const flushers = useRef<Map<ZhScript, () => Promise<void>>>(new Map());
   const registerFlush = useCallback((script: ZhScript, fn: (() => Promise<void>) | null) => {
@@ -222,6 +228,7 @@ const LocalizationEditor = ({ field, sid, onFieldUpdate, label, rows = 3, flushR
             onFieldUpdate={onFieldUpdate}
             registerFlush={registerFlush}
             textareaRef={s === 'Hans' ? hansTextareaRef : undefined}
+            selectionBind={s === 'Hans' ? hansSelectionBind : undefined}
           />
         ))}
       </div>

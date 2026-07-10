@@ -11,7 +11,7 @@ interface Props {
 const SPEED_PRESETS = [0.7, 0.85, 1.0];
 
 const selectCls =
-  'rounded border border-gray-600 bg-gray-900 px-2 py-1 text-sm text-gray-100 disabled:opacity-50';
+  'rounded border border-gray-600 bg-gray-900 px-2 py-1 text-base text-gray-100 disabled:opacity-50 sm:text-sm';
 
 const MODAL_STYLE: Modal.Styles = {
   overlay: { backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 50 },

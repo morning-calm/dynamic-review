@@ -284,6 +284,11 @@ const TripListPage = () => {
                     >
                       {opening === trip.trip_id ? 'Opening…' : trip.has_session ? 'Resume' : 'Open'}
                     </button>
+                    {/* The disabled-state explanation lives in the title tooltip, which
+                        touch devices never show — surface it as text on phones. */}
+                    {!trip.reviewable && (
+                      <span className="text-[11px] text-gray-500 sm:hidden">no audio yet</span>
+                    )}
                   </div>
                 </li>
               ))}

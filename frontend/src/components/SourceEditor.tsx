@@ -59,7 +59,7 @@ const SourceEditor = ({
         onBlur={() => save.flush()}
         rows={2}
         spellCheck
-        className={`w-full resize-y rounded border bg-gray-900 px-3 py-2 text-sm text-gray-300 outline-none focus:border-custom-green ${
+        className={`w-full resize-y rounded border bg-gray-900 px-3 py-2 text-base text-gray-300 outline-none focus:border-custom-green sm:text-sm ${
           changed ? 'border-amber-600/60' : 'border-gray-700'
         }`}
       />

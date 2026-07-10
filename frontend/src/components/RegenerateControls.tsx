@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import Modal from 'react-modal';
 import { toast } from 'react-toastify';
 import { api, ApiError, type Field, type RegenerateMode } from '../api';
+import type { CapturedSelection } from '../hooks';
 import ManualEditModal from './ManualEditModal';
 
 interface RegenerateControlsProps {
@@ -12,6 +13,11 @@ interface RegenerateControlsProps {
   hasTextChange: boolean;
   /** Reads the textarea selection for highlight mode. Absent for Q&A (whole only). */
   getSelectionRange?: () => { start: number; end: number } | null;
+  /** The persisted capture (useTextSelection) — renders the "Selected: …" chip so the
+   * reviewer sees what the tools will operate on (and, on touch, that it survived blur). */
+  capturedSelection?: CapturedSelection | null;
+  /** Clears the persisted capture (the chip's ✕). */
+  onClearSelection?: () => void;
   /** Q&A fields are short → whole-regenerate only. */
   wholeOnly?: boolean;
   /** True when a highlightable narration surface exists for the selection-based ops
@@ -53,6 +59,8 @@ const RegenerateControls = ({
   onFieldUpdate,
   hasTextChange,
   getSelectionRange,
+  capturedSelection,
+  onClearSelection,
   wholeOnly = false,
   hasSelection = true,
   selectionSourceText,
@@ -60,6 +68,7 @@ const RegenerateControls = ({
   onBeforeRegenerate,
 }: RegenerateControlsProps) => {
   const [busy, setBusy] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [bugOpen, setBugOpen] = useState(false);
   const [bugText, setBugText] = useState('');
@@ -326,208 +335,383 @@ const RegenerateControls = ({
     </button>
   );
 
+  // --- Each tool button is built ONCE and rendered by both layouts: the classic
+  // single wrapped row on desktop (`hidden sm:flex`) and grouped disclosures on
+  // phones (`sm:hidden`), where ~18 wrapped buttons would be a wall of rows.
+  const undoBtn = (
+    <button
+      type="button"
+      disabled={busy || !field.can_undo}
+      onClick={() => stepHistory('undo')}
+      title="Undo the last audio change (step back through this clip's takes)"
+      className={`${btn} border-gray-600 text-gray-200`}
+    >
+      ↶ Undo
+    </button>
+  );
+  const redoBtn = (
+    <button
+      type="button"
+      disabled={busy || !field.can_redo}
+      onClick={() => stepHistory('redo')}
+      title="Redo (step forward through this clip's takes)"
+      className={`${btn} border-gray-600 text-gray-200`}
+    >
+      ↷ Redo
+    </button>
+  );
+  const regenAllBtn = (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={() => regen('whole')}
+      title="Re-record this entire block from its current text — audition the result, then Combine to keep it"
+      className={`${btn} border-gray-600 text-gray-200`}
+    >
+      Regenerate All
+    </button>
+  );
+  const fixPronWholeBtn = (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={onAltTextWhole}
+      title="Type replacement/phonetic text and re-record this whole block from it (fixes a pronunciation; the on-screen text is unchanged)"
+      className={`${btn} border-gray-600 text-gray-200`}
+    >
+      Fix pronunciation…
+    </button>
+  );
+  const genFromEditBtn = (
+    <button
+      type="button"
+      disabled={busy || !hasTextChange}
+      onClick={() => regen('segment')}
+      title={
+        hasTextChange
+          ? 'Re-record just the words you edited and splice them into the existing audio'
+          : `Edit ${surfaceLabel} first`
+      }
+      className={`${btn} border-gray-600 text-gray-200`}
+    >
+      Generate from edit
+    </button>
+  );
+  const highlightBtn = (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={onHighlight}
+      title={`Select the phrase in ${surfaceLabel}, then click to re-record just that phrase (the text is unchanged)`}
+      className={`${btn} border-gray-600 text-gray-200`}
+    >
+      Regenerate highlighted
+    </button>
+  );
+  const fixPronBtn = (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={onAltText}
+      title={`Select the phrase in ${surfaceLabel}, then type replacement/phonetic text to speak there (the on-screen text is unchanged)`}
+      className={`${btn} border-gray-600 text-gray-200`}
+    >
+      Fix pronunciation…
+    </button>
+  );
+  const insert1Btn = (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={() => void onInsertSilence(1)}
+      title={`Click at a pause in ${surfaceLabel} (usually right after a full stop), then click to lengthen that pause by 1s — it never splits a word`}
+      className={`${btn} border-gray-600 text-gray-200`}
+    >
+      Insert 1s
+    </button>
+  );
+  const insertHalfBtn = (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={() => void onInsertSilence(0.5)}
+      title={`Click at a pause in ${surfaceLabel}, then click to lengthen that pause by 0.5s (the lighter touch for non-beginner audio)`}
+      className={`${btn} border-gray-600 text-gray-200`}
+    >
+      Insert 0.5s
+    </button>
+  );
+  const remove1Btn = (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={() => void onRemoveSilence(1)}
+      title={`Click at an over-long pause in ${surfaceLabel}, then click to remove up to 1s of it (a natural pause is always kept — it never cuts speech)`}
+      className={`${btn} border-gray-600 text-gray-200`}
+    >
+      Remove 1s
+    </button>
+  );
+  const removeHalfBtn = (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={() => void onRemoveSilence(0.5)}
+      title={`Click at a slightly-long pause in ${surfaceLabel}, then click to remove up to 0.5s of it (a natural pause is always kept — it never cuts speech)`}
+      className={`${btn} border-gray-600 text-gray-200`}
+    >
+      Remove 0.5s
+    </button>
+  );
+  const combineBtn = (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={doCombine}
+      title="Keep the new take you just auditioned — it replaces that part of the working audio (undoable)"
+      className={`${btn} border-custom-green text-custom-green`}
+    >
+      Combine
+    </button>
+  );
+  const trimMinusBtn = (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={() => onTrimCandidate(50)}
+      title="Trim 50 ms more off the END of the candidate (drop a trailing breath or the start of the next sound) before combining"
+      className={`${btn} border-gray-600 text-gray-200`}
+    >
+      Trim end −
+    </button>
+  );
+  const trimPlusBtn = (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={() => onTrimCandidate(-50)}
+      title="Restore 50 ms of the candidate's end (undo a trim-too-far)"
+      className={`${btn} border-gray-600 text-gray-200`}
+    >
+      Trim end +
+    </button>
+  );
+  const redoCandBtn = (
+    <button
+      type="button"
+      disabled={busy || !lastRegen}
+      onClick={redoCandidate}
+      title="Re-roll this candidate with the exact same request (a fresh take, in case the first has an issue)"
+      className={`${btn} border-gray-600 text-gray-200`}
+    >
+      Redo candidate
+    </button>
+  );
+  const createNewBtn = (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={() => setManualOpen(true)}
+      title={
+        savedClips > 0
+          ? `${savedClips} take${savedClips === 1 ? '' : 's'} attached for the admin — open to review`
+          : 'Create a new take as an attachment with instructions for the admin (does not replace the working audio)'
+      }
+      className={`${btn} ${
+        savedClips > 0 ? 'border-amber-500 bg-amber-500/10 text-amber-300' : 'border-gray-600 text-gray-200'
+      }`}
+    >
+      Create new{savedClips > 0 ? ` (${savedClips})` : ''}
+    </button>
+  );
+  const reportBtn = (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={() => setBugOpen(true)}
+      title="Report a problem with this part (write in any language). The current text + audio are saved so we can see exactly what you saw."
+      className={`${btn} border-rose-500/70 text-rose-300`}
+    >
+      Report a problem
+    </button>
+  );
+  const helpBtn = (
+    <button
+      type="button"
+      onClick={() => setHelpOpen((o) => !o)}
+      aria-expanded={helpOpen}
+      title="How these tools work"
+      className={`${btn} shrink-0 rounded-full border-gray-600 px-3 text-gray-400`}
+    >
+      ?
+    </button>
+  );
+  const busyNote = busy ? <span className="text-xs text-gray-500">working…</span> : null;
+
+  // The tools that read the reviewer's selection exist when a selection surface does.
+  const hasSelectionTools = !wholeOnly && hasSelection;
+  const hasChipSelection = Boolean(capturedSelection && capturedSelection.start !== capturedSelection.end);
+
+  // Phone grouping: a native <details> disclosure per tool family (no hover needed).
+  const group = (name: string, hint: string, open: boolean, children: ReactNode) => (
+    <details open={open || undefined} className="rounded border border-gray-800 bg-gray-900/30">
+      <summary className="cursor-pointer select-none px-3 py-2 text-xs font-medium text-gray-300">
+        {name}
+        {hint && <span className="ml-2 font-normal text-gray-500">{hint}</span>}
+      </summary>
+      <div className="flex flex-wrap items-center gap-2 px-3 pb-3 pt-1">{children}</div>
+    </details>
+  );
+
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <button
-        type="button"
-        disabled={busy || !field.can_undo}
-        onClick={() => stepHistory('undo')}
-        title="Undo the last audio change (step back through this clip's takes)"
-        className={`${btn} border-gray-600 text-gray-200`}
-      >
-        ↶ Undo
-      </button>
-      <button
-        type="button"
-        disabled={busy || !field.can_redo}
-        onClick={() => stepHistory('redo')}
-        title="Redo (step forward through this clip's takes)"
-        className={`${btn} border-gray-600 text-gray-200`}
-      >
-        ↷ Redo
-      </button>
-
-      {sep}
-
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => regen('whole')}
-        title="Re-record this entire block from its current text — audition the result, then Combine to keep it"
-        className={`${btn} border-gray-600 text-gray-200`}
-      >
-        Regenerate All
-      </button>
-
-      {wholeOnly && (
-        <button
-          type="button"
-          disabled={busy}
-          onClick={onAltTextWhole}
-          title="Type replacement/phonetic text and re-record this whole block from it (fixes a pronunciation; the on-screen text is unchanged)"
-          className={`${btn} border-gray-600 text-gray-200`}
-        >
-          Fix pronunciation…
-        </button>
-      )}
-
-      {wholeOnly && sep}
-      {wholeOnly && getSelectionRange && trimNoiseBtn}
-      {wholeOnly && trimSilenceBtn}
-
-      {!wholeOnly && (
-        <>
+    <div className="space-y-2">
+      {hasChipSelection && capturedSelection && (
+        <div className="flex w-full min-w-0 items-center gap-1 text-xs">
+          <span
+            className="min-w-0 truncate rounded border border-sky-800/60 bg-sky-950/40 px-2 py-1 text-sky-300"
+            title="The highlighted-text tools below act on this selection"
+          >
+            Selected: “{capturedSelection.text}”
+          </span>
           <button
             type="button"
-            disabled={busy || !hasTextChange}
-            onClick={() => regen('segment')}
-            title={
-              hasTextChange
-                ? 'Re-record just the words you edited and splice them into the existing audio'
-                : `Edit ${surfaceLabel} first`
-            }
-            className={`${btn} border-gray-600 text-gray-200`}
+            onClick={onClearSelection}
+            aria-label="Clear the selection"
+            className="shrink-0 rounded px-2 py-1 text-gray-400 hover:bg-gray-700 hover:text-gray-200"
           >
-            Generate from edit
+            ✕
           </button>
-          {/* Selection-based ops read getSelectionRange from the language's narration
-              surface: EN/JP the SceneDesc textarea (JP: the kana line), _ZH the Simplified
-              (Hans) field of the 4-script block. */}
-          {hasSelection && (
+        </div>
+      )}
+
+      {/* Desktop: the classic single wrapped row (unchanged layout at sm:+). */}
+      <div className="hidden flex-wrap items-center gap-2 sm:flex">
+        {undoBtn}
+        {redoBtn}
+        {sep}
+        {regenAllBtn}
+        {wholeOnly && fixPronWholeBtn}
+        {wholeOnly && sep}
+        {wholeOnly && getSelectionRange && trimNoiseBtn}
+        {wholeOnly && trimSilenceBtn}
+        {!wholeOnly && (
+          <>
+            {genFromEditBtn}
+            {/* Selection-based ops read getSelectionRange from the language's narration
+                surface: EN/JP the SceneDesc textarea (JP: the kana line), _ZH the Simplified
+                (Hans) field of the 4-script block. */}
+            {hasSelection && (
+              <>
+                {highlightBtn}
+                {fixPronBtn}
+                {sep}
+                {trimNoiseBtn}
+                {insert1Btn}
+                {insertHalfBtn}
+                {remove1Btn}
+                {removeHalfBtn}
+              </>
+            )}
+            {trimSilenceBtn}
+          </>
+        )}
+        {field.audio.candidate && (
+          <>
+            {sep}
+            {combineBtn}
+            {trimMinusBtn}
+            {trimPlusBtn}
+            {redoCandBtn}
+          </>
+        )}
+        {sep}
+        {createNewBtn}
+        {reportBtn}
+        {helpBtn}
+        {busyNote}
+      </div>
+
+      {/* Phones: the same buttons in grouped disclosures. A pending candidate's controls
+          stay outside the groups — Combine must never be buried. */}
+      <div className="space-y-1.5 sm:hidden">
+        {field.audio.candidate && (
+          <div className="flex flex-wrap items-center gap-2 rounded border border-custom-green/40 bg-gray-900/30 p-2">
+            {combineBtn}
+            {trimMinusBtn}
+            {trimPlusBtn}
+            {redoCandBtn}
+          </div>
+        )}
+        {group(
+          'Generate',
+          'whole take',
+          false,
+          <>
+            {regenAllBtn}
+            {!wholeOnly && genFromEditBtn}
+            {wholeOnly && fixPronWholeBtn}
+          </>,
+        )}
+        {(hasSelectionTools || Boolean(getSelectionRange)) &&
+          group(
+            'Fix a highlighted spot',
+            'select text first',
+            hasChipSelection,
             <>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onHighlight}
-                title={`Select the phrase in ${surfaceLabel}, then click to re-record just that phrase (the text is unchanged)`}
-                className={`${btn} border-gray-600 text-gray-200`}
-              >
-                Regenerate highlighted
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onAltText}
-                title={`Select the phrase in ${surfaceLabel}, then type replacement/phonetic text to speak there (the on-screen text is unchanged)`}
-                className={`${btn} border-gray-600 text-gray-200`}
-              >
-                Fix pronunciation…
-              </button>
-              {sep}
-              {trimNoiseBtn}
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void onInsertSilence(1)}
-                title={`Click at a pause in ${surfaceLabel} (usually right after a full stop), then click to lengthen that pause by 1s — it never splits a word`}
-                className={`${btn} border-gray-600 text-gray-200`}
-              >
-                Insert 1s
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void onInsertSilence(0.5)}
-                title={`Click at a pause in ${surfaceLabel}, then click to lengthen that pause by 0.5s (the lighter touch for non-beginner audio)`}
-                className={`${btn} border-gray-600 text-gray-200`}
-              >
-                Insert 0.5s
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void onRemoveSilence(1)}
-                title={`Click at an over-long pause in ${surfaceLabel}, then click to remove up to 1s of it (a natural pause is always kept — it never cuts speech)`}
-                className={`${btn} border-gray-600 text-gray-200`}
-              >
-                Remove 1s
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void onRemoveSilence(0.5)}
-                title={`Click at a slightly-long pause in ${surfaceLabel}, then click to remove up to 0.5s of it (a natural pause is always kept — it never cuts speech)`}
-                className={`${btn} border-gray-600 text-gray-200`}
-              >
-                Remove 0.5s
-              </button>
-            </>
+              {hasSelectionTools && highlightBtn}
+              {hasSelectionTools && fixPronBtn}
+              {getSelectionRange && trimNoiseBtn}
+            </>,
           )}
-          {trimSilenceBtn}
-        </>
+        {group(
+          'Pauses & silence',
+          hasSelectionTools ? 'tap where the pause is' : '',
+          false,
+          <>
+            {hasSelectionTools && (
+              <>
+                {insert1Btn}
+                {insertHalfBtn}
+                {remove1Btn}
+                {removeHalfBtn}
+              </>
+            )}
+            {trimSilenceBtn}
+          </>,
+        )}
+        {group(
+          'Takes & history',
+          '',
+          false,
+          <>
+            {undoBtn}
+            {redoBtn}
+            {createNewBtn}
+            {reportBtn}
+          </>,
+        )}
+        <div className="flex items-center gap-2">
+          {helpBtn}
+          {busyNote}
+        </div>
+      </div>
+
+      {helpOpen && (
+        <div className="space-y-1 rounded border border-gray-700 bg-gray-900/60 p-2 text-xs text-gray-300">
+          <p>
+            <span className="font-medium text-gray-200">Highlighted-text tools</span> — select the words in{' '}
+            {surfaceLabel}, then tap the tool. The “Selected:” chip above the buttons shows what will be used.
+          </p>
+          <p>
+            <span className="font-medium text-gray-200">Pause tools</span> — tap in {surfaceLabel} to place the
+            cursor at the pause (usually right after a full stop), then tap Insert/Remove.
+          </p>
+          <p>
+            <span className="font-medium text-gray-200">Generate / Regenerate</span> — makes a candidate take:
+            listen to it, then Combine to keep it (undoable).
+          </p>
+        </div>
       )}
-
-      {field.audio.candidate && (
-        <>
-          {sep}
-          <button
-            type="button"
-            disabled={busy}
-            onClick={doCombine}
-            title="Keep the new take you just auditioned — it replaces that part of the working audio (undoable)"
-            className={`${btn} border-custom-green text-custom-green`}
-          >
-            Combine
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => onTrimCandidate(50)}
-            title="Trim 50 ms more off the END of the candidate (drop a trailing breath or the start of the next sound) before combining"
-            className={`${btn} border-gray-600 text-gray-200`}
-          >
-            Trim end −
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => onTrimCandidate(-50)}
-            title="Restore 50 ms of the candidate's end (undo a trim-too-far)"
-            className={`${btn} border-gray-600 text-gray-200`}
-          >
-            Trim end +
-          </button>
-          <button
-            type="button"
-            disabled={busy || !lastRegen}
-            onClick={redoCandidate}
-            title="Re-roll this candidate with the exact same request (a fresh take, in case the first has an issue)"
-            className={`${btn} border-gray-600 text-gray-200`}
-          >
-            Redo candidate
-          </button>
-        </>
-      )}
-
-      {sep}
-
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => setManualOpen(true)}
-        title={
-          savedClips > 0
-            ? `${savedClips} take${savedClips === 1 ? '' : 's'} attached for the admin — open to review`
-            : 'Create a new take as an attachment with instructions for the admin (does not replace the working audio)'
-        }
-        className={`${btn} ${
-          savedClips > 0 ? 'border-amber-500 bg-amber-500/10 text-amber-300' : 'border-gray-600 text-gray-200'
-        }`}
-      >
-        Create new{savedClips > 0 ? ` (${savedClips})` : ''}
-      </button>
-
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => setBugOpen(true)}
-        title="Report a problem with this part (write in any language). The current text + audio are saved so we can see exactly what you saw."
-        className={`${btn} border-rose-500/70 text-rose-300`}
-      >
-        Report a problem
-      </button>
-
-      {busy && <span className="text-xs text-gray-500">working…</span>}
 
       <ManualEditModal
         field={field}

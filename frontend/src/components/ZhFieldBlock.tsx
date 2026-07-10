@@ -1,5 +1,6 @@
 import { useRef, type ReactNode } from 'react';
 import type { Field } from '../api';
+import { useTextSelection } from '../hooks';
 import EditableField from './EditableField';
 import LocalizationEditor from './LocalizationEditor';
 import AudioReview from './AudioReview';
@@ -33,14 +34,16 @@ interface ZhFieldBlockProps {
 const ZhFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine, rows, readOnly = false }: ZhFieldBlockProps) => {
   const flushRef = useRef<(() => Promise<void>) | null>(null);
   // The Simplified (Hans) textarea — the VOICED script. The audio selection tools
-  // (highlight / alt / trim-noise / pause) read the reviewer's highlight/caret from it;
-  // a textarea keeps its selection after blur, so clicking a button below still sees it.
-  const hansTextareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const getSelectionRange = () => {
-    const el = hansTextareaRef.current;
-    if (!el) return null;
-    return { start: el.selectionStart, end: el.selectionEnd };
-  };
+  // (highlight / alt / trim-noise / pause) read the reviewer's highlight/caret from it.
+  // The hook persists the capture across blur (iOS collapses the selection when a tool
+  // button is tapped) and invalidates it if the Hans text or the working take changes.
+  const {
+    ref: hansTextareaRef,
+    bind: hansSelectionBind,
+    getSelectionRange,
+    selection,
+    clearSelection,
+  } = useTextSelection(field.localization?.cur.Hans ?? '', field.audio.working);
   // SceneDesc supports the surgical CJK splice ("Generate from edit", mode=segment): the
   // backend re-voices just the edited hanzi clause and falls back to whole-regen when
   // uncertain. Enabled once the Simplified hanzi differs from the seed. Q&A fields stay
@@ -67,6 +70,7 @@ const ZhFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine, ro
             rows={rows}
             flushRef={flushRef}
             hansTextareaRef={hansTextareaRef}
+            hansSelectionBind={hansSelectionBind}
           />
         ) : (
           <EditableField field={field} sid={sid} onFieldUpdate={onFieldUpdate} label={label} singleLine={singleLine} rows={rows} flushRef={flushRef} />
@@ -93,6 +97,8 @@ const ZhFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine, ro
               // Only offer the selection-reading tools when a Hans surface exists —
               // a non-localized field would route char offsets into the wrong text.
               getSelectionRange={field.localization ? getSelectionRange : undefined}
+              capturedSelection={field.localization ? selection : undefined}
+              onClearSelection={field.localization ? clearSelection : undefined}
               selectionSourceText={field.localization?.cur.Hans ?? undefined}
               surfaceLabel="the Simplified (Hans) field"
               onBeforeRegenerate={async () => {

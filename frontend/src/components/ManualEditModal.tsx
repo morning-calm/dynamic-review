@@ -67,7 +67,7 @@ const ClipRow = ({ clip, sid, fid, busy, setBusy, onFieldUpdate }: RowProps) => 
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={2}
-          className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm"
+          className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-base sm:text-sm"
         />
       ) : (
         <p className="text-xs italic text-gray-400">Imported file</p>
@@ -78,7 +78,7 @@ const ClipRow = ({ clip, sid, fid, busy, setBusy, onFieldUpdate }: RowProps) => 
         onChange={(e) => setNote(e.target.value)}
         rows={2}
         placeholder="Note for the admin"
-        className="w-full rounded border border-amber-700/60 bg-gray-900 px-2 py-1 text-sm text-amber-200"
+        className="w-full rounded border border-amber-700/60 bg-gray-900 px-2 py-1 text-base text-amber-200 sm:text-sm"
       />
       <div className="flex flex-wrap gap-2">
         <button
@@ -244,7 +244,7 @@ const ManualEditModal = ({ field, sid, isOpen, onClose, onFieldUpdate }: Props) 
           onChange={(e) => setNewText(e.target.value)}
           rows={2}
           placeholder="Text to voice for a new take"
-          className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm"
+          className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-base sm:text-sm"
         />
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" disabled={busy} onClick={generate} className={`${btn} border-gray-600 text-gray-200`}>
@@ -280,7 +280,7 @@ const ManualEditModal = ({ field, sid, isOpen, onClose, onFieldUpdate }: Props) 
               onChange={(e) => setComment(e.target.value)}
               rows={2}
               placeholder="Note for the admin (required) — e.g. ‘use this take, the master mispronounces …’"
-              className="w-full rounded border border-amber-700/60 bg-gray-900 px-2 py-1 text-sm"
+              className="w-full rounded border border-amber-700/60 bg-gray-900 px-2 py-1 text-base sm:text-sm"
             />
             <div className="flex flex-wrap gap-2">
               <button type="button" disabled={busy} onClick={save} className={`${btn} border-custom-green text-custom-green`}>
