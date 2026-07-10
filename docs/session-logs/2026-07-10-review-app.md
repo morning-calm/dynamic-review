@@ -189,6 +189,18 @@ combine; 1px `640px` query-vs-`sm` boundary. **Plus a real bug I fixed in the up
 Fable's scope): `staging.get_trip` calls `sys.exit()` on a missing trip, so `except Exception`
 didn't catch it and the batch aborted — now `except (Exception, SystemExit)`.
 
+### Deploy — DONE 2026-07-10 (dave: "commit changes and deploy to backend server")
+Committed `33b6798` (19 files, +1016/-117) + pushed to main. Also retired `Caerphilly_Castle_B1_EN`
++ `York_I_B2_EN` (added in error): removed from `trips_to_review.json` (127 trips remain) and added
+to the export `EXCLUDE` set in `Scripts/Trello/export_review_trips.py` (dynamic-content — dave
+commits via GitHub Desktop); library-app had no references. Laptop
+(`dynamic-languages-Lenovo-Z580:~/Desktop/Server/review-app`): `git pull` → 33b6798, `npm run build`
+(bundle `index-4jHTmZks.js` — matches local), `sudo systemctl restart review-app.service`. Verified:
+review-app.service + review-tunnel.service active; local health 200; public
+`review.dynamiclanguages.org` health + SPA both 200. (Unit-file "changed on disk" warning = deferred
+BACKLOG #10 daemon-reload; restart works regardless.) The new backend now serves the R2 image
+fallback — #3 fully live.
+
 ### #3 R2 upload — DONE 2026-07-10 (dave approved)
 `py -3.12 scripts/upload_review_images_r2.py --apply` on the workstation: **423/423 images uploaded**
 across 129 trips, 0 missing. 2 trips skipped (absent on staging): Caerphilly_Castle_B1_EN,
