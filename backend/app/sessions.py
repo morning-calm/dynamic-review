@@ -949,6 +949,36 @@ def _coverage_for(sid: str, frow) -> tuple[list[list[float]], bool]:
     return ranges, working_done or _original_done(sid, frow)
 
 
+_UNSAFE_FN = re.compile(r"[^A-Za-z0-9._-]+")
+
+_TRIP_ID_CACHE: dict[str, str] = {}                  # sid -> trip_id (immutable after seed)
+
+
+def _trip_id_cached(sid: str) -> str:
+    """serialize_field runs once per FIELD (a session GET serialises every field), so the
+    per-sid trip_id lookup is cached the way `_ZH_IS_CACHE` caches is_zh — a session's
+    trip_id never changes after seed."""
+    v = _TRIP_ID_CACHE.get(sid)
+    if v is None:
+        v = trip_id_for_session(sid)
+        _TRIP_ID_CACHE[sid] = v
+    return v
+
+
+def field_download_name(trip_id: str, frow) -> str:
+    """The mp3 filename an admin sees when they take a scene's audio off to a desktop
+    editor. It NAMES the field it came from (`…_scene3_questionOption1.mp3`), because the
+    only thing standing between a downloaded take and being re-imported into the WRONG
+    slot is the filename. The frontend compares an upload against this same name before
+    importing, so this is the single source of truth for both sides."""
+    if frow["field_path"] == "questionOption":
+        label = f"questionOption{frow['option_index']}"
+    else:
+        label = frow["field_path"]
+    trip = _UNSAFE_FN.sub("_", trip_id)          # trip ids carry spaces + dots
+    return f"{trip}_scene{frow['scene_index']}_{label}.mp3"
+
+
 def serialize_field(sid: str, frow) -> dict:
     fid = frow["id"]
     has_audio = bool(frow["has_audio"])
@@ -1018,6 +1048,10 @@ def serialize_field(sid: str, frow) -> dict:
         "audio": audio,
         "versions": versions,
         "manual_clips": _clips_for(sid, fid) if has_audio else [],
+        # The filename this field's take carries in the per-scene download zip. The FE
+        # warns when an uploaded mp3's name doesn't match it (wrong-slot import guard).
+        "download_name": (field_download_name(_trip_id_cached(sid), frow)
+                          if has_audio else None),
     }
 
     # _ZH: attach the editable 4-script block. Mandarin is V3-only — the single working

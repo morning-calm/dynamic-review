@@ -315,6 +315,7 @@ const ReviewBody = () => {
               scene={scene}
               fields={sceneFields[si] ?? scene.fields}
               sid={session.id}
+              tripId={session.trip_id}
               onFieldUpdate={updateField}
               readOnly={!editable}
               isZh={isZh}

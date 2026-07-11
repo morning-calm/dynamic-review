@@ -132,6 +132,7 @@ const AdminInlineEdit = ({ session, onUpdate }: { session: Session; onUpdate: (f
                   scene={scene}
                   fields={scene.fields}
                   sid={session.id}
+                  tripId={session.trip_id}
                   onFieldUpdate={onUpdate}
                   readOnly={false}
                   isZh={isZh}

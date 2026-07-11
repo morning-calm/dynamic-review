@@ -9,7 +9,7 @@ import re
 import zipfile
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse, Response, StreamingResponse
 
 from . import db, sessions
@@ -97,6 +97,44 @@ def get_overlay(sid: str, filename: str, request: Request):
     ext = path.suffix.lower()
     media = "image/png" if ext == ".png" else "image/jpeg"
     return _serve_range(path, request, media)
+
+
+@router.get("/api/sessions/{sid}/scenes/{index}/download",
+            dependencies=[Depends(require_admin)] + _SCOPE)
+def download_scene(sid: str, index: int):
+    """ADMIN ONLY: one scene's audio, for fixing a reviewer's `edit_required` flag in a
+    desktop editor. Each take is named for the FIELD it belongs to (see
+    `sessions.field_download_name`) so the admin can't lose track of which file goes back
+    into which slot — SceneDesc vs questionKey vs option 2. Pristine v0s ride along under
+    `orig/` for reference."""
+    srow = sessions._session_row(sid)
+    rows = db.query(
+        "SELECT * FROM field_edits WHERE session_id=? AND scene_index=? AND has_audio=1 "
+        "ORDER BY id", (sid, index))
+    dirs = sessions.work_dirs(sid)
+    buf = io.BytesIO()
+    wrote = 0
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as zf:
+        for frow in rows:
+            if not frow["mp3_name"]:
+                continue
+            name = sessions.field_download_name(srow["trip_id"], frow)
+            working = dirs["working"] / frow["mp3_name"]
+            if working.exists():
+                zf.write(working, arcname=name)
+                wrote += 1
+            orig = dirs["orig"] / frow["mp3_name"]
+            if orig.exists():
+                zf.write(orig, arcname=f"orig/{name}")
+    if not wrote:
+        raise HTTPException(404, detail={
+            "error": "no_audio", "detail": f"scene {index} has no audio takes"})
+    buf.seek(0)
+    trip = sessions._UNSAFE_FN.sub("_", srow["trip_id"])
+    fname = f"{trip}_scene{index}_audio.zip"
+    return StreamingResponse(
+        buf, media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'})
 
 
 @router.get("/api/sessions/{sid}/download",

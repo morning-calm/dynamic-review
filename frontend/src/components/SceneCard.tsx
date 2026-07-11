@@ -8,12 +8,15 @@ import FlagControl from './FlagControl';
 import CommentBox from './CommentBox';
 import AudioFieldBlock from './AudioFieldBlock';
 import ZhFieldBlock from './ZhFieldBlock';
+import SceneAudioDownload from './SceneAudioDownload';
 
 interface SceneCardProps {
   scene: Scene;
   /** Live field state for this scene, in the same order as scene.fields. */
   fields: Field[];
   sid: string;
+  /** Names the per-scene audio zip an admin downloads (`<trip>_scene3_audio.zip`). */
+  tripId: string;
   onFieldUpdate: (f: Field) => void;
   /** Session is locked (submitted/approving/approved) — edit controls go
    * `inert`, but audio players stay interactive so the take can still be heard. */
@@ -66,7 +69,7 @@ const SceneMedia = ({ scene }: { scene: Scene }) => {
   );
 };
 
-const SceneCard = ({ scene, fields, sid, onFieldUpdate, readOnly = false, isZh = false, language }: SceneCardProps) => {
+const SceneCard = ({ scene, fields, sid, tripId, onFieldUpdate, readOnly = false, isZh = false, language }: SceneCardProps) => {
   const isJp = language === 'Japanese';
   const sceneDesc = fields.find((f) => f.field_path === 'SceneDesc');
   const titleKey = fields.find((f) => f.field_path === 'titleKey');
@@ -103,10 +106,17 @@ const SceneCard = ({ scene, fields, sid, onFieldUpdate, readOnly = false, isZh =
 
   return (
     <section className="rounded-lg border border-gray-700 bg-gray-800/60 p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <span className="rounded bg-gray-700 px-2 py-0.5 text-xs font-medium text-gray-200">Scene {scene.index}</span>
         {!scene.has_audio && <span className="text-xs text-gray-500">text-only (no audio)</span>}
         {scene.is_static_image && <span className="text-xs text-gray-500">360 still</span>}
+        {/* Admin-only, and only when this scene actually seeded takes (an audio-unavailable
+            session has audio fields but no files to download). */}
+        {fields.some((f) => f.has_audio) && (
+          <span className="ml-auto">
+            <SceneAudioDownload sid={sid} sceneIndex={scene.index} tripId={tripId} />
+          </span>
+        )}
       </div>
 
       <SceneMedia scene={scene} />

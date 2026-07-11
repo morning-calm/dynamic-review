@@ -53,7 +53,10 @@ The atom the UI renders/edits. One per editable thing.
   "versions": [                       // archived takes, newest last
     { "label": "3v0", "kind": "v0_original", "url": "/audio/{sid}/12/v/0" },
     { "label": "3v1", "kind": "splice",      "url": "/audio/{sid}/12/v/1" }
-  ]
+  ],
+  "download_name": "Tokyo_08_scene3_SceneDesc.mp3"  // this take's name in the per-scene
+                                      // zip; null when no audio. The FE's wrong-slot
+                                      // import guard compares an upload's name to it.
 }
 ```
 
@@ -193,6 +196,7 @@ are admin-only. The audio-snapshot GET authenticates via the httpOnly cookie (br
 | `GET /audio/{sid}/{fid}/{which}` | — (`which` ∈ `original｜working｜candidate｜fallback`) | `audio/mpeg`, **HTTP Range supported** |
 | `GET /audio/{sid}/{fid}/v/{n}` | — | `audio/mpeg` (archived version n), Range supported |
 | `GET /api/sessions/{sid}/download` | — | `application/zip` — all originals + every version + current `{i}.mp3`. **Admin only** (`403` for reviewers): the bundle is for editing takes in a desktop audio editor + re-importing. |
+| `GET /api/sessions/{sid}/scenes/{index}/download` | — | `application/zip` — ONE scene's audio. **Admin only.** Each working take is named for its field (`<trip>_scene3_SceneDesc.mp3`, `…_questionKey.mp3`, `…_questionOption1.mp3`); pristine v0s ride along under `orig/`. `404 no_audio` if the scene has no takes. The name is `Field.download_name` — the FE warns when an uploaded mp3's name doesn't match the field it's being imported into. |
 | `POST /api/sessions/{sid}/submit` | — | `{ "ok": bool, "validation": [ {scene_index,field_path,issue} ] }` — reviewer/admin (own language): **validates only, no writes**; on `ok` flips the session to `submitted` (locked read-only, awaiting admin). Hard-fail issues keep it `in_review`. |
 | `POST /api/sessions/{sid}/approve` | — | `{ "ok": bool, "validation": […], "written": [field_path…], "promoted_mp3": [name…], "awaiting_stage9": true }` — **admin only.** Writes changed **text** to staging Trip + TripGroup desc/categories and promotes the corrected `{i}.mp3` masters (archiving prior). `409` if the session isn't `submitted`; if live staging drifted so validation now fails, returns `ok:false` and reverts to `submitted`. **No S3/ogg** (Stage 9). |
 | `POST /api/sessions/{sid}/request-changes` | `{ "note": "…" }` | `{ "ok": true }` — **admin only.** Sends a `submitted` trip back to the reviewer (`changes_requested`) with a note; `409` from other states. |

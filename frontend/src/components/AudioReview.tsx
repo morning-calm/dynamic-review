@@ -1,6 +1,8 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type RefObject, type SyntheticEvent } from 'react';
 import { api, ApiError, flushPlayedBeacon, type Field } from '../api';
+import { useAuth } from '../authContext';
 import { useDebouncedCallback } from '../hooks';
+import ImportMp3 from './ImportMp3';
 
 interface AudioReviewProps {
   field: Field;
@@ -220,6 +222,8 @@ const AudioRow = ({ label, src }: { label: string; src: string | null }) =>
  * reloads + resets coverage so Done can never unlock against audio never heard.
  */
 const AudioReview = ({ field, sid, onFieldUpdate }: AudioReviewProps) => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const workingEl = useRef<HTMLAudioElement | null>(null);
   const coveredRanges = useRef<Range[]>(mergeRanges(field.played_coverage as Range[]));
   const lastTime = useRef(0);
@@ -486,6 +490,16 @@ const AudioReview = ({ field, sid, onFieldUpdate }: AudioReviewProps) => {
             ))}
           </div>
         </details>
+      )}
+
+      {/* Admin: the return leg of "Download scene audio" — the fixed mp3 goes back in AT the
+          field it belongs to, so the slot is chosen by WHERE you click, not by filename.
+          Deliberately outside the readOnly `inert` wrappers: an admin fixing audio on a
+          `submitted` session is exactly the case this exists for (the backend allows it). */}
+      {isAdmin && field.has_audio && (
+        <div className="pt-1">
+          <ImportMp3 field={field} sid={sid} onUpdate={onFieldUpdate} compact />
+        </div>
       )}
     </div>
   );

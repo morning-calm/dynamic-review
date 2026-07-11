@@ -138,6 +138,15 @@ un-complete by `sessions.export_completed_trips`; rebuild any time with
   — never use transcription to detect truncation. Full history:
   `docs/splice-end-cutoff-analysis.md`.
 - **Versioning:** canonical `<i>.mp3`; superseded takes archived `versions/<i>v<n>.mp3`.
+- **Offline fix round-trip (ADMIN only):** a reviewer flags `edit_required` → the admin hits
+  **Download scene audio** on the SceneCard (`GET /api/sessions/{sid}/scenes/{i}/download`,
+  `require_admin`) → fixes the mp3 in a desktop editor → **Import edited MP3** on that field's
+  audio row (Review page; `components/ImportMp3.tsx`, also used by the Changes page). Every take
+  in the zip is named for its FIELD (`sessions.field_download_name` → `Field.download_name`:
+  `<trip>_scene3_questionOption1.mp3`) and the import **soft-warns on a name mismatch**, so a
+  take can't silently land in the wrong slot. ⚠️ NOT "Create new" — that only ATTACHES a take
+  for someone else to action; `import_mp3` is what installs a new working master (archives the
+  old take, clears coverage, re-locks Done). The whole-trip zip stays on the Changes page.
 - **Submit** writes changed **text** to staging Trip + TripGroup (desc + re-derived
   `tripCategories`) and leaves the corrected `<i>.mp3` masters in place — **Stage 9**
   (`stage9_finalise.py` / the CEFR `run_levels.py`) does the mp3→ogg + subtitles + S3.

@@ -405,6 +405,11 @@ export interface Field {
   audio: AudioLinks;
   versions: AudioVersion[];
   manual_clips: ManualClip[];
+  /** The filename this field's take carries inside the per-scene download zip (e.g.
+   * `Tokyo_08_scene3_questionOption1.mp3`); null when the field has no audio. Server-owned
+   * — the import guard compares an uploaded file's name against it to catch a take being
+   * re-imported into the WRONG field. */
+  download_name: string | null;
   /** Transient (regenerate response only): a CJK surgical splice was requested but bailed,
    * so the WHOLE narration was regenerated instead. Lets the FE flag that the whole clip
    * changed. Not persisted — absent on normal field fetches. */
@@ -626,6 +631,23 @@ const requestJson = async <T>(path: string, init?: RequestInit): Promise<T> => {
   return (await res.json()) as T;
 };
 
+/** GET a binary body (the download zips). Same auth + 401 handling as requestJson, but
+ * the response is a Blob the caller hands to a programmatic download. */
+const fetchBlob = async (path: string): Promise<Blob> => {
+  let res: Response;
+  try {
+    res = await fetch(path, { credentials: 'include', headers: authHeaders() });
+  } catch (e) {
+    throw new ApiError(0, 'network', e instanceof Error ? e.message : 'network error');
+  }
+  if (res.status === 401) {
+    clearToken();
+    unauthorizedHandler?.();
+  }
+  if (!res.ok) await throwFromResponse(res);
+  return res.blob();
+};
+
 const getJson = <T>(path: string): Promise<T> => requestJson<T>(path, { headers: authHeaders() });
 
 const postJson = <T>(path: string, body?: unknown): Promise<T> =>
@@ -791,27 +813,20 @@ export const api = {
     requestJson<Field>(field(sid, fid, `/clips/${cid}`), { method: 'DELETE', headers: jsonHeaders() }),
 
   /**
-   * Download the session zip. A plain <a href> can't send the Authorization
-   * header (→ 401), so the caller fetches the blob with the header and triggers
-   * a programmatic download.
+   * Download the whole-session zip (admin only). A plain <a href> can't send the
+   * Authorization header (→ 401), so the caller fetches the blob with the header and
+   * triggers a programmatic download.
    */
-  downloadZip: async (sid: string): Promise<Blob> => {
-    let res: Response;
-    try {
-      res = await fetch(`/api/sessions/${encodeURIComponent(sid)}/download`, {
-        credentials: 'include',
-        headers: authHeaders(),
-      });
-    } catch (e) {
-      throw new ApiError(0, 'network', e instanceof Error ? e.message : 'network error');
-    }
-    if (res.status === 401) {
-      clearToken();
-      unauthorizedHandler?.();
-    }
-    if (!res.ok) await throwFromResponse(res);
-    return res.blob();
-  },
+  downloadZip: (sid: string): Promise<Blob> =>
+    fetchBlob(`/api/sessions/${encodeURIComponent(sid)}/download`),
+
+  /**
+   * Download ONE scene's audio (admin only): every audio field's working take, named for
+   * the field it belongs to, plus the pristine v0s under `orig/`. The round trip for a
+   * reviewer's `edit_required` flag — fix the mp3 offline, re-import it at that field.
+   */
+  downloadSceneZip: (sid: string, sceneIndex: number): Promise<Blob> =>
+    fetchBlob(`/api/sessions/${encodeURIComponent(sid)}/scenes/${sceneIndex}/download`),
 
   /** Reviewer/admin: validate only (no writes) and lock the session to `submitted`. */
   submit: (sid: string): Promise<SubmitResponse> =>

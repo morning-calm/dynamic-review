@@ -15,7 +15,9 @@ import {
 } from '../api';
 import { useAuth } from '../authContext';
 import { fieldChanged, zhChangedScripts } from '../fieldDiff';
+import { saveBlob } from '../saveBlob';
 import NavBar from '../components/NavBar';
+import ImportMp3 from '../components/ImportMp3';
 import InlineDiff from '../components/InlineDiff';
 import AdminInlineEdit from '../components/AdminInlineEdit';
 import RecallControl from '../components/RecallControl';
@@ -62,35 +64,6 @@ const flatten = (s: Session): FlatField[] => {
 
 const fieldLabel = (ff: FlatField): string =>
   ff.sceneIndex === null ? ff.field.field_path : `Scene ${ff.sceneIndex} · ${ff.field.field_path}`;
-
-const ImportMp3 = ({ field, sid, onUpdate }: { field: Field; sid: string; onUpdate: (f: Field) => void }) => {
-  const [busy, setBusy] = useState(false);
-  return (
-    <label className={`inline-flex cursor-pointer items-center rounded border border-gray-600 px-2 py-1 text-xs text-gray-200 hover:bg-gray-700 ${busy ? 'opacity-50' : ''}`}>
-      {busy ? 'Importing…' : 'Import edited MP3'}
-      <input
-        type="file"
-        accept="audio/mpeg,.mp3"
-        className="hidden"
-        disabled={busy}
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          e.target.value = '';
-          if (!file) return;
-          setBusy(true);
-          api
-            .importMp3(sid, field.fid, file)
-            .then((updated) => {
-              onUpdate(updated);
-              toast.success('Imported as the new working master.');
-            })
-            .catch((err: unknown) => toast.error(`Import failed: ${err instanceof ApiError ? err.detail : 'network error'}`))
-            .finally(() => setBusy(false));
-        }}
-      />
-    </label>
-  );
-};
 
 /** Submit/approve result — the two endpoints share `{ok, validation}`; approve
  * additionally reports what got written/promoted to staging. */
@@ -234,22 +207,11 @@ const ChangesSummaryPage = () => {
       .finally(() => setApplyingFix(null));
   };
 
-  // C3: a plain <a href> can't carry the Authorization header (→ 401). Fetch the
-  // zip as a blob with the header, then trigger a download from an object URL.
   const downloadAll = () => {
     setDownloading(true);
     api
       .downloadZip(sid)
-      .then((blob) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${session?.trip_id ?? 'session'}.zip`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-      })
+      .then((blob) => saveBlob(blob, `${session?.trip_id ?? 'session'}.zip`))
       .catch((e: unknown) => toast.error(`Download failed: ${e instanceof ApiError ? e.detail : 'network error'}`))
       .finally(() => setDownloading(false));
   };
