@@ -162,3 +162,59 @@ the check were revoked.)
   while the file is named `questionOption0` (pre-existing UI wording).
 - Whole-trip zip (`download_all`) still uses raw arcnames (`working/3.mp3`) — untouched.
 - `review-app.service` daemon-reload warning (BACKLOG #10) still present; restart works.
+
+---
+
+## ~14:15 — Scene thumbnails blank in production (review-app)
+
+### Goal
+Dave: "the video scene thumbnails are still missing — where is the review app looking on R2?"
+(the 3000x1500 JPGs that accompany each scene).
+
+### What I did
+**Root cause: there was no R2 fallback at all**, despite the comment at `config.py:62-64`
+claiming one. `thumbs.thumb_url_for_scene` only ever returned a URL *after* `jpg_for_stem`
+found the JPG on **local disk** (the Windows `D:\Final stitch\Backed Up\* VID-PIC Thumbnails`
+trees in `THUMB_ROOTS`). The live laptop has none of them —
+`[thumbs] indexed 0 thumbnail JPGs … from 5 roots` in its journal — so every scene got
+`thumb_url: null` and `SceneCard.tsx:52` fell back to `image_url`. Meanwhile **1301 thumbnails
+were already in the bucket** from earlier workstation runs.
+
+Fix (`backend/app/thumbs.py`, commit **a0c243d**):
+- New `_remote_keys()` — lists the `scene-thumbs/` prefix of `dynamic-languages-thumbs` **once**,
+  paginated, under the file's existing double-checked-locking idiom. Unreachable R2 → empty set.
+- `thumb_url_for_scene`: local JPG → upload + URL (unchanged); **no local JPG → serve the R2 key
+  if it is really in the bucket**, else None. The stem is reproducible on any host (it comes from
+  the repo-resident `VRD/VideoIds-*.json`); only the JPG *bytes* are workstation-only.
+- `_remember_uploaded` also adds to `_R2_KEYS` so the remote set stays truthful after an upload.
+- `_public_url` now **percent-encodes** the key (keys carry the JPG's real name, spaces and all —
+  we were relying on the browser to fix that silently). Raw key stays raw at every boto3 call.
+- `config.py`: rewrote the comment that claimed a fallback existed.
+
+### Verified
+- Workstation, `THUMB_ROOTS` pointed at a nonexistent dir (simulating the laptop): Tokyo_03
+  **6/15**, Taipei101_HSK3_ZH **12/15**; emitted URL returns **HTTP 200 image/jpeg, 360 KB**.
+- Same two trips **with** the real local trees: **identical 6/15 and 12/15** — pure addition,
+  no regression on the workstation path.
+- Remaining nulls are correct: static-image scenes (overlays serve those) + the intro/outro
+  title cards (`Day 2 IN_000`, `JP 3 OUT_000`), which have **no thumbnail JPG anywhere** — the
+  workstation can't resolve them either with all 5364 files indexed. Pre-existing, not this bug.
+- **/red-fable (per the standing pre-deploy rule): no correctness bugs.** It verified the
+  `_R2_KEYS.add` is inside `_LOCK`, the raw-vs-encoded key split at every boto3 touchpoint, and
+  that the pagination loop terminates. It tightened one comment; I fixed a stale docstring.
+- **Deployed**: laptop pulled **a0c243d**, `sudo -n /usr/bin/systemctl restart review-app.service`;
+  `review-app` + `review-tunnel` both **active**. Live-host check:
+  `[thumbs] indexed 0 … / [thumbs] 1301 thumbnails already on R2` → **resolved 6 of 15**, sample
+  URL `…/scene-thumbs/Vid%2020230310%20113925%2020230313010548-1.jpg`.
+
+### Open / low-urgency TODOs
+- **A failed R2 listing is cached as empty for the process lifetime** — a network blip at the
+  first thumbnail resolution means blank thumbs until uvicorn restarts. Matches the file's policy
+  for every other cache (`_R2_TRIED` never retries) and beats hammering a dead endpoint per scene.
+  Known property, accepted.
+- The one-time bucket listing runs **under `_LOCK`**, so the first resolving thread briefly stalls
+  the others (once per process). Consistent with the other lazy cache builds; not worth the risk of
+  restructuring.
+- Thumbnails only exist on R2 for scenes some workstation run has already resolved. A **brand-new**
+  trip whose JPGs were never uploaded still shows blank on the laptop — the workstation must see it
+  once (or run a bulk uploader) to seed the bucket. No bulk thumb-uploader exists today.
