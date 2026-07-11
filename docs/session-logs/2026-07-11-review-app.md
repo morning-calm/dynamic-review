@@ -82,3 +82,83 @@ zip, exact notifier attribution`).
 ### Next steps
 - Watch the next real reviewer session's activity email — it should now name the **actual**
   person (exact, not guessed) on start/resume.
+
+---
+
+## Session 2 — per-scene audio download + per-field import (the offline-fix round trip)
+
+### Goal
+Dave: the whole-trip zip isn't what he needs. When a reviewer flags `edit_required` he wants
+that **scene's** audio, fixed in a desktop editor, put back — "but it must be clear where to
+upload for which field (e.g. scenedesc vs questionkey)". He asked whether "Create new" +
+upload mp3 could take the fixed file.
+
+### Investigation (the load-bearing finding)
+**"Create new" can NOT install a fixed take.** Its `Import mp3…` (`ManualEditModal`) only
+ATTACHES a draft take — *"Saved takes do NOT replace the working audio"* — and saving it flags
+the field `edit_required` so someone else actions it. An admin uploading there would be filing
+a request with himself. The control that really installs a new working master is
+`api.importMp3` → `/fields/{fid}/import-mp3` ("Import edited MP3"), which existed **only on the
+Changes summary page** — already per-field (so the which-field question was solved *there*),
+just on the wrong page, with no matching download.
+
+### What I did
+Shipped as **751020f**.
+- **`sessions.field_download_name(trip_id, frow)`** — self-describing per-field mp3 name
+  (`<trip>_scene3_questionOption1.mp3`; trip ids sanitised — they carry spaces + dots). The
+  **single source of truth** for the zip's arcnames AND the FE guard; served on every audio
+  field as **`Field.download_name`**.
+- **`GET /api/sessions/{sid}/scenes/{index}/download`** (`require_admin` + `scope_sid`) — that
+  scene's working takes under those names + the pristine v0s under `orig/`; `404 no_audio` if
+  the scene has no takes.
+- **"Download scene audio"** on the SceneCard header (admin only).
+- **`components/ImportMp3.tsx`** — lifted out of ChangesSummaryPage (was inline) and now also
+  rendered on **each audio field's row on the Review page** (admin only, all languages incl.
+  ZH/JP via ZhFieldBlock). The slot is chosen by **where you click**, not by the filename.
+- **Wrong-slot guard** — importing a file carrying ANOTHER field's download name asks first.
+  It fires ONLY on names matching the per-scene pattern; deliberately silent for the whole-trip
+  zip's `3.mp3`/`3_q.mp3` and hand-made files (see red-team below).
+- Extracted **`api.fetchBlob`** + **`saveBlob.ts`** so both download flows share one path.
+
+### Verified
+- Real ASGI app + real tokens: reviewer **403 admin only**, anon **401**, admin **200** zip
+  containing exactly `SceneDesc` / `questionKey` / `questionOption0..2`, bytes equal to the
+  takes on disk, `download_name` served == the zip arcname; bogus scene → **404 no_audio**.
+- **Full round trip driven**: download → import an edited mp3 at a field → working master
+  replaced (new hash), previous take **archived**, coverage cleared, Done re-locked.
+- **Guard truth-table** (node): fires on adjacent option / wrong field / wrong scene; silent
+  for `3.mp3`, `3_a1.mp3`, `my fixed take.mp3`.
+- `tsc` + `eslint` + `build` clean.
+- **NOT browser-driven**: the `window.confirm` dialog's appearance and the buttons' rendering.
+
+### Red-team (`/red-fable`, fresh Fable agent — now a standing pre-deploy step)
+No correctness bugs. Two real catches:
+1. **N+1 I'd introduced** — `serialize_field` called `trip_id_for_session(sid)` **per field**
+   (~100 redundant queries on a 20-scene GET). Now cached per sid (`_TRIP_ID_CACHE`, mirroring
+   the file's `_ZH_IS_CACHE`); I independently confirmed `trip_id` is never UPDATEd and sessions
+   are never DELETEd, so it can't go stale.
+2. **Guard would have false-fired on the whole-trip zip flow** (its files extract as `3.mp3`),
+   nagging on every import and training admins to click it away. **Fixed before commit** —
+   the guard now only fires on names that look like one of ours but belong to another field.
+- It also confirmed `useAuth()` inside the memo'd `AudioReview`/`SceneCard` does NOT undermine
+  the keystroke-isolation memo (AuthProvider's context value is memoised and only changes on
+  login/logout).
+
+### Deployed
+Laptop pulled **751020f**, `npm run build` (bundle `index-BZaLocqu.js` — matches local),
+`sudo systemctl restart review-app.service`. Both `review-app.service` + `review-tunnel.service`
+**active**; app root + new bundle + health all 200 through the tunnel. **Gate re-verified live
+on a real trip** (Taipei101_HSK12_ZH): `ted → 403 admin only`, `admin → 200` with
+`Taipei101_HSK12_ZH_scene1_SceneDesc.mp3` + `…_questionKey.mp3` in the zip. (Tokens minted for
+the check were revoked.)
+
+### Open / low-urgency TODOs (carried + new)
+- **Not browser-verified**: the confirm dialog + button rendering — Dave will see these first.
+- **`ImportMp3` renders on `approving`/`approved` sessions** (it sits outside the `inert`
+  wrappers so an admin CAN fix a `submitted` session — which the backend allows). Terminal
+  states would 403 with a toast rather than hide the button. Threading `readOnly` into
+  `AudioReview` is a judgment call — left.
+- Option numbering cosmetic tension: the UI badge says "Correct answer (option 1)" for k=0
+  while the file is named `questionOption0` (pre-existing UI wording).
+- Whole-trip zip (`download_all`) still uses raw arcnames (`working/3.mp3`) — untouched.
+- `review-app.service` daemon-reload warning (BACKLOG #10) still present; restart works.
