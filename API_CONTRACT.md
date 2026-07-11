@@ -192,7 +192,7 @@ are admin-only. The audio-snapshot GET authenticates via the httpOnly cookie (br
 | `POST /api/sessions/{sid}/fields/{fid}/revert` | — | `Field` — restores `original_text` + `v0` audio. |
 | `GET /audio/{sid}/{fid}/{which}` | — (`which` ∈ `original｜working｜candidate｜fallback`) | `audio/mpeg`, **HTTP Range supported** |
 | `GET /audio/{sid}/{fid}/v/{n}` | — | `audio/mpeg` (archived version n), Range supported |
-| `GET /api/sessions/{sid}/download` | — | `application/zip` — all originals + every version + current `{i}.mp3` |
+| `GET /api/sessions/{sid}/download` | — | `application/zip` — all originals + every version + current `{i}.mp3`. **Admin only** (`403` for reviewers): the bundle is for editing takes in a desktop audio editor + re-importing. |
 | `POST /api/sessions/{sid}/submit` | — | `{ "ok": bool, "validation": [ {scene_index,field_path,issue} ] }` — reviewer/admin (own language): **validates only, no writes**; on `ok` flips the session to `submitted` (locked read-only, awaiting admin). Hard-fail issues keep it `in_review`. |
 | `POST /api/sessions/{sid}/approve` | — | `{ "ok": bool, "validation": […], "written": [field_path…], "promoted_mp3": [name…], "awaiting_stage9": true }` — **admin only.** Writes changed **text** to staging Trip + TripGroup desc/categories and promotes the corrected `{i}.mp3` masters (archiving prior). `409` if the session isn't `submitted`; if live staging drifted so validation now fails, returns `ok:false` and reverts to `submitted`. **No S3/ogg** (Stage 9). |
 | `POST /api/sessions/{sid}/request-changes` | `{ "note": "…" }` | `{ "ok": true }` — **admin only.** Sends a `submitted` trip back to the reviewer (`changes_requested`) with a note; `409` from other states. |

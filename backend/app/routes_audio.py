@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import FileResponse, RedirectResponse, Response, StreamingResponse
 
 from . import db, sessions
-from .auth import scope_sid
+from .auth import require_admin, scope_sid
 
 router = APIRouter()
 
@@ -99,8 +99,12 @@ def get_overlay(sid: str, filename: str, request: Request):
     return _serve_range(path, request, media)
 
 
-@router.get("/api/sessions/{sid}/download", dependencies=_SCOPE)
+@router.get("/api/sessions/{sid}/download",
+            dependencies=[Depends(require_admin)] + _SCOPE)
 def download_all(sid: str):
+    """ADMIN ONLY (403 for reviewers): the mp3 bundle exists so an admin can take the
+    takes off to a desktop audio editor and re-import them. Reviewers do their listening
+    in-app, where the coverage/Done gate can see it."""
     sessions._session_row(sid)   # 404 if missing
     dirs = sessions.work_dirs(sid)
     buf = io.BytesIO()

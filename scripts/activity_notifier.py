@@ -45,9 +45,20 @@ MAX_PER_DAY = 40
 IMMEDIATE_KINDS = {"login", "start", "finish", "auto_review"}
 
 # ---------------------------------------------------------------- attribution
-# field_edits has no user_id. Finishes use the exact submitted_by/approved_by/
-# completed_by column. Starts/breaks are attributed to the language-capable user who
-# logged in most recently before the activity (falling back to the language default).
+# EXACT when we have it: field_edits.edited_by is stamped by db.update_fields from the
+# authenticated request's user, so the last editor of a session IS the person working on
+# it. Use that first (`actor_for`) — the heuristic below could only ever guess, and got it
+# wrong when an ADMIN picked up a Mandarin session Ted owns (2026-07-11: "ted resumed
+# Taipei101" when it was admin). Finishes use the exact submitted_by/approved_by/
+# completed_by column.
+#
+# The heuristic remains the FALLBACK for rows written before edited_by existed, and for
+# the low-level writes that bypass update_fields: the language-capable user who logged in
+# most recently before the activity (falling back to the language default).
+#
+# How stale an edited_by stamp may be and still be trusted as "who is active now". The
+# fallback only kicks in when the recent writes carried no editor at all.
+ACTOR_STAMP_WINDOW = 30 * 60
 LANG_DEFAULT = {"Mandarin": "ted", "Japanese": "toshifumi", "English": "admin"}
 # A session in a reviewer's specialty language is attributed to that reviewer when they
 # have logged in within this window before the activity (admin login noise notwithstanding).
@@ -165,6 +176,15 @@ def attribute(lang, at_ts, users, logins, live_tokens=None):
     return best or LANG_DEFAULT.get(lang, "someone")
 
 
+def actor_for(s, lang, at_ts, users, logins, live_tokens=None) -> str:
+    """Who is working on session *s* at *at_ts*. Prefers the RECORDED editor (exact);
+    falls back to `attribute`'s guess only when no recent write carried one."""
+    who, stamped = s.get("last_editor"), s.get("last_editor_ts")
+    if who and stamped is not None and (at_ts - stamped) <= ACTOR_STAMP_WINDOW:
+        return who
+    return attribute(lang, at_ts, users, logins, live_tokens)
+
+
 # ---------------------------------------------------------------- DB snapshot
 def snapshot(con):
     """Per-session aggregates used for event detection."""
@@ -182,6 +202,15 @@ def snapshot(con):
             sess[r["session_id"]].update(
                 first_ts=r["first_ts"], last_ts=r["last_ts"],
                 touched=r["touched"], done=r["done"] or 0)
+    # The most recent RECORDED editor per session (exact attribution — see actor_for).
+    # SQLite bare-column rule: with a single MAX() aggregate, the other columns come from
+    # the row that produced the maximum, so edited_by belongs to that latest row.
+    for r in con.execute(
+        "SELECT session_id, edited_by, MAX(updated_at) last_editor_ts FROM field_edits "
+        "WHERE edited_by IS NOT NULL AND edited_by <> '' GROUP BY session_id"):
+        if r["session_id"] in sess:
+            sess[r["session_id"]].update(last_editor=r["edited_by"],
+                                         last_editor_ts=r["last_editor_ts"])
     # completed_trips (marker completions, incl. 'manual')
     completed = {}
     for r in con.execute("SELECT trip_id, completed_by, completed_at, method, session_id FROM completed_trips"):
@@ -224,8 +253,8 @@ def detect(state, sess, completed, users, logins, now, live_tokens=None):
             if not prev["started"] or resumed:
                 # Attribute at the RECENT activity time, not first_ts — a session seeded
                 # weeks ago by admin then picked up by ted must read "ted", not "admin"
-                # (the 2026-07-07 mis-attribution).
-                who = attribute(lang, last_ts, users, logins, live_tokens)
+                # (the 2026-07-07 mis-attribution), and vice versa (2026-07-11).
+                who = actor_for(s, lang, last_ts, users, logins, live_tokens)
                 verb = "resumed" if resumed else "started"
                 new_events.append({"ts": last_ts if resumed else (s.get("first_ts") or last_ts),
                                    "kind": "start", "user": who, "trip": s["trip_id"],
@@ -246,7 +275,7 @@ def detect(state, sess, completed, users, logins, now, live_tokens=None):
             state_verb, who = finished_now
             done = s.get("done", 0); touched_n = s.get("touched", 0)
             new_events.append({"ts": s.get("last_ts") or now, "kind": "finish",
-                               "user": who or attribute(lang, now, users, logins, live_tokens),
+                               "user": who or actor_for(s, lang, now, users, logins, live_tokens),
                                "trip": s["trip_id"], "lang": lang, "verb": state_verb,
                                "done": done, "touched": touched_n})
             prev["finished"] = True
@@ -254,7 +283,7 @@ def detect(state, sess, completed, users, logins, now, live_tokens=None):
         # ---- BREAK 90m+ ----
         if (prev["started"] and not prev["finished"] and last_ts is not None
                 and (now - last_ts) >= BREAK_SECONDS and not prev.get("break_reported")):
-            who = attribute(lang, last_ts, users, logins, live_tokens)
+            who = actor_for(s, lang, last_ts, users, logins, live_tokens)
             new_events.append({"ts": last_ts, "kind": "break", "user": who,
                                "trip": s["trip_id"], "lang": lang,
                                "done": s.get("done", 0), "touched": s.get("touched", 0),

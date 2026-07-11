@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'react-toastify';
-import { api, ApiError, type Field, type FlagValue } from '../api';
+import { api, ApiError, type Field, type FlagValue, type ZhScript } from '../api';
+import { ZH_SCRIPTS, zhPartialEdit } from '../fieldDiff';
 
 interface FlagControlProps {
   field: Field;
@@ -13,6 +14,8 @@ const FLAG_BADGE: Record<FlagValue, { label: string; cls: string }> = {
   done: { label: 'Done', cls: 'bg-custom-green text-white' },
   edit_required: { label: 'Edit required', cls: 'bg-amber-600 text-white' },
 };
+
+const SCRIPT_LABEL = Object.fromEntries(ZH_SCRIPTS) as Record<ZhScript, string>;
 
 /** done / edit-required / clear, with done gated on `can_mark_done`. Also offers revert. */
 const FlagControl = ({ field, sid, onFieldUpdate }: FlagControlProps) => {
@@ -39,6 +42,10 @@ const FlagControl = ({ field, sid, onFieldUpdate }: FlagControlProps) => {
 
   const doneDisabled = busy || !field.can_mark_done;
   const badge = FLAG_BADGE[field.flag];
+  // _ZH: the same soft "you changed some scripts but not the others" reminder the
+  // LocalizationEditor shows above the field, repeated HERE — at the top of the field it
+  // gets scrolled past, and marking done is the moment it matters.
+  const partial = field.localization ? zhPartialEdit(field.localization) : null;
 
   return (
     <div
@@ -78,6 +85,17 @@ const FlagControl = ({ field, sid, onFieldUpdate }: FlagControlProps) => {
         >
           Clear
         </button>
+      )}
+
+      {partial && (
+        <span
+          className="text-xs text-amber-400/90"
+          title={`${partial.changed.map((s) => SCRIPT_LABEL[s]).join(' + ')} changed, but ${partial.unchanged
+            .map((s) => SCRIPT_LABEL[s])
+            .join(', ')} unchanged — if the meaning changed, update those too (all four are final).`}
+        >
+          ⚠ {partial.unchanged.map((s) => SCRIPT_LABEL[s]).join(', ')} not updated
+        </span>
       )}
 
       <button

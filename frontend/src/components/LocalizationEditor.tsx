@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { toast } from 'react-toastify';
 import { api, ApiError, flushLocalizationBeacon, type Field, type ZhScript } from '../api';
 import { useDebouncedCallback, type SelectionBind } from '../hooks';
+import { zhPartialEdit } from '../fieldDiff';
 import { useSaveCoordinator } from '../saveStatusContext';
 import InlineDiff from './InlineDiff';
 
@@ -199,20 +200,16 @@ const LocalizationEditor = ({ field, sid, onFieldUpdate, label, rows = 3, flushR
     };
   }, [flushRef]);
   if (!loc) return null;
-  // Soft sibling reminder (never blocks): the four scripts are ONE fact in four forms —
-  // when some changed and others didn't, the unchanged ones are probably stale
-  // (2026-07-08: a whole trip shipped with Hans edited but Hant/zhuyin/en untouched).
-  const present = SCRIPT_ORDER.filter((s) => loc.cur[s] != null);
-  const changedScripts = present.filter((s) => (loc.cur[s] ?? '') !== (loc.orig[s] ?? ''));
-  const unchangedScripts = present.filter((s) => !changedScripts.includes(s));
-  const partial = changedScripts.length > 0 && unchangedScripts.length > 0;
+  // Soft sibling reminder (never blocks), also repeated next to Mark done by FlagControl —
+  // this one sits at the top of the field and was being scrolled past.
+  const partial = zhPartialEdit(loc);
   return (
     <div className="space-y-2">
       {label && <p className="text-xs font-medium uppercase tracking-wide text-gray-400">{label}</p>}
       {partial && (
         <p className="text-xs text-amber-400/90">
-          ⚠ {changedScripts.map((s) => SCRIPT_LABEL[s]).join(' + ')} changed, but{' '}
-          {unchangedScripts.map((s) => SCRIPT_LABEL[s]).join(', ')} unchanged — if the meaning changed, update those too (all four are final).
+          ⚠ {partial.changed.map((s) => SCRIPT_LABEL[s]).join(' + ')} changed, but{' '}
+          {partial.unchanged.map((s) => SCRIPT_LABEL[s]).join(', ')} unchanged — if the meaning changed, update those too (all four are final).
         </p>
       )}
       <div className="space-y-3 rounded border border-gray-800 bg-gray-950/40 p-2">

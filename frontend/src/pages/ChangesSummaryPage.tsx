@@ -333,14 +333,19 @@ const ChangesSummaryPage = () => {
         backLabel="Review"
         right={
           <>
-            <button
-              type="button"
-              disabled={downloading}
-              onClick={downloadAll}
-              className="rounded border border-gray-600 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-700 disabled:opacity-50"
-            >
-              {downloading ? 'Downloading…' : 'Download all'}
-            </button>
+            {/* Admin only (the backend 403s reviewers): the mp3 bundle is for taking the
+                takes into a desktop audio editor, which is an admin job. */}
+            {isAdmin && (
+              <button
+                type="button"
+                disabled={downloading}
+                onClick={downloadAll}
+                title="Download the original + working + archived mp3s for this trip"
+                className="rounded border border-gray-600 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-700 disabled:opacity-50"
+              >
+                {downloading ? 'Downloading…' : 'Download all'}
+              </button>
+            )}
 
             {editable && (
               <button
