@@ -59,9 +59,9 @@ MANIFEST_PATH = REVIEW_APP_ROOT / "trips_to_review.json"
 AUDIO_GENERATION_ROOT = SCRIPTS_ROOT / "Audio Generation"
 
 # --- Scene thumbnails (videoId → local VID/PIC JPG → Cloudflare R2) ----------
-# These source trees are best-effort (thumbnails already serve from R2 in
-# production — see thumbs.py); on a host without them (e.g. the Ubuntu server)
-# they simply never match and the R2-served thumb is used instead. Overridable
+# These source trees are the UPLOAD side only: a host that has them mirrors each JPG
+# to R2 on first use. A host without them (the Ubuntu server) indexes 0 files and
+# serves whatever is already in the bucket (thumbs._remote_keys). Overridable
 # via REVIEW_APP_THUMB_ROOTS (comma-separated) for hosts that DO have local
 # copies at different paths.
 VIDEOIDS_JSON = SCRIPTS_ROOT / "VRD" / "VideoIds-1782220834.json"

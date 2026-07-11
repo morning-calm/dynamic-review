@@ -16,6 +16,11 @@ sync route handlers in FastAPI's threadpool stay safe):
                           (named with spaces, leading vid/pic title-cased)
       → R2 upload (idempotent)
       → https://thumbs.dynamiclanguages.org/scene-thumbs/<stem>.jpg
+
+On a host WITHOUT the local VID-PIC trees (the Ubuntu server, any hosted backend) the
+index is empty, so we skip straight from the stem to the R2 key and serve it if that
+key is already in the bucket — the stem is reproducible anywhere from the VideoIds
+JSON, only the JPG bytes are workstation-only. Miss → null thumb, never a broken img.
 """
 
 from __future__ import annotations
@@ -25,7 +30,7 @@ import os
 import re
 import threading
 from pathlib import Path
-from urllib.parse import unquote
+from urllib.parse import quote, unquote
 
 from . import config
 
@@ -41,7 +46,8 @@ _THUMB_INDEX: dict[str, Path] | None = None  # normkey(stem) → jpg path
 _THUMB_SIG_INDEX: dict[str, list[Path]] | None = None  # datetime-signature → jpg paths
 _R2_CLIENT = None                            # boto3 s3 client or None
 _R2_TRIED = False
-_UPLOADED: set[str] | None = None            # R2 keys known to exist
+_UPLOADED: set[str] | None = None            # keys THIS host uploaded/head-verified (persisted JSON)
+_R2_KEYS: set[str] | None = None             # keys actually present under the prefix
 
 _DIGITS_RE = re.compile(r"\D+")
 
@@ -220,6 +226,8 @@ def _remember_uploaded(key: str) -> None:
     s = _uploaded_set()
     with _LOCK:
         s.add(key)
+        if _R2_KEYS is not None:
+            _R2_KEYS.add(key)
         try:
             config.THUMB_UPLOAD_CACHE.write_text(
                 json.dumps({"keys": sorted(s)}, indent=0), encoding="utf-8")
@@ -253,8 +261,50 @@ def _ensure_uploaded(stem: str, jpg: Path) -> None:
         print(f"[thumbs] upload failed for {key}: {e}")
 
 
+def _remote_keys() -> set[str]:
+    """Every key already under ``scene-thumbs/`` on R2, listed ONCE (paginated).
+
+    This is what lets a host with no local thumbnail trees — the Ubuntu laptop, any
+    future hosted backend — still serve the thumbnails a workstation uploaded
+    earlier: the videoId → stem mapping comes from the (repo-resident) VideoIds JSON,
+    so the key is reproducible anywhere; only the JPG bytes are workstation-only.
+    Empty set when R2 is unreachable, so we degrade to "no thumb", never to a
+    broken <img>."""
+    global _R2_KEYS
+    if _R2_KEYS is None:
+        with _LOCK:
+            if _R2_KEYS is None:
+                keys: set[str] = set()
+                s3 = _r2()
+                if s3 is not None:
+                    try:
+                        token = None
+                        while True:
+                            kw = {"Bucket": config.THUMB_BUCKET,
+                                  "Prefix": config.THUMB_KEY_PREFIX}
+                            if token:
+                                kw["ContinuationToken"] = token
+                            resp = s3.list_objects_v2(**kw)
+                            for o in resp.get("Contents") or []:
+                                keys.add(o["Key"])
+                            if not resp.get("IsTruncated"):
+                                break
+                            token = resp.get("NextContinuationToken")
+                            if not token:
+                                break
+                        print(f"[thumbs] {len(keys)} thumbnails already on R2 "
+                              f"({config.THUMB_BUCKET}/{config.THUMB_KEY_PREFIX})")
+                    except Exception as e:  # noqa: BLE001 - best effort
+                        print(f"[thumbs] could not list R2 thumbnails: {e}")
+                        keys = set()
+                _R2_KEYS = keys
+    return _R2_KEYS
+
+
 def _public_url(stem: str) -> str:
-    return f"{config.THUMB_PUBLIC_BASE}{_key_for(stem)}"
+    # Keys carry the JPG's real name, spaces and all ("Vid 20230310 … -1.jpg") — encode
+    # them for the <img src>; the S3 key itself (_key_for) stays raw.
+    return f"{config.THUMB_PUBLIC_BASE}{quote(_key_for(stem), safe='/')}"
 
 
 # --------------------------------------------------------------------------- #
@@ -262,7 +312,8 @@ def _public_url(stem: str) -> str:
 # --------------------------------------------------------------------------- #
 def thumb_url_for_scene(scene: dict) -> str | None:
     """Public thumbnail URL for a VID scene, uploading the JPG to R2 on first use.
-    Returns None when the scene has no videoId or no matching JPG (never raises)."""
+    Returns None when the scene has no videoId, or when the thumbnail is neither on
+    disk nor already in the bucket (never raises)."""
     try:
         vid = _vimeo_id((scene or {}).get("videoUrl"))
         if not vid:
@@ -271,10 +322,14 @@ def thumb_url_for_scene(scene: dict) -> str | None:
         if not stem:
             return None
         jpg = jpg_for_stem(stem)
-        if not jpg:
-            return None
-        _ensure_uploaded(stem, jpg)
-        return _public_url(stem)
+        if jpg:
+            _ensure_uploaded(stem, jpg)
+            return _public_url(stem)
+        # No local JPG (host without the VID-PIC trees): serve the copy a machine
+        # that HAD them uploaded earlier, if it is really there.
+        if _key_for(stem) in _remote_keys():
+            return _public_url(stem)
+        return None
     except Exception as e:  # noqa: BLE001
         print(f"[thumbs] thumb_url_for_scene error: {e}")
         return None
