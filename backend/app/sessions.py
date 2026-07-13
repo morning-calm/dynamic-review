@@ -2607,12 +2607,49 @@ def set_comment(sid: str, fid: int, text: str) -> dict:
 
 
 def revert(sid: str, fid: int) -> dict:
+    """Put a field back exactly as it was seeded: text, the editable English sibling, the
+    _ZH 4-script block, and the working audio (the pristine v0 master).
+
+    ALL the reviewer-editable text surfaces must be reset, not just `current_text` — a
+    field counts as edited (and is written to staging) if ANY of them differs from its
+    original (`_field_has_edit`). Before 2026-07-13 this reset `current_text` only, so
+    reverting a MANDARIN field was a no-op where it mattered: the reviewer edits
+    `localization.cur`, never `current_text`, so their words stayed in the 4-script box,
+    Gate-1 still blocked on the now-stale zhuyin, and submit still wrote the edit to
+    staging. English/Japanese fields DO live in `current_text` and were reverted correctly
+    — except for the editable English sibling (`source_text`), which is written back to
+    staging too and was likewise never reset.
+    """
     _session_row(sid)
     frow = _field_row(sid, fid)
     patch = {"current_text": frow["original_text"], "flag": "none",
              "candidate_mp3_path": None, "splice_confidence": None,
              "played_coverage_json": "{}", "working_text": frow["original_text"],
-             "version_cursor": 0}   # working now == the pristine master (v0)
+             "version_cursor": 0,   # working now == the pristine master (v0)
+             # The editable English translation (the *En writeback). '' when the field has
+             # no English sibling, so this is a no-op there. Both columns are NOT NULL.
+             "source_text": frow["original_source"]}
+
+    # _ZH: the 4-script block IS the reviewer's edit surface (and cur.Hans is what the
+    # voice speaks). Restore cur -> orig, and re-baseline `working_hans` to the Hans the
+    # v0 take actually says — it's the OLD text the next surgical splice diffs against, so
+    # leaving it on the reverted-away wording would splice at cut times for audio that no
+    # longer exists.
+    loc_raw = _srow_get(frow, "localization_json")
+    if loc_raw:
+        try:
+            loc = json.loads(loc_raw)
+        except (ValueError, TypeError):
+            loc = None
+        if isinstance(loc, dict) and isinstance(loc.get("orig"), dict):
+            orig_loc = loc["orig"]
+            loc["cur"] = dict(orig_loc)
+            hans = (orig_loc.get("Hans") or "").strip()
+            if hans:
+                loc["working_hans"] = hans
+            patch["localization_json"] = json.dumps(loc, ensure_ascii=False)
+
+    reverted_audio = False
     if frow["has_audio"] and frow["mp3_name"]:
         dirs = work_dirs(sid)
         name = frow["mp3_name"]
@@ -2620,7 +2657,15 @@ def revert(sid: str, fid: int) -> dict:
         if orig.exists():
             audio_io.mp3_to_mp3_copy(orig, dirs["working"] / name)
             patch["working_audio_hash"] = _file_hash(dirs["working"] / name)
+            reverted_audio = True
     db.update_fields(fid, **patch)
+    # Re-mirror the restored take, like every other working-take mutator (combine, import,
+    # undo/redo, trim, pause). Not cosmetic: `resolve_audio_dir` can SEED a new session from
+    # the review-audio R2 cache on a host with no local masters, so a mirror left holding the
+    # reverted-away take would hand that session the edited audio as its "pristine" master.
+    # Best-effort — never raises, never fails the revert.
+    if reverted_audio:
+        _r2_upload_working(_trip_id_cached(sid), work_dirs(sid), _field_row(sid, fid))
     db.touch_session(sid)
     return serialize_field(sid, _field_row(sid, fid))
 

@@ -23,7 +23,9 @@ by role/language: admin → admin guide, Japanese reviewer → Toshifumi's, Mand
 Ted's. **Editing these markdown files updates what users see** (no rebuild needed).
 
 ## Notes for whoever maintains these
-- Ted reviews **Mandarin (`_ZH`)** trips → the 4-script block + V2/V3 voice pick.
+- Ted reviews **Mandarin (`_ZH`)** trips → the 4-script block (the **Simplified/Hans** line is
+  what's voiced). Mandarin is **V3-only** since 2026-07-02 — the old V2/V3 audition + per-trip
+  pick are retired; don't reintroduce them into the guides.
 - Toshifumi reviews **Japanese (`_JP`)** trips → the kanji/kana narration (the **kana** line is
   what's voiced).
 - The **"Report a problem"** button is LIVE (in-app bug reports with snapshots + reply thread) —

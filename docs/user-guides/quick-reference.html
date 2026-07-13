@@ -48,14 +48,28 @@
   <ol class="flow">
     <li><span class="k">Log in</span> with your username &amp; password (link from David).</li>
     <li><span class="k">Open a trip</span> from your list. Pinned trips at the top are urgent.</li>
-    <li><span class="k">Mandarin only:</span> listen to <span class="k">V2</span> and <span class="k">V3</span> and pick the better voice (once per trip).</li>
     <li><span class="k">Fix the text</span> of each part — trip title, description, and each scene's title / narration / question / options.</li>
     <li><span class="k">Regenerate the audio</span> for what you changed → <span class="k">listen</span> → <span class="k">Combine</span>.</li>
     <li><span class="k">Play the whole clip</span> (the bar must fill) → the <span class="k">Done</span> button unlocks → click it.</li>
-    <li>When every part is Done → <span class="k">Submit</span>. David approves.</li>
+    <li>When every part is Done → <span class="k">Submit</span>.</li>
+    <li><span class="k">Answer the AI review</span> if the trip comes back to you (see below) → <span class="k">Submit</span> again. David approves.</li>
     <li>Something wrong you can't fix? <span class="k">Report a problem</span> (write in your language) or comment + flag "Edit required".</li>
     <li>Need help? The <span class="k">?</span> button in the top bar opens this page and your full guide.</li>
   </ol>
+
+  <h2>The AI review — when a trip comes back to you</h2>
+  <div class="mock">
+    <div class="row">
+      <span class="btn green">I’ve actioned this</span>
+      <span class="btn">Keep my version…</span>
+      <span class="btn" style="border-color:#1d4ed8;color:#93c5fd">For the admin (English)</span>
+    </div>
+    <div class="cap">After you submit, an automated check reads your edits (meaning · wording · Q&amp;A logic). If it has questions the trip comes back to <b>you</b>, not David — a purple <b>AI review</b> box lists them. Click one to jump to its scene; the same remark appears next to the text.</div>
+  </div>
+  <div class="call"><span class="n">✓</span><div><span class="k">I’ve actioned this</span> — you agree and made the change.</div></div>
+  <div class="call"><span class="n">✕</span><div><span class="k">Keep my version…</span> — you disagree. <b>A short note is required</b>; David reads it instead of the change. The AI is often right, but not always — this is how you overrule it.</div></div>
+  <div class="call"><span class="n">→</span><div><span class="k">For the admin (English)</span> — it's about the <b>English</b>, which isn't yours to fix. Goes to David. Note optional.</div></div>
+  <div class="note" style="margin-top:10px"><span class="k">Every item needs an answer</span> before you can submit again. Nothing is ever changed automatically.</div>
 
   <h2>The buttons under each audio part</h2>
   <div class="mock">
@@ -98,6 +112,14 @@
 
   <div class="note" style="margin-top:16px">
     <span class="k">Marking "Done" needs a full listen.</span> The Done button stays locked until you've played the whole clip (seeking to the end doesn't count) — this is deliberate, so nothing ships un-checked.
+  </div>
+
+  <div class="note" style="margin-top:10px">
+    <span class="k">Never add words just to fix a mispronunciation.</span> The text on screen is what the learner reads, so an extra word (e.g. 喔, 这个) ends up in the finished trip — and it can throw the tone of the word beside it. Use <span class="k">Fix pronunciation…</span> instead: you type a spelling that makes the voice say it right, the audio is re-recorded, and <b>the on-screen text is unchanged</b>.
+  </div>
+
+  <div class="note" style="margin-top:10px">
+    <span class="k">Revert to original</span> (bottom right of a part) puts it back exactly as it started — all the text <em>and</em> the original recording. Use it when an edit turned out to be a mistake.
   </div>
 
   <footer>Review app · internal tool · this is a visual companion to the written guides — open them any time from the <b>?</b> button in the app's top bar.</footer>

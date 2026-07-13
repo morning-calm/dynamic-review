@@ -37,12 +37,15 @@ separate reviewer — you review and approve them in one pass.
   re-recording the whole narration (a toast tells you — re-listen to the full clip);
   *Fix pronunciation…* instead flags the part **edit-required** (the alt text is never silently voiced
   as the whole field); the trim/pause tools refuse with a clear message rather than guess.
-- **Mandarin (`_ZH`)** trips start with the 4-script block + V2/V3 voice pick (see Ted's
-  guide); the audio tools appear after the pick collapses to a single take. The pick can be
-  **cleared** ("Clear pick" next to the V2/V3 buttons) to re-audition both versions —
-  audio edits made on the picked take are dropped (with a warning); text edits survive.
+- **Mandarin (`_ZH`)** trips use the 4-script block; the **Simplified (Hans)** line is what the
+  voice speaks. Mandarin is **V3-only** (decided 2026-07-02) — the old V2/V3 side-by-side
+  audition and per-trip pick are retired, and a `_ZH` trip now seeds a single working take
+  like any other language.
 - **Japanese (`_JP`)** trips use the kanji/kana narration; the voice speaks the kana line
   (see Toshifumi's guide).
+- **Revert to original** (bottom right of each part) restores that part completely: the text,
+  the editable English sibling, the `_ZH` 4-script block, **and** the pristine master audio.
+  After a revert the part no longer counts as an edit and won't be written to staging.
 
 ## 3. Narration settings (voice / speed / model)
 - Per trip you can correct the **voice**, **speed**, or **ElevenLabs model** if the auto-guess
@@ -60,20 +63,40 @@ separate reviewer — you review and approve them in one pass.
 - Approval is safe: it re-checks against **live** staging first, and if anything drifted (e.g.
   a scene was removed in staging since the review started) it blocks rather than writing.
 
-## 5. Importing a hand-edited audio file
+## 5. The AI review (Gate 2) — it goes to the REVIEWER first
+After a reviewer submits, an automated check (Claude) reads their edits for **meaning**,
+**wording** and **Q&A logic**. It judges the target language — **not vocabulary level** (that's a
+separate deterministic check; the LLM's level calls were wrong as often as right and were
+removed). Nothing is ever applied automatically.
+
+- **A clean report goes straight to your approve queue.** Only if it flags something does the
+  trip bounce **back to the reviewer** (status *AI review*) — out of your queue until they've
+  answered. They're told by a nav badge and an email.
+- The reviewer answers each item: **resolved** (they actioned it) / **rejected** (they keep their
+  version — **a note is required**, and you read that note instead of a change) / **deferred**
+  (it's about the **English**, so it's your call, not theirs).
+- You see every answer and note on the **Changes & submit** page.
+- **"Take it back now"** (in the purple *AI review* box on that page — it reads *"Take back
+  without triage"* on the trip's own review page) reclaims a trip immediately, marking any
+  unanswered items **deferred to you** — the escape hatch so the gate can never wedge a trip
+  (e.g. the reviewer is away).
+- Suggested fixes are shown read-only unless machine-verified; a verified one gets an **Apply
+  suggested fix** button.
+
+## 6. Importing a hand-edited audio file
 - On any audio part you can **import an mp3** to replace the working take (for a manual edit
   done outside the app). The previous take is archived so you can undo.
 
-## 6. Marking a trip complete (bypass)
+## 7. Marking a trip complete (bypass)
 - For work already finished in the old system, **Mark complete** records the trip as done
   **without** writing anything to staging or masters — it's just a bookkeeping marker.
 - **Un-complete** returns a trip to the active queue.
 
-## 7. Accounts
+## 8. Accounts
 - Reviewer/admin accounts are created with `backend/manage.py` (there is no sign-up). Reviewers
   are scoped to their language(s): Ted → Mandarin, Toshifumi → Japanese.
 
-## 8. Bug reports
+## 9. Bug reports
 - Reviewers (and you) file a **"Report a problem"** on any audio part — in any language. The
   exact text + working/candidate audio are snapshotted with the report, so you see and hear
   precisely what the reporter saw.
@@ -83,7 +106,7 @@ separate reviewer — you review and approve them in one pass.
 - `scripts/check_bug_reports.py` prints open reports from the terminal if you want a
   scriptable check.
 
-## 9. Help button
+## 10. Help button
 - The **?** in the top bar opens the user guides in a new tab: the one-page **quick
   reference** and the **written guide** matched to the signed-in user (reviewers also get
   their native-language version). They're served straight from `docs/user-guides/`, so
