@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef, useState } from 'react';
-import type { Field, Scene } from '../api';
+import type { Field, Finding, FindingsPayload, Scene } from '../api';
 import { useTextSelection, useMediaQuery } from '../hooks';
 import EditableField from './EditableField';
 import AudioReview from './AudioReview';
@@ -9,6 +9,8 @@ import CommentBox from './CommentBox';
 import AudioFieldBlock from './AudioFieldBlock';
 import ZhFieldBlock from './ZhFieldBlock';
 import SceneAudioDownload from './SceneAudioDownload';
+import { FindingCard } from './AutoReviewPanel';
+import { findingsForField } from '../findings';
 
 interface SceneCardProps {
   scene: Scene;
@@ -18,6 +20,12 @@ interface SceneCardProps {
   /** Names the per-scene audio zip an admin downloads (`<trip>_scene3_audio.zip`). */
   tripId: string;
   onFieldUpdate: (f: Field) => void;
+  /** Gate-2 findings for THIS scene. Each is rendered next to the field it is about, so the
+   * reviewer reads the AI's remark beside the text it refers to — the summary panel at the
+   * top of the page links down here (dave, 2026-07-13). */
+  findings?: Finding[];
+  onFindingAnswered?: (p: FindingsPayload) => void;
+  onFindingApplied?: () => void;
   /** Session is locked (submitted/approving/approved) — edit controls go
    * `inert`, but audio players stay interactive so the take can still be heard. */
   readOnly?: boolean;
@@ -46,6 +54,48 @@ const FieldShell = ({ children }: { children: React.ReactNode }) => (
   <div className="space-y-2 rounded-md border border-gray-800 bg-gray-900/40 p-3">{children}</div>
 );
 
+/** The AI's remark(s) about one field, rendered immediately above that field's editor.
+ * Module-level, NOT defined inside SceneCard's render: an inline component gets a new
+ * identity every render, so React would REMOUNT every FindingCard on any scene update
+ * (a keystroke, a coverage tick, answering a sibling finding) — wiping a half-typed
+ * rejection note. FindingCard renders its own `<li>`, so no wrapper item here. */
+const FieldFindings = ({
+  field,
+  findings,
+  sid,
+  isZh,
+  readOnly,
+  onAnswered,
+  onApplied,
+}: {
+  field: Field;
+  findings: Finding[];
+  sid: string;
+  isZh: boolean;
+  readOnly: boolean;
+  onAnswered?: (p: FindingsPayload) => void;
+  onApplied?: () => void;
+}) => {
+  const mine = findings.length ? findingsForField(findings, field) : [];
+  if (mine.length === 0 || !onAnswered || !onApplied) return null;
+  return (
+    <ul className="space-y-2">
+      {mine.map((f) => (
+        <FindingCard
+          key={f.id}
+          finding={f}
+          sid={sid}
+          isZh={isZh}
+          readOnly={readOnly}
+          showJump={false}
+          onAnswered={onAnswered}
+          onApplied={onApplied}
+        />
+      ))}
+    </ul>
+  );
+};
+
 /** Scene preview: the VID/PIC thumbnail JPG (served from R2), falling back to a
  * static-360 still, then a placeholder. Vimeo embeds are not used. */
 const SceneMedia = ({ scene }: { scene: Scene }) => {
@@ -69,12 +119,34 @@ const SceneMedia = ({ scene }: { scene: Scene }) => {
   );
 };
 
-const SceneCard = ({ scene, fields, sid, tripId, onFieldUpdate, readOnly = false, isZh = false, language }: SceneCardProps) => {
+const SceneCard = ({
+  scene,
+  fields,
+  sid,
+  tripId,
+  onFieldUpdate,
+  readOnly = false,
+  isZh = false,
+  language,
+  findings = [],
+  onFindingAnswered,
+  onFindingApplied,
+}: SceneCardProps) => {
   const isJp = language === 'Japanese';
   const sceneDesc = fields.find((f) => f.field_path === 'SceneDesc');
   const titleKey = fields.find((f) => f.field_path === 'titleKey');
   const questionKey = fields.find((f) => f.field_path === 'questionKey');
   const options = fields.filter((f) => optionIndex(f.field_path) !== null);
+
+  // Shared by the four <FieldFindings> call sites below (see the module-level component).
+  const findingProps = {
+    findings,
+    sid,
+    isZh,
+    readOnly,
+    onAnswered: onFindingAnswered,
+    onApplied: onFindingApplied,
+  };
 
   // Live SceneDesc text + textarea ref, for "Generate from edit" + highlight mode.
   const descFlushRef = useRef<(() => Promise<void>) | null>(null);
@@ -138,6 +210,7 @@ const SceneCard = ({ scene, fields, sid, tripId, onFieldUpdate, readOnly = false
       <div className="mt-4 space-y-4">
         {titleKey && (
           <FieldShell>
+            <FieldFindings field={titleKey} {...findingProps} />
             {isZh ? (
               <ZhFieldBlock field={titleKey} sid={sid} onFieldUpdate={onFieldUpdate} label="Title" rows={2} readOnly={readOnly} />
             ) : (
@@ -148,6 +221,7 @@ const SceneCard = ({ scene, fields, sid, tripId, onFieldUpdate, readOnly = false
 
         {sceneDesc && (
           <FieldShell>
+            <FieldFindings field={sceneDesc} {...findingProps} />
             {isZh ? (
               <ZhFieldBlock
                 field={sceneDesc}
@@ -222,6 +296,7 @@ const SceneCard = ({ scene, fields, sid, tripId, onFieldUpdate, readOnly = false
         {(questionKey || options.length > 0) && (
           <FieldShell>
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Question</p>
+            {questionKey && <FieldFindings field={questionKey} {...findingProps} />}
             {questionKey && (
               isZh ? (
                 <ZhFieldBlock field={questionKey} sid={sid} onFieldUpdate={onFieldUpdate} label="Prompt" rows={2} readOnly={readOnly} />
@@ -243,7 +318,8 @@ const SceneCard = ({ scene, fields, sid, tripId, onFieldUpdate, readOnly = false
                 </div>
               );
               return (
-                <div key={opt.fid} className="border-t border-gray-800 pt-2">
+                <div key={opt.fid} className="space-y-2 border-t border-gray-800 pt-2">
+                  <FieldFindings field={opt} {...findingProps} />
                   {isZh ? (
                     <ZhFieldBlock field={opt} sid={sid} onFieldUpdate={onFieldUpdate} rows={3} readOnly={readOnly} header={header} />
                   ) : (

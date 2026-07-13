@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { api, ApiError, isEditableStatus, type ExternalReport, type Field, type Session } from '../api';
+import {
+  api,
+  ApiError,
+  isEditableStatus,
+  type ExternalReport,
+  type Field,
+  type Finding,
+  type FindingsPayload,
+  type Session,
+} from '../api';
 import { SaveStatusProvider } from '../SaveStatusProvider';
 import { useSaveCoordinator } from '../saveStatusContext';
 import NavBar from '../components/NavBar';
@@ -29,6 +38,9 @@ const jumpToFirstUndone = (): boolean => {
   window.setTimeout(() => first.classList.remove('ring-2', 'ring-amber-500'), 1600);
   return true;
 };
+
+/** Stable empty array — a fresh `[]` per render would break SceneCard's memo. */
+const NO_FINDINGS: Finding[] = [];
 
 interface FieldLocation {
   trip: boolean;
@@ -130,6 +142,37 @@ const ReviewBody = () => {
     session ? sid : undefined,
     session && isEditableStatus(session.status) ? 'editing' : 'viewing (locked)',
   );
+
+  // Gate-2 findings. Owned HERE, not in AutoReviewPanel, because they render in two places
+  // at once — the summary panel at the top AND next to the field each one is about — and
+  // answering in either has to update both.
+  const [findings, setFindings] = useState<FindingsPayload | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .getFindings(sid)
+      .then((p) => {
+        if (!cancelled) setFindings(p);
+      })
+      .catch(() => {
+        if (!cancelled) setFindings(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sid]);
+  // Grouped once per findings change, not per render: SceneCard is memo'd, and handing it a
+  // freshly-filtered array every render would re-render every scene on every keystroke.
+  const findingsByScene = useMemo(() => {
+    const m = new Map<number, Finding[]>();
+    for (const f of findings?.findings ?? []) {
+      if (f.scene === null) continue;   // trip-level: the summary panel is its only home
+      const list = m.get(f.scene);
+      if (list) list.push(f);
+      else m.set(f.scene, [f]);
+    }
+    return m;
+  }, [findings]);
 
   // Stage-4b field reports from the web/VR apps (refresh=true re-syncs from staging).
   const [extReports, setExtReports] = useState<ExternalReport[]>([]);
@@ -239,7 +282,12 @@ const ReviewBody = () => {
 
         {/* Gate-2 triage — the reviewer answers the AI before the trip returns to the admin.
             Renders nothing when the session has no findings. */}
-        <AutoReviewPanel session={session} onApplied={reload} />
+        <AutoReviewPanel
+          session={session}
+          payload={findings}
+          onAnswered={setFindings}
+          onApplied={reload}
+        />
 
         {(session.status === 'submitted' || session.status === 'approving') && (
           <div className="rounded border border-blue-700 bg-blue-900/30 p-3 text-sm text-blue-200">
@@ -344,6 +392,9 @@ const ReviewBody = () => {
               readOnly={!editable}
               isZh={isZh}
               language={session.language}
+              findings={findingsByScene.get(scene.index) ?? NO_FINDINGS}
+              onFindingAnswered={setFindings}
+              onFindingApplied={reload}
             />
           </div>
         ))}

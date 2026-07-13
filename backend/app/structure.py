@@ -53,6 +53,7 @@ import scene_ids  # Scripts repo shared ruleset — NEVER reimplement mint/prese
 
 from . import db, thumbs
 from .staging import db as fb_db, get_trip, get_tripgroup, tripgroup_id_for
+from .statuses import ACTIVE_STATUSES
 
 _POSITIONAL_MEDIA_WARNING = (
     "Scene media (mp3/ogg/subtitles) is positional — after an add/remove/reorder the "
@@ -64,7 +65,11 @@ _POSITIONAL_MEDIA_WARNING = (
 _SCENE_TEXT_FIELDS = ("titleKey", "titleKeyEn", "SceneDesc", "SceneDescEn",
                       "questionKey", "questionKeyEn")
 
-_ACTIVE_STATUSES = ("in_review", "submitted", "approving", "changes_requested")
+# A structural edit under a live session desyncs its scene indexes, so the guard must cover
+# EVERY non-terminal status. Derived, never hand-listed (statuses.py): this list silently
+# missed 'ai_review' when that status was added, which is exactly how a Gate-2 bounce would
+# have opened this guard's window.
+_ACTIVE_STATUSES = ACTIVE_STATUSES
 
 # mutate(qt) -> (new_qt, index_map | None, ...) — index_map: old -> new (None=removed)
 _Mutate = Callable[[list[dict]], tuple[list[dict], "dict[int, int | None] | None"]]

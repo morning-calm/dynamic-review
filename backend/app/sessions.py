@@ -41,6 +41,7 @@ from .locks import WHISPER_LOCK
 from .staging import (db as fb_db, get_trip, get_tripgroup, merge_categories,
                       paths_for, tripgroup_id_for, update_trip_text,
                       update_tripgroup)
+from .statuses import ACTIVE_STATUSES, EDITABLE_STATUSES
 
 from stage9.common import COUNTRY_CFG
 from stage9.whisper_timing import transcribe_words
@@ -693,12 +694,17 @@ def create_or_resume(trip_id: str, user, *,
         raise HTTPException(409, detail={
             "error": "completed",
             "detail": "trip is completed — un-complete it to review"})
-    # Resume the newest non-terminal session (in_review / submitted / changes_requested);
-    # `approved` is terminal, so a fresh open re-seeds from the now-promoted masters.
+    # Resume the newest still-live session. `approved` is the only terminal status, so a
+    # fresh open after approval re-seeds from the now-promoted masters — but EVERY other
+    # status must resume, including the transient `approving` (an open during that window,
+    # or after a crash mid-approve, resumes read-only rather than seeding a blank shadow).
+    # The set is DERIVED (statuses.ACTIVE_STATUSES), never hand-listed: a missing status
+    # here re-seeds a blank session which, being the newest, permanently shadows the
+    # reviewer's real one — see statuses.py for the incident this cost.
+    ph = ",".join("?" * len(ACTIVE_STATUSES))
     existing = db.query_one(
-        "SELECT id FROM sessions WHERE trip_id=? AND "
-        "status IN ('in_review','submitted','changes_requested') "
-        "ORDER BY created_at DESC LIMIT 1", (trip_id,))
+        f"SELECT id FROM sessions WHERE trip_id=? AND status IN ({ph}) "
+        "ORDER BY created_at DESC LIMIT 1", (trip_id, *ACTIVE_STATUSES))
     if existing:
         return get_session(existing["id"])
 
@@ -864,12 +870,9 @@ def _field_row(sid: str, fid: int):
     return row
 
 
-# Reviewer-editable states. `submitted`/`approving` are locked (admin owns the review
-# snapshot); `approved` is terminal. `changes_requested` is editable again.
-# `ai_review` = Gate 2 came back with findings and bounced the trip to the reviewer to
-# answer them (auto_review_ingest); they need to edit to action a suggestion, and the admin
-# can't approve meanwhile because approve() only claims from 'submitted'.
-_EDITABLE_STATUSES = ("in_review", "changes_requested", "ai_review")
+# Reviewer-editable states — defined in statuses.py with the rest of the vocabulary (see
+# there: a hand-copied status list is what caused the 2026-07-13 blank-session incident).
+_EDITABLE_STATUSES = EDITABLE_STATUSES
 
 
 def trip_id_for_session(sid: str) -> str:

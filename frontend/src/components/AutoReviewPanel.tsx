@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   api,
   isEditableStatus,
@@ -7,6 +7,7 @@ import {
   type FindingsPayload,
   type Session,
 } from '../api';
+import { findingFieldPath } from '../findings';
 import { useAuth } from '../authContext';
 
 /**
@@ -37,15 +38,16 @@ const STATUS_STYLE: Record<Exclude<Finding['status'], 'open'>, { label: string; 
 };
 
 const fieldLabel = (f: Finding): string => {
-  const name = f.option !== null ? `${f.field}[${f.option}]` : f.field;
+  const name = findingFieldPath(f);
   return f.scene !== null ? `Scene ${f.scene} · ${name}` : name;
 };
 
-const FindingCard = ({
+export const FindingCard = ({
   finding,
   sid,
   isZh,
   readOnly,
+  showJump = true,
   onAnswered,
   onApplied,
 }: {
@@ -53,6 +55,8 @@ const FindingCard = ({
   sid: string;
   isZh: boolean;
   readOnly: boolean;
+  /** The summary panel links out to the scene; the in-scene copy is already there. */
+  showJump?: boolean;
   onAnswered: (p: FindingsPayload) => void;
   onApplied: () => void;
 }) => {
@@ -116,7 +120,7 @@ const FindingCard = ({
             {STATUS_STYLE[finding.status].label}
           </span>
         )}
-        {finding.scene !== null && (
+        {showJump && finding.scene !== null && (
           <a href={`#scene-${finding.scene}`} className="ml-auto text-xs text-blue-300 hover:underline">
             Go to scene {finding.scene} →
           </a>
@@ -218,23 +222,26 @@ const FindingCard = ({
   );
 };
 
+/**
+ * The summary panel at the top of the Review page: every finding in one list, each linking
+ * down to its scene. The findings state is owned by the PAGE (not this component) because
+ * the same findings are also rendered inside each scene — answering one anywhere has to
+ * update both surfaces at once.
+ */
 const AutoReviewPanel = ({
   session,
+  payload,
+  onAnswered,
   onApplied,
 }: {
   session: Session;
+  payload: FindingsPayload | null;
+  onAnswered: (p: FindingsPayload) => void;
   onApplied: () => void;
 }) => {
   const sid = session.id;
   const { user } = useAuth();
-  const [payload, setPayload] = useState<FindingsPayload | null>(null);
   const [skipping, setSkipping] = useState(false);
-
-  const load = useCallback(() => {
-    api.getFindings(sid).then(setPayload).catch(() => setPayload(null));
-  }, [sid]);
-
-  useEffect(load, [load]);
 
   if (!payload || payload.findings.length === 0) return null;
 
@@ -252,7 +259,7 @@ const AutoReviewPanel = ({
   const skip = async () => {
     setSkipping(true);
     try {
-      setPayload(await api.skipFindingsTriage(sid));
+      onAnswered(await api.skipFindingsTriage(sid));
       onApplied();
     } finally {
       setSkipping(false);
@@ -284,24 +291,25 @@ const AutoReviewPanel = ({
         {readOnly
           ? 'These were the AI’s findings and how they were answered.'
           : open > 0
-            ? 'An automated reviewer checked your edits for meaning, wording and Q&A logic. Answer each ' +
-              'one — action it, keep your version (say why), or hand it to the admin if it’s about the ' +
-              'English. You can submit again once they’re all answered.'
+            ? 'An automated reviewer checked your edits for meaning, wording and Q&A logic. Click a ' +
+              'finding to jump to its scene, where the same remark and buttons appear next to the text. ' +
+              'Answer each one — action it, keep your version (say why), or hand it to the admin if it’s ' +
+              'about the English. You can submit again once they’re all answered.'
             : 'All answered — submit when you’re ready.'}
       </p>
 
+      {/* FindingCard's root IS the <li> — no wrapper item (it would nest li > li). */}
       <ul className="space-y-2">
         {findings.map((f) => (
-          <li key={f.id} className="list-none">
-            <FindingCard
-              finding={f}
-              sid={sid}
-              isZh={isZh}
-              readOnly={readOnly}
-              onAnswered={setPayload}
-              onApplied={onApplied}
-            />
-          </li>
+          <FindingCard
+            key={f.id}
+            finding={f}
+            sid={sid}
+            isZh={isZh}
+            readOnly={readOnly}
+            onAnswered={onAnswered}
+            onApplied={onApplied}
+          />
         ))}
       </ul>
     </section>

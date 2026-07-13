@@ -22,6 +22,9 @@ import json
 import sqlite3
 import time
 
+from .statuses import EDITABLE_STATUSES   # stdlib-only too — keeps this module importable
+                                          # by the cron runner without FastAPI/config
+
 # The verdicts a reviewer must respond to. 'ok' is informational and never a triage item.
 ACTIONABLE_VERDICTS = ("warning", "needs_human")
 
@@ -93,12 +96,12 @@ def ingest(con: sqlite3.Connection, sid: str, trip_id: str, report_id: int,
             " WHERE session_id=? AND status IN ('rejected','deferred')", (sid,)):
         carried[(r[0], r[1], r[2], r[3])] = (r[4], r[5], r[6], r[7])
     con.execute("DELETE FROM auto_review_findings WHERE session_id=?", (sid,))
-    opened = 0
+    opened: list[tuple] = []          # (scene, field, option) per finding needing an answer
     for f in fields:
         key = (f.get("scene"), f.get("field") or "", f.get("option"), f.get("verdict"))
         status, note, by, at = carried.get(key) or ("open", "", None, None)
         if status == "open":
-            opened += 1
+            opened.append((f.get("scene"), f.get("field") or "", f.get("option")))
         con.execute(
             "INSERT INTO auto_review_findings(session_id, report_id, trip_id, scene_index,"
             " field_path, option_index, verdict, reasons_json, fix_json, fix_verified,"
@@ -118,8 +121,27 @@ def ingest(con: sqlite3.Connection, sid: str, trip_id: str, report_id: int,
         con.execute(
             "UPDATE sessions SET status='ai_review', updated_at=? "
             "WHERE id=? AND status='submitted'", (now, sid))
+        # Un-tick the fields the AI is asking about, so the reviewer's own "all done" gate
+        # lands them on each one (dave, 2026-07-13). ONLY those fields — the rest of the
+        # trip keeps the ticks they earned. Playback coverage is NOT cleared, so once
+        # they've answered they can re-mark done without re-listening to the whole take (a
+        # text edit clears coverage by itself, which is the case that SHOULD re-listen).
+        # 'edit_required' is left alone: it's the reviewer's own louder flag.
+        #
+        # AFTER the CAS, and only while the session is the REVIEWER's: if the admin claimed
+        # it mid-report the CAS above no-op'd, so there is no bounce to land on and their
+        # per-field state must not be rewritten under an in-flight (or finished) approve.
+        # A recall/request-changes that raced the model leaves it editable — the un-tick is
+        # still wanted there, so this reads the status back rather than trusting the CAS.
+        row = con.execute("SELECT status FROM sessions WHERE id=?", (sid,)).fetchone()
+        if row and row[0] in EDITABLE_STATUSES:
+            for scene, field, option in opened:
+                con.execute(
+                    "UPDATE field_edits SET flag='none' WHERE session_id=? AND scene_index IS ?"
+                    " AND field_path=? AND option_index IS ? AND flag='done'",
+                    (sid, scene, field, option))
     con.commit()
-    return opened
+    return len(opened)
 
 
 def open_count(con: sqlite3.Connection, sid: str) -> int:
