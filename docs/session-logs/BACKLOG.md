@@ -34,12 +34,11 @@ Re-reviewed all three (`claude_review.py --sid`); all now `ai_review` with findi
 Taichung_HSK3 (1), Taipei101_HSK3 (1), KaohsiungLotusPond_HSK12 (3). Level noise gone as
 predicted. See session-2 log.
 
-### 0c. ~~Nobody has an email address set~~ — **MOSTLY DONE 2026-07-13**
-`ted`'s address is set in the live DB (verified via notifier dry-run). **STILL TO DO:** add
-`"app_url": "https://review.dynamiclanguages.org"` to the LAPTOP's
-`scripts/notifier_config.json` — without it the findings email says "Open it here: the review
-app" with no link. (One-line edit; the sandbox blocked it as an unrequested live-config change.)
-`toshifumi` and `admin` still have no email.
+### 0c. ~~Nobody has an email address set~~ — **DONE 2026-07-13**
+`ted`'s address is set in the live DB, and `app_url` is now in the laptop's
+`scripts/notifier_config.json`, so the findings email deep-links to
+`https://review.dynamiclanguages.org/review/<sid>` (verified HTTP 200).
+**Remaining:** `toshifumi` and `admin` still have no email set.
 
 ### 0d. Two design questions dave deferred
 - Should a carried-forward `rejected` answer survive a **verdict change** (warning→needs_human
@@ -52,16 +51,11 @@ app" with no link. (One-line edit; the sandbox blocked it as an unrequested live
 
 ## P1 — Do next (high value, self-contained, no product decision)
 
-### 0e. `revert()` ignores `localization_json` — "Revert to original" is BROKEN for _ZH
-**What:** `sessions.revert()` (`sessions.py:2606`) patches `current_text`, `working_text`, `flag`,
-candidate/coverage/version_cursor and copies the pristine v0 mp3 back — but **never touches
-`localization_json`**. On a Mandarin field the 4-script block IS the voiced surface, so hitting
-"Revert to original" leaves the edited Hans (e.g. Ted's `喔`) sitting in the box, the working
-text and the localization disagree, and Gate-1 still hard-blocks on the stale zhuyin.
-**Why it matters now:** this is exactly the button dave/Ted will reach for to undo the six
-Taipei101_HSK12 lines (0a). Today they must retype the Hans by hand instead.
-**Fix:** in `revert()`, when the row has a `localization_json`, reset `cur` ← `orig` and
-re-baseline `working_hans`. Found 2026-07-13; NOT fixed (out of scope of that session's change).
+### 0e. ~~`revert()` ignores `localization_json`~~ — **FIXED + LIVE 2026-07-13 (b3a0d36)**
+`revert()` now restores every text surface (`current_text`, `source_text`, the `_ZH` 4-script
+block + `working_hans`) and re-mirrors the take to R2. Checking JP/EN found `source_text` was
+never reset in ANY language. Verified on the live host against Ted's real Taipei101 scene-1
+field. See the session-3 log.
 
 ### 1. "Apply suggested fix" button on the Auto-review panel
 **What:** a button next to each machine-verified suggested fix that writes the fix through the

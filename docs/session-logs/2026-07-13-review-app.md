@@ -230,13 +230,82 @@ REFUSES to delete anything not pristine): deleted the 2 blank sessions after re-
 findings refer to (they were ingested before the fix). Post-state confirmed: each `ai_review`
 session now has exactly as many un-ticked fields as it has open findings (1, 1, 3).
 
+---
+
+## Session 3 — revert() across all 3 languages, app_url, user guides (b3a0d36 LIVE)
+
+### Goals (dave)
+1. Do the user guides / quick reference need updating?
+2. Add the app URL to the notifier.
+3. **Fix "Revert to original" for Mandarin, and check Japanese + English too.**
+
+### `revert()` was broken worse than "the box still shows 喔"
+A field is written to **staging** if ANY of its text surfaces differs from its original
+(`_field_has_edit`, sessions.py:2830): `current_text`, `source_text` (the editable English
+sibling, written back by the `*En` writeback at ~3199), or the `_ZH` `localization_json` block.
+`revert()` reset only `current_text`/`working_text` + the v0 mp3.
+
+A Mandarin reviewer edits `localization.cur.*` and **never** `current_text` (`_zh_hans_for_tts`),
+so revert was a **no-op exactly where it mattered**: the words stayed in the 4-script box, Gate-1
+still blocked on the stale zhuyin, **and submit still wrote the edit to staging**.
+
+**Checking JP/EN (dave's ask) found the shared gap:** `source_text` was never reset in ANY
+language — so a reverted field could still push an English edit to staging.
+
+`revert()` now also:
+- `source_text` ← `original_source` (both NOT NULL, seeded from the same value → can't destroy
+  content; only an explicit `update_source` can make them differ. Live DB: 0/389 rows differ).
+- `_ZH`: `localization.cur` ← `orig`, **and re-baselines `working_hans` ← `orig.Hans`** —
+  `working_hans` is the OLD text the next surgical CJK splice diffs against, and after a revert
+  the working take IS the pristine v0 (which says `orig.Hans`); leaving it stale would splice at
+  cut times for audio that no longer exists.
+- **re-mirrors the restored take to R2** (red-team catch). NOT cosmetic: `resolve_audio_dir` can
+  SEED a new session from the `review-audio` cache on a host with no local masters, so a stale
+  mirror would hand it the edited audio as its "pristine" master.
+
+### User guides — one was ACTIVELY WRONG, and the AI review was undocumented
+- **Ted's guide still told him to "listen to V2 and V3 and pick the better voice"** — retired
+  2026-07-02 (Mandarin is V3-only; the code is gone). Same stale text in the admin guide, the
+  quick reference, and (red-team catch) `README.md`. All removed.
+- **The whole Gate-2 triage flow was undocumented** and Ted is about to be asked to use it.
+  Added to both reviewer guides (EN + zh/ja), the admin guide and the quick reference: the three
+  buttons, the REQUIRED note on "Keep my version", answer-everything-then-resubmit.
+- Added **"don't add words to the text to fix a mispronunciation — use Fix pronunciation…, which
+  leaves the on-screen text unchanged"** (in zh + ja too). This is *exactly* the trap Ted fell
+  into and is the single most valuable line in the whole doc change.
+- Documented **Revert to original**.
+- Guides render live from `docs/user-guides/` per request → **pull, no rebuild**.
+
+### Red-team (/red-opus — dave switched the reviewer model this session)
+No code defects. It found the R2 mirror gap (fixed above) and two doc inaccuracies I'd
+introduced: the take-back button has **different labels on different pages**
+(`AutoReviewPanel` "Take back without triage (admin)" vs `ChangesSummaryPage` "Take it back now
+(unanswered items come to me)") and `README.md` still advertised the V2/V3 pick. It verified
+every guide claim against the code (button labels, required-note rule, 409 `findings_open`,
+inline rendering, "Apply suggested fix" only when verified+ZH → correctly absent from
+Toshifumi's guide) and confirmed `dict(orig_loc)` is a sufficient copy (all 205 live
+localization blocks are flat).
+
+### Verified
+- revert on ZH/JP/EN against a copy of the live DB, and again **ON THE LIVE HOST** against a DB
+  copy using **Ted's real Taipei101 scene-1 field**: 喔 gone → `cur == orig` → `_field_has_edit`
+  False → the corrected text reaches the FE payload. **Gate-1's zhuyin block clears itself.**
+- Gates: tsc / lint / build clean; backend ast+import clean.
+- `app_url` added to the laptop's `notifier_config.json` → the findings email now links to
+  `https://review.dynamiclanguages.org/review/<sid>` (verified HTTP 200).
+- Post-deploy: all four parts of the new `revert` present in the running process; public app
+  200; `/help/quick` + `/help/guide` auth-gated (401); uvicorn + cloudflared active.
+
 ### Open / TODO
 - **The email to Ted is drafted and pasted to dave but NOT sent** — dave sends it himself, with
   the audio attachments. It asks the decisive question: keep 喔/这颗/这个 (and we chase the TTS)
-  or revert the six lines (and the tone bug likely dies with them)?
-- **`app_url` still not in the laptop's `notifier_config.json`** → Ted's findings email has no
-  deep link.
-- **`revert()` ignores `localization_json`** — "Revert to original" is broken for _ZH fields.
+  or revert the six lines (and the tone bug likely dies with them)? **Revert now actually works,
+  so "yes, delete them" is a one-click answer per field.**
 - Ted's 8 tone bug reports remain formally `open` (the email answers them; close them after).
 - The orphans' `work/` dirs (`sess_65e9b6d8ea3f`, `sess_887ef88d4e45`) are still on disk — seed
   copies of the masters only, harmless, delete whenever.
+- Red-team nits NOT actioned (pre-existing): autosave-vs-revert race (typing then hitting Revert
+  inside the 1 s debounce can re-save the edit — affects every editor, not just revert); the
+  guides say "click any item to jump to that scene" but only the "Go to scene N →" link
+  navigates (the app's own panel copy says the same, so guides + UI are at least consistent).
+- `systemctl daemon-reload` still pending on the laptop (unit file changed on disk; harmless).
