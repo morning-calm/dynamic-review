@@ -122,3 +122,121 @@ Verified ON THE LAPTOP (the cross-host risk was the whole point):
 ### Next steps
 1. Dave reviews; then deploy to the laptop + set Ted's email.
 2. Answer Ted's tone bug reports.
+
+---
+
+## Session 2 — Ted's email, the re-review, and the blank-session incident (af11d9a LIVE)
+
+### Goals
+1. Set Ted's email so the AI-review findings actually reach him.
+2. Re-review his three submitted (non-approved) trips so they bounce to him for triage.
+3. Draft dave an email to Ted about the 喔 / tone problem.
+
+### What I found — the 喔 story is NOT what it looked like
+Dave's draft asked Ted "should I delete 喔 from the text?". **喔 is not in the script anywhere**
+(grep of the whole Scripts tree: zero hits; staging json: zero hits). It is in
+`localization_json.cur.Hans` ONLY — i.e. **Ted typed it in himself** on 2026-07-09 19:37–19:40,
+in six fields of `Taipei101_HSK12_ZH`, and the app voiced exactly what he typed (`splice_meta`
+mode=whole). He confirmed mid-session: *"I add another word to make it sound more natural."*
+
+The six: s1 `楼喔` · s2 `楼喔` · s6 opt0/opt1 `这颗球` · s10 `人喔` · s12 opt0 `这个城市`.
+**Every one of his 8 open tone bug reports (楼/球/人/城市) is on one of those six fields, and the
+mis-voiced word always sits directly adjacent to the word he added.** So the hypothesis for the
+email: the addition is what breaks the TTS tone, and reverting the six lines fixes all 8 reports
+at once. Asked him to confirm the ORIGINAL audio says them correctly.
+- Also: s7 has `堅固` — traditional 堅 in the **Simplified** box (should be 坚固). NOT a level
+  issue: 强 (the original) and 柱子 (in the draft) are BOTH out of band for HSK1-2 already, so
+  don't nag him about level here — I nearly did, and checked first.
+- Gate-1 on that session: **7 hard blocks, all "zhuyin doesn't match the Simplified text"** —
+  his Hans edits didn't carry into zhuyin/Hant. Six vanish if he reverts; s8's remains.
+- ⚠️ **`sessions.revert()` does NOT clear `localization_json`** (sessions.py:2606 patches
+  current_text/working_text/flag/audio only). On a _ZH field the 4-script block IS the voiced
+  surface, so "Revert to original" leaves 喔 in the Hans box and Gate-1 still blocks. Reverting
+  these has to be done by editing the Hans box by hand. **Unfixed — see BACKLOG.**
+
+### Done
+- `manage.py set-email --username ted --email <his PTS address>` (P0-0c). Notifier dry-run
+  confirms the findings email now addresses him. `app_url` NOT added to `notifier_config.json`
+  (sandbox blocked the live-config edit) → the email says "Open it here: the review app" with
+  no link. **Still to do.**
+- Re-reviewed the 3 submitted trips (P0-0b, dave's go): Taichung_HSK3 (1 finding),
+  Taipei101_HSK3 (1), KaohsiungLotusPond_HSK12 (3). All three CAS'd to `ai_review`. **The new
+  prompt is much cleaner — the old HSK-level noise is gone** (the ten 老旧 warnings didn't
+  recur). 5 findings total: 3 are "English translation not updated after a Chinese edit"
+  (→ Ted will defer those to the admin), 2 are stray leading newlines, 1 an unnatural comma.
+
+### 🔥 The incident: opening an `ai_review` trip re-seeded a BLANK session
+Dave reported "all the marked done have reverted... I can't see the AI's remark". **Nothing had
+reverted.** The DB showed all 70/47/112 fields still `done`. What actually happened: opening
+those trips from the list created **two brand-new blank sessions** (14:30, 14:34) — because
+`create_or_resume`'s resume whitelist was `('in_review','submitted','changes_requested')` and
+**`ai_review` was missing**. The blank session, being the NEWEST, then permanently shadowed
+Ted's real one. Dave was looking at empty duplicates. (No work lost — but this would have
+orphaned it silently.)
+
+**Root cause is a class, not a line:** "which statuses are still live?" was hand-copied in TWO
+places. So:
+- **`backend/app/statuses.py` (NEW)** — the one enumeration. `ALL_STATUSES` /
+  `TERMINAL_STATUSES=('approved',)` / `ACTIVE_STATUSES` (**derived**) / `EDITABLE_STATUSES`.
+  Stdlib-only, because `auto_review_ingest` is imported by the cron runner without FastAPI.
+- `sessions.create_or_resume` + `sessions._EDITABLE_STATUSES` + `structure._ACTIVE_STATUSES`
+  all now derive from it. Adding a status can no longer be half-done.
+
+### Two MORE bugs of the same class, found by the red-teams
+1. **`approving` was missing from the resume list too** — same bug, second door. A crash (or a
+   deploy restart) mid-approve strands a session in `approving`; the next open would seed a
+   blank shadow. Resuming it is safe: it's not in `EDITABLE_STATUSES`, so it opens read-only.
+2. **`structure._ACTIVE_STATUSES` was ALSO missing `ai_review`** — and this one is *worse* than
+   the bug we started with. It's the guard that refuses an admin scene insert/remove/reorder
+   while a live session exists (it desyncs `scene_index`es). A Gate-2-bounced trip slipped
+   through it: an admin structural edit would have **silently misaligned every `field_edits` row
+   of the reviewer's session**. Corruption, not just shadowing. (Tellingly, that list already
+   had `approving` while the resume query didn't — which is what exposed door #1.)
+
+### Also built (dave's ask)
+- **Gate-2 findings now un-tick the ONE field each is about** (`auto_review_ingest.ingest`), so
+  the reviewer's "all sections done" gate lands them on it. Every other field keeps its tick.
+  **Coverage is NOT cleared** → they can re-tick without re-listening to the whole take.
+- **The AI's remark + its three answer buttons now render INLINE next to each flagged field**
+  (`SceneCard` → module-level `FieldFindings`, reusing `FindingCard`), not only in the summary
+  panel. Findings state lifted to `ReviewPage` so both surfaces stay in step.
+  - The summary panel and its "Go to scene N →" link **already existed** — they were invisible
+    only because the blank session had no findings to show.
+
+### Red-team (fable, then **opus** — dave switched the reviewer model mid-session)
+Opus found a **real race the fable pass and I both missed**: the un-tick fired BEFORE the CAS
+and unconditionally. If a report landed while the admin was mid-approve, the CAS correctly
+no-op'd but the `done` flags were cleared anyway — rewriting reviewer state on a session they no
+longer owned (and if approve then reverted to `submitted`, their ticks were simply gone). Now it
+runs AFTER the CAS, gated on a status read-back being in `EDITABLE_STATUSES` (a recall that
+raced the model leaves it editable, and the un-tick IS wanted there — hence read-back, not
+rowcount). Opus also finished a `li > li` invalid-nesting fix the fable pass had only half-done.
+
+### Verified
+- 4/4 behavioural tests against a COPY of the live review.db: resume returns Ted's session (not
+  a re-seed) · ingest un-ticks exactly the flagged fields and nothing else · coverage survives ·
+  **a report landing during `approving` does NOT touch the done flags** (the Opus race).
+- Gates: `npx tsc --noEmit`, `npm run lint`, `npm run build` all clean; backend imports clean
+  incl. the cron runner's FastAPI-free import form.
+- ON THE LAPTOP after deploy: `ACTIVE_STATUSES` + `structure._ACTIVE_STATUSES` both carry
+  `ai_review`/`approving`; public app HTTP 200 serving `index-DV7gbZT1.js` (identical hash to
+  the local build); `/api/findings/inbox` 401 unauth; uvicorn + cloudflared both active.
+
+### Deployed (af11d9a — LIVE)
+DB backed up to R2 first (`review-20260713-140735.db`), then pull → cleanup → `npm run build` →
+`systemctl restart review-app.service`. Cleanup (`/tmp/cleanup_orphans.py`, dry-run first, and it
+REFUSES to delete anything not pristine): deleted the 2 blank sessions after re-verifying 0 edits
+/ 0 comments / 0 flags / 0 coverage / 0 findings, and un-ticked the 5 fields the existing
+findings refer to (they were ingested before the fix). Post-state confirmed: each `ai_review`
+session now has exactly as many un-ticked fields as it has open findings (1, 1, 3).
+
+### Open / TODO
+- **The email to Ted is drafted and pasted to dave but NOT sent** — dave sends it himself, with
+  the audio attachments. It asks the decisive question: keep 喔/这颗/这个 (and we chase the TTS)
+  or revert the six lines (and the tone bug likely dies with them)?
+- **`app_url` still not in the laptop's `notifier_config.json`** → Ted's findings email has no
+  deep link.
+- **`revert()` ignores `localization_json`** — "Revert to original" is broken for _ZH fields.
+- Ted's 8 tone bug reports remain formally `open` (the email answers them; close them after).
+- The orphans' `work/` dirs (`sess_65e9b6d8ea3f`, `sess_887ef88d4e45`) are still on disk — seed
+  copies of the masters only, harmless, delete whenever.

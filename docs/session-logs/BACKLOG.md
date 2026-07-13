@@ -17,28 +17,29 @@ code changes need a `systemctl restart review-app.service` in an idle window, FE
 time: 楼 / 球 / 人 / 城市 — rising-tone syllables rendered as dipping tone. Some say the whole word
 "can't generate".
 **Why it matters:** it is BLOCKING Ted on `Taipei101_HSK12_ZH` (sess_67d43aae2c03) — he has 6
-`edit_required` flags on it and has never submitted it. Biggest single item in the 07-13 audit,
-and nothing in the auto-review work touches it: this is a **voice/model** problem, not a review
-one. Check the trip's voice matches the master's gender/registry entry (`annasu` is female;
-`yu`/`jason` male) before assuming it's a V3 synthesis defect.
+`edit_required` flags on it and has never submitted it.
+**🔑 LIKELY CAUSE FOUND 2026-07-13 (session 2):** every one of the 8 reports is on one of the
+**six fields Ted himself edited** on 07-09 19:37–19:40, and the mis-voiced word always sits
+**directly adjacent to a word he added** (`楼喔`, `这颗球`, `人喔`, `这个城市`). 喔/这颗/这个 are
+NOT in the script — he typed them into the Simplified box ("I add another word to make it sound
+more natural") and the app voiced exactly that. So this is probably not a generic V3 defect:
+**the added particle/measure-word is what breaks the tone of its neighbour.**
+**Next:** dave's email (drafted, session-2 log) asks Ted to confirm the ORIGINAL audio says
+them correctly. If yes → revert the six lines and all 8 reports die at once. If he wants to KEEP
+the additions, we have to chase the TTS. **Then close the 8 reports.**
+(Voice sanity-check still valid: `annasu` is female; `yu`/`jason` male.)
 
-### 0b. The 3 already-submitted trips will NOT bounce to Ted on their own
-**What:** `Taipei101_HSK3_ZH` (sess_db4ac31ff3ff), `Taichung_HSK3_ZH` (sess_0ef71bcd3373),
-`KaohsiungLotusPond_HSK12_ZH` (sess_4243b6da1f26) already have Gate-2 reports, so
-`claude_review.pending_sessions` won't re-review them and **no findings rows exist** — they sit in
-dave's approve queue exactly as before, and Ted never sees the AI's comments.
-**To do it:** force a re-review per session — `python scripts/claude_review.py --sid <sid>` on the
-laptop — which ingests findings and bounces each to `ai_review` (out of dave's queue until Ted
-answers). The re-review runs against the NEW prompt, so the level noise (the ten 老旧 warnings on
-Taichung_HSK3) is gone, replaced by the deterministic check.
-**Blocked on:** dave's call — it moves live trips out of his approve queue.
+### 0b. ~~The 3 already-submitted trips will NOT bounce to Ted~~ — **DONE 2026-07-13**
+Re-reviewed all three (`claude_review.py --sid`); all now `ai_review` with findings for Ted:
+Taichung_HSK3 (1), Taipei101_HSK3 (1), KaohsiungLotusPond_HSK12 (3). Level noise gone as
+predicted. See session-2 log.
 
-### 0c. Nobody has an email address set
-**What:** `users.email` shipped 2026-07-13 and is empty for every user, so the reviewer-findings
-email silently no-ops (in-app badge still works).
-**To do it:** `py -3.12 backend/manage.py set-email --username ted --email <addr>` on the laptop.
-Needs the address from dave. Also add `app_url: https://review.dynamiclanguages.org` to
-`scripts/notifier_config.json` so the email deep-links to the trip.
+### 0c. ~~Nobody has an email address set~~ — **MOSTLY DONE 2026-07-13**
+`ted`'s address is set in the live DB (verified via notifier dry-run). **STILL TO DO:** add
+`"app_url": "https://review.dynamiclanguages.org"` to the LAPTOP's
+`scripts/notifier_config.json` — without it the findings email says "Open it here: the review
+app" with no link. (One-line edit; the sandbox blocked it as an unrequested live-config change.)
+`toshifumi` and `admin` still have no email.
 
 ### 0d. Two design questions dave deferred
 - Should a carried-forward `rejected` answer survive a **verdict change** (warning→needs_human
@@ -50,6 +51,17 @@ Needs the address from dave. Also add `app_url: https://review.dynamiclanguages.
 ---
 
 ## P1 — Do next (high value, self-contained, no product decision)
+
+### 0e. `revert()` ignores `localization_json` — "Revert to original" is BROKEN for _ZH
+**What:** `sessions.revert()` (`sessions.py:2606`) patches `current_text`, `working_text`, `flag`,
+candidate/coverage/version_cursor and copies the pristine v0 mp3 back — but **never touches
+`localization_json`**. On a Mandarin field the 4-script block IS the voiced surface, so hitting
+"Revert to original" leaves the edited Hans (e.g. Ted's `喔`) sitting in the box, the working
+text and the localization disagree, and Gate-1 still hard-blocks on the stale zhuyin.
+**Why it matters now:** this is exactly the button dave/Ted will reach for to undo the six
+Taipei101_HSK12 lines (0a). Today they must retype the Hans by hand instead.
+**Fix:** in `revert()`, when the row has a `localization_json`, reset `cur` ← `orig` and
+re-baseline `working_hans`. Found 2026-07-13; NOT fixed (out of scope of that session's change).
 
 ### 1. "Apply suggested fix" button on the Auto-review panel
 **What:** a button next to each machine-verified suggested fix that writes the fix through the
@@ -186,6 +198,16 @@ Scripts note via GitHub Desktop.
 ---
 
 ## Done
+- **2026-07-13 (session 2)** — **Blank-session incident + status-vocabulary consolidation**
+  (af11d9a, LIVE). Opening an `ai_review` trip re-seeded a BLANK session that then shadowed the
+  reviewer's real one (2 reached production; no work lost). Root cause was a hand-copied status
+  list in TWO places; `backend/app/statuses.py` is now the single enumeration and
+  `ACTIVE_STATUSES` is derived, so a status can't be half-added again. Red-teams found two more
+  of the same class: `approving` missing from the resume list, and — worse —
+  `structure._ACTIVE_STATUSES` missing `ai_review`, which would have let an admin scene
+  insert/reorder silently desync a live reviewer's `scene_index`es. Plus: findings un-tick the
+  one field they're about (after the CAS, only while the session is still the reviewer's — an
+  Opus red-team catch), and the AI's remark + answer buttons now render inline at the field.
 - **2026-07-08** — P1 #1 "Apply suggested fix" button (BE `apply_suggested_fix` +
   `POST /sessions/{sid}/auto-review/apply`, FE panel button) and P2 #4 prune of the dead
   Mandarin A/B code. Branch `backlog/apply-fix-and-ab-prune` (not merged/deployed yet —
