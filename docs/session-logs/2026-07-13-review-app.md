@@ -120,8 +120,9 @@ Verified ON THE LAPTOP (the cross-host risk was the whole point):
   (warning→needs_human currently re-opens it)? And is compound rescue (老旧) too lenient at HSK3?
 
 ### Next steps
-1. Dave reviews; then deploy to the laptop + set Ted's email.
-2. Answer Ted's tone bug reports.
+1. ~~Dave reviews; then deploy to the laptop + set Ted's email.~~ **Both done in session 2.**
+2. Answer Ted's tone bug reports. → **root cause found in session 2; the email is drafted and
+   with dave to send.**
 
 ---
 
@@ -309,3 +310,45 @@ localization blocks are flat).
   guides say "click any item to jump to that scene" but only the "Go to scene N →" link
   navigates (the app's own panel copy says the same, so guides + UI are at least consistent).
 - `systemctl daemon-reload` still pending on the laptop (unit file changed on disk; harmless).
+
+---
+
+## End of day — 2026-07-13
+
+### Shipped & LIVE on the laptop
+| Commit | What |
+|---|---|
+| `2167ba6` | (session 1) Gate-1 deterministic HSK level check + Gate-2 findings → reviewer triage |
+| `af11d9a` | (session 2) blank-session incident fix + status-vocabulary consolidation |
+| `b3a0d36` | (session 3) `revert()` restores every text surface (ZH/JP/EN) + user-guide overhaul |
+
+Also live: Ted's email set; the 3 submitted trips re-reviewed and bounced to him (`ai_review`);
+`app_url` in the notifier; the 2 orphan sessions deleted.
+
+### The theme of the day, worth carrying forward
+Every serious bug found today was **the same shape: a hand-maintained list that a new feature
+forgot to update.** `ai_review` was added in session 1 and *silently* missing from the resume
+whitelist (blank sessions), from `structure._ACTIVE_STATUSES` (would have corrupted a live
+session's scene indexes), and — the same class one level up — the user guides still described a
+feature retired 6 weeks earlier, and `revert()` still only knew about the ONE text surface that
+existed before the 4-script block and the English sibling were added.
+**Lesson: when adding a status / a text surface / a feature, grep for every place the OLD set is
+enumerated.** `backend/app/statuses.py` now makes that structurally impossible for statuses.
+The remaining hand-maintained sets worth auditing next time something is added: the text
+surfaces in `_field_has_edit` vs `revert` (now aligned), and the user guides.
+
+### Where things stand with Ted
+- He is **unblocked on nothing by us** — the ball is with him, via dave's email.
+- The email (drafted, in session 2 + refined by dave) asks the one decisive question: keep
+  喔/这颗/这个 (→ we chase the TTS) or revert the six lines (→ his 8 tone reports likely all die
+  at once). **Revert now actually works, so "delete them" is one click per field.**
+- His 3 re-reviewed trips are in his queue with 5 findings to answer (3 of them English →
+  he'll defer those to dave).
+- `Taipei101_HSK12_ZH` still has 7 Gate-1 hard blocks (stale zhuyin) + the 堅固 traditional-char
+  typo — 6 of the 7 disappear if the six lines are reverted.
+
+### Next session
+1. **Ted's reply** → action it (revert the six lines, or chase the TTS), then close his 8 bug
+   reports.
+2. `Taipei101_HSK12_ZH`: fix 堅固 → 坚固 and the remaining scene-8 zhuyin, then it can be approved.
+3. BACKLOG P1 #1/#2 (apply-fix button branch merge; R2 manifest coverage) — unchanged, still queued.
