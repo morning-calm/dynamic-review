@@ -45,13 +45,16 @@ export const setUnauthorizedHandler = (fn: (() => void) | null): void => {
 export type FlagValue = 'none' | 'done' | 'edit_required';
 export type RegenerateMode = 'segment' | 'whole' | 'highlight' | 'alt';
 export type FallbackExtent = 'sentence' | 'scene' | 'custom';
-export type SessionStatus = 'in_review' | 'submitted' | 'approving' | 'approved' | 'changes_requested';
+export type SessionStatus =
+  | 'in_review' | 'submitted' | 'approving' | 'approved' | 'changes_requested' | 'ai_review';
 
 /** Statuses in which a reviewer may still edit text/audio/flags/narration.
  * `submitted`/`approving`/`approved` are locked (read-only) in the FE; the
- * backend enforces the same boundary with a 403 on the write endpoints. */
+ * backend enforces the same boundary with a 403 on the write endpoints.
+ * `ai_review` = Gate 2 sent findings back to the reviewer: editable again, because
+ * actioning a suggestion means editing the text. */
 export const isEditableStatus = (s: SessionStatus): boolean =>
-  s === 'in_review' || s === 'changes_requested';
+  s === 'in_review' || s === 'changes_requested' || s === 'ai_review';
 
 export type Role = 'admin' | 'reviewer';
 
@@ -446,6 +449,47 @@ export interface AutoReviewField {
   suggested_fix_verified?: boolean | null;
 }
 
+/** How a reviewer may answer one Gate-2 finding (backend auto_review_ingest.RESPONSES).
+ * `rejected` REQUIRES a note — it's the admin's only record of why the AI was overruled.
+ * `deferred` = the finding is about the English/source, so it's the admin's call. */
+export type FindingAction = 'resolved' | 'rejected' | 'deferred';
+export type FindingStatus = 'open' | FindingAction;
+
+/** One triage item: a non-clean Gate-2 verdict the reviewer must answer before the trip
+ * goes back to the admin. */
+export interface Finding {
+  id: number;
+  scene: number | null;
+  field: string;
+  option: number | null;
+  verdict: 'warning' | 'needs_human';
+  reasons: string[];
+  suggested_fix: Record<string, string> | null;
+  suggested_fix_verified: boolean | null;
+  status: FindingStatus;
+  note: string;
+  responded_by: string | null;
+  responded_at: number | null;
+  created_at: number;
+}
+
+export interface FindingsPayload {
+  findings: Finding[];
+  open: number;
+  status: SessionStatus;
+}
+
+export interface FindingsInbox {
+  sessions: {
+    session_id: string;
+    trip_id: string;
+    submitted_by: string | null;
+    open: number;
+    updated_at: number;
+  }[];
+  count: number;
+}
+
 export interface AutoReviewReport {
   id: number;
   created_at: number;
@@ -709,6 +753,28 @@ export const api = {
     loc: { scene: number; field: string; option: number | null },
   ): Promise<{ field: Field; applied: string[]; skipped: { script: string; reason: string }[] }> =>
     postJson(`/api/sessions/${encodeURIComponent(sid)}/auto-review/apply`, loc),
+
+  /** Gate-2 triage: the findings the reviewer must answer before the trip returns to the
+   * admin. Present for any session; `open > 0` is what holds it in `ai_review`. */
+  getFindings: (sid: string): Promise<FindingsPayload> =>
+    getJson(`/api/sessions/${encodeURIComponent(sid)}/findings`),
+
+  /** Answer one finding. `rejected` requires a note (the admin reads it). */
+  respondFinding: (
+    sid: string,
+    fid: number,
+    action: FindingAction,
+    note = '',
+  ): Promise<FindingsPayload> =>
+    postJson(`/api/sessions/${encodeURIComponent(sid)}/findings/${fid}/respond`, { action, note }),
+
+  /** ADMIN: reclaim an `ai_review` trip without the reviewer's triage (open findings are
+   * marked deferred-to-admin). The escape hatch so the gate can't wedge a trip. */
+  skipFindingsTriage: (sid: string, note = ''): Promise<FindingsPayload> =>
+    postJson(`/api/sessions/${encodeURIComponent(sid)}/findings/skip`, { note }),
+
+  /** Nav badge: sessions waiting on THIS user's AI-review triage. */
+  getFindingsInbox: (): Promise<FindingsInbox> => getJson('/api/findings/inbox'),
 
   regenerate: (
     sid: string,

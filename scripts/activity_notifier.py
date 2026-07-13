@@ -371,6 +371,100 @@ def send_via_mailwizz(cfg, subject, text_body, html_body):
         return e.code, e.read().decode("utf-8", "replace")[:500]
 
 
+# ---------------------------------------------------------------- reviewer findings email
+def notify_reviewer_findings(state, con, cfg, dry_run=False):
+    """Email the SUBMITTING REVIEWER when Gate-2 findings land on their trip (2026-07-13).
+
+    This is separate from dave's activity digest: it goes TO the reviewer, immediately, and
+    is not batched — the trip is sitting in 'ai_review' waiting on them, so a delayed email
+    just delays the trip. One email per session (not per finding).
+
+    Watermarked on auto_review_findings.id so a session is emailed once per report; a
+    re-review writes fresh findings with higher ids and mails again, which is correct.
+    A reviewer with no email set is skipped silently — the in-app badge still shows it.
+    """
+    wm = state.get("findings_email_watermark")
+    try:
+        rows = con.execute(
+            "SELECT f.id, f.session_id, f.trip_id, s.submitted_by, u.email, u.username "
+            "FROM auto_review_findings f "
+            "JOIN sessions s ON s.id = f.session_id "
+            "LEFT JOIN users u ON u.username = s.submitted_by "
+            "WHERE f.status='open' AND f.id > ? ORDER BY f.id",
+            (wm or 0,)).fetchall()
+    except sqlite3.OperationalError:
+        return []           # table not created yet (backend hasn't migrated) — no-op
+    if wm is None:
+        # First run after this feature ships: watermark forward, don't blast history.
+        state["findings_email_watermark"] = max((r["id"] for r in rows), default=0)
+        return []
+    if not rows:
+        return []
+
+    by_session = {}
+    for r in rows:
+        by_session.setdefault(r["session_id"], {"trip": r["trip_id"], "n": 0,
+                                                "email": r["email"], "who": r["submitted_by"]})
+        by_session[r["session_id"]]["n"] += 1
+
+    sent, failed = [], set()
+    for sid, s in by_session.items():
+        if not s["email"]:
+            # Nothing to retry — this user can never be emailed until one is set, and the
+            # badge already shows them the work. Watermark past it.
+            print(f"[findings] {s['trip']}: no email for '{s['who']}' — in-app badge only "
+                  f"(set one: py -3.12 backend/manage.py set-email --username {s['who']} "
+                  f"--email …)")
+            continue
+        url = (cfg or {}).get("app_url", "").rstrip("/")
+        link = f"{url}/review/{sid}" if url else "the review app"
+        n = s["n"]
+        subject = f"review-app: {n} AI-review item{'' if n == 1 else 's'} on {s['trip']}"
+        text = (f"Hi {s['who']},\n\n"
+                f"An automated check of your edits to {s['trip']} raised {n} "
+                f"item{'' if n == 1 else 's'} for you to look at.\n\n"
+                f"The trip is back with you until you answer each one — you can action it, "
+                f"keep your version (with a note saying why), or hand it to the admin if "
+                f"it's about the English.\n\n"
+                f"Open it here: {link}\n")
+        html = (f"<p>Hi {s['who']},</p>"
+                f"<p>An automated check of your edits to <b>{s['trip']}</b> raised "
+                f"<b>{n}</b> item{'' if n == 1 else 's'} for you to look at.</p>"
+                f"<p>The trip is back with you until you answer each one — action it, keep "
+                f"your version (with a note saying why), or hand it to the admin if it's "
+                f"about the English.</p>"
+                f"<p><a href=\"{link}\">Open {s['trip']}</a></p>")
+        if dry_run:
+            print(f"\n--- DRY RUN: reviewer email ---\nTo: {s['email']}\nSubject: {subject}\n"
+                  f"{text}--- end ---")
+        else:
+            rcfg = dict(cfg, to_email=s["email"], to_name=s["who"] or "there")
+            # send_via_mailwizz only catches HTTPError; a URLError/timeout would otherwise
+            # escape this whole function BEFORE the watermark advances and re-email every
+            # already-sent session next run — treat any raise as a failed send instead.
+            try:
+                status, resp = send_via_mailwizz(rcfg, subject, text, html)
+            except Exception as e:  # noqa: BLE001
+                status, resp = 599, str(e)
+            print(f"[findings] emailed {s['who']} <{s['email']}> about {s['trip']} "
+                  f"({n} item(s)) — HTTP {status}")
+            if status >= 300:
+                print(f"[findings]   MailWizz said: {resp[:200]}")
+                failed.add(sid)
+                continue
+        sent.append(sid)
+
+    # Advance the watermark only over rows we're done with. A failed send must be retried
+    # next run, so stop short of the first row belonging to a failed session — otherwise a
+    # transient MailWizz 500 would silently swallow the one email that matters.
+    if failed:
+        first_failed = min(r["id"] for r in rows if r["session_id"] in failed)
+        state["findings_email_watermark"] = first_failed - 1
+    else:
+        state["findings_email_watermark"] = max(r["id"] for r in rows)
+    return sent
+
+
 # ---------------------------------------------------------------- rate limit + main
 def can_send(state, now, force):
     log = [t for t in state["email_log"] if now - t < 24 * 3600]
@@ -432,6 +526,15 @@ def main():
         print(f"[notifier] baseline seeded at {dt.datetime.fromtimestamp(now):%Y-%m-%d %H:%M} "
               f"({len(sess)} sessions); no email.")
         return
+
+    # Reviewer-facing mail runs BEFORE (and independently of) dave's digest: it must not be
+    # held by the digest's 1/hour batching gate — the trip is parked waiting on the reviewer.
+    _cfg = json.loads(CONFIG_PATH.read_text(encoding="utf-8")) if CONFIG_PATH.exists() else {}
+    try:
+        notify_reviewer_findings(state, con, _cfg, dry_run=args.dry_run)
+    except Exception as e:  # noqa: BLE001 — never let reviewer mail break the digest
+        print(f"[findings] notify failed (continuing): {e}")
+    save_state(state)
 
     new_events = detect_logins(state, users, logins, now)
     new_events += detect_auto_reviews(state, con, now)

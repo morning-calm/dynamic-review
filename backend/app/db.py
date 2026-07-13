@@ -17,6 +17,7 @@ import threading
 import time
 from typing import Any
 
+from . import auto_review_ingest   # stdlib-only; owns the auto_review_findings DDL
 from .config import DB_PATH
 
 _LOCK = threading.RLock()
@@ -254,6 +255,9 @@ CREATE TABLE IF NOT EXISTS auto_reviews (
     report_json  TEXT NOT NULL DEFAULT '{}'     -- Gate-2 per-field verdicts (see claude_review.py)
 );
 
+-- NOTE: auto_review_findings lives in auto_review_ingest.FINDINGS_DDL (applied below in
+-- init()) — the cron runner scripts/claude_review.py creates it too, and one copy of the
+-- DDL means the API and the runner can never disagree about the table.
 CREATE INDEX IF NOT EXISTS ix_structops_trip ON structure_ops(trip_id, performed_at);
 CREATE INDEX IF NOT EXISTS ix_extreports_trip ON external_reports(trip_id, scene_index);
 CREATE INDEX IF NOT EXISTS ix_extreports_status ON external_reports(status, created_at);
@@ -285,6 +289,7 @@ def init() -> None:
         conn.execute("PRAGMA synchronous=NORMAL;")
         conn.execute("PRAGMA foreign_keys=ON;")
         conn.executescript(SCHEMA)
+        conn.executescript(auto_review_ingest.FINDINGS_DDL)
         # Lightweight migrations: per-session voice tuning overrides (added after
         # the initial schema shipped). CREATE TABLE IF NOT EXISTS won't add columns
         # to an existing sessions table, so add them here if absent.
@@ -340,6 +345,11 @@ def init() -> None:
         if "preferred_version" not in have:
             # the trip's chosen ElevenLabs A/B version: 'v2' | 'v3' | NULL (undecided).
             conn.execute("ALTER TABLE sessions ADD COLUMN preferred_version TEXT")
+        # Reviewer email — so the notifier can tell a reviewer their Gate-2 findings are
+        # waiting (2026-07-13). NULL = don't email that user; the in-app badge still works.
+        ucols = {r["name"] for r in conn.execute("PRAGMA table_info(users)")}
+        if "email" not in ucols:
+            conn.execute("ALTER TABLE users ADD COLUMN email TEXT")
         conn.commit()
         _CONN = conn
 

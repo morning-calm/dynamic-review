@@ -10,6 +10,7 @@ const STATUS_LABEL: Record<SessionStatus, string> = {
   approving: 'Approving…',
   approved: 'Approved',
   changes_requested: 'Changes requested',
+  ai_review: 'AI review — with reviewer',
 };
 
 /** Admin-only staging-wide trip search (the Firefoo replacement's front door): find ANY

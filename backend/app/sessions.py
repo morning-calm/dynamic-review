@@ -33,8 +33,8 @@ import numpy as np
 from fastapi import HTTPException
 
 from . import config  # noqa: F401  (ensures SCRIPTS_ROOT on sys.path) — keep first
-from . import (audio_core, audio_io, audio_splice, auto_checks, cjk_align, cjk_splice, db,
-               images_r2, review_audio, thumbs)
+from . import (audio_core, audio_io, audio_splice, auth, auto_checks, auto_review_ingest,
+               cjk_align, cjk_splice, db, images_r2, review_audio, thumbs)
 from .config import (COUNTRY_VOICE_GUESS, COVERAGE_DONE_FRACTION,
                      LANGUAGE_FALLBACK_VOICE, WORK_ROOT)
 from .locks import WHISPER_LOCK
@@ -866,7 +866,10 @@ def _field_row(sid: str, fid: int):
 
 # Reviewer-editable states. `submitted`/`approving` are locked (admin owns the review
 # snapshot); `approved` is terminal. `changes_requested` is editable again.
-_EDITABLE_STATUSES = ("in_review", "changes_requested")
+# `ai_review` = Gate 2 came back with findings and bounced the trip to the reviewer to
+# answer them (auto_review_ingest); they need to edit to action a suggestion, and the admin
+# can't approve meanwhile because approve() only claims from 'submitted'.
+_EDITABLE_STATUSES = ("in_review", "changes_requested", "ai_review")
 
 
 def trip_id_for_session(sid: str) -> str:
@@ -1322,6 +1325,121 @@ def apply_suggested_fix(sid: str, scene: int, field: str,
     hard, soft = validate(sid, mode="submit")
     return {"field": result, "applied": applied, "skipped": skipped,
             "gate1": {"hard": hard, "soft": soft}}
+
+
+# --------------------------------------------------------------------------- #
+# Gate-2 findings triage — the reviewer answers the AI, then the trip goes to the admin.
+# (docs/auto-review-proposal.md; workflow decided by dave 2026-07-13.)
+# --------------------------------------------------------------------------- #
+def _open_findings_count(sid: str) -> int:
+    row = db.query_one("SELECT COUNT(*) AS n FROM auto_review_findings "
+                       "WHERE session_id=? AND status='open'", (sid,))
+    return int(row["n"]) if row else 0
+
+
+def _finding_dict(r) -> dict:
+    return {
+        "id": r["id"], "scene": r["scene_index"], "field": r["field_path"],
+        "option": r["option_index"], "verdict": r["verdict"],
+        "reasons": json.loads(r["reasons_json"] or "[]"),
+        "suggested_fix": json.loads(r["fix_json"]) if r["fix_json"] else None,
+        "suggested_fix_verified": (None if r["fix_verified"] is None
+                                   else bool(r["fix_verified"])),
+        "status": r["status"], "note": r["response_note"] or "",
+        "responded_by": r["responded_by"], "responded_at": r["responded_at"],
+        "created_at": r["created_at"],
+    }
+
+
+def findings(sid: str) -> dict:
+    """Every Gate-2 triage item for this session + how many are still unanswered.
+    Reviewers act on these; admins read them (the notes are addressed TO the admin)."""
+    rows = db.query(
+        "SELECT * FROM auto_review_findings WHERE session_id=? "
+        "ORDER BY COALESCE(scene_index, -1), id", (sid,))
+    items = [_finding_dict(r) for r in rows]
+    return {"findings": items,
+            "open": sum(1 for i in items if i["status"] == "open"),
+            "status": _session_row(sid)["status"]}
+
+
+def respond_finding(sid: str, fid: int, user, action: str, note: str = "") -> dict:
+    """Answer ONE finding. Three answers, per the workflow dave specified:
+
+      resolved — the reviewer actioned the suggestion (they edited the text, possibly via
+                 apply_suggested_fix). Note optional.
+      rejected — the reviewer keeps their version. A note is REQUIRED: it is the admin's
+                 only record of WHY the AI was overruled.
+      deferred — the finding is about the ENGLISH/source, which is not the reviewer's to
+                 change; it goes to the admin to action or dismiss. Note optional.
+
+    Answering does NOT re-open a closed session and does NOT edit any text; the reviewer's
+    edits go through the normal autosave path. Clearing the last open finding simply
+    unblocks re-submit (they still press Submit — we never auto-hand-back)."""
+    if action not in auto_review_ingest.RESPONSES:
+        raise HTTPException(422, detail={
+            "error": "bad_action",
+            "detail": f"action must be one of {list(auto_review_ingest.RESPONSES)}"})
+    note = (note or "").strip()
+    if action in auto_review_ingest.NOTE_REQUIRED and not note:
+        raise HTTPException(422, detail={
+            "error": "note_required",
+            "detail": "rejecting a suggestion needs a short reason — the admin sees it "
+                      "instead of the change"})
+    row = db.query_one("SELECT * FROM auto_review_findings WHERE id=? AND session_id=?",
+                       (fid, sid))
+    if not row:
+        raise HTTPException(404, detail={"error": "no_finding", "detail": str(fid)})
+    db.execute(
+        "UPDATE auto_review_findings SET status=?, response_note=?, responded_by=?, "
+        "responded_at=? WHERE id=?",
+        (action, note, getattr(user, "username", None), time.time(), fid))
+    return findings(sid)
+
+
+def skip_findings_triage(sid: str, user, note: str = "") -> dict:
+    """ADMIN override: take a trip back from the reviewer without waiting for them to
+    answer the AI (they're away, it's urgent, the findings are noise). Every open finding
+    is marked 'deferred' to the admin — an honest record of what was NOT answered — and the
+    session returns to 'submitted' so approve() can claim it.
+
+    This is the escape hatch that keeps the gate from ever wedging a trip."""
+    srow = _session_row(sid)
+    if srow["status"] != "ai_review":
+        raise HTTPException(409, detail={
+            "error": "bad_state",
+            "detail": f"session is '{srow['status']}' — nothing to skip (triage only "
+                      "holds a session in 'ai_review')"})
+    who = getattr(user, "username", None)
+    stamp = (note or "").strip() or f"[admin {who} took this back without reviewer triage]"
+    db.execute(
+        "UPDATE auto_review_findings SET status='deferred', responded_by=?, responded_at=?, "
+        "response_note=CASE WHEN response_note='' THEN ? ELSE response_note END "
+        "WHERE session_id=? AND status='open'",
+        (who, time.time(), stamp, sid))
+    db.execute("UPDATE sessions SET status='submitted', updated_at=? "
+               "WHERE id=? AND status='ai_review'", (time.time(), sid))
+    return findings(sid)
+
+
+def findings_inbox(user) -> dict:
+    """Sessions in 'ai_review' this user should act on — the nav badge + queue chips.
+    A reviewer sees the ones THEY submitted; an admin sees all (they can override)."""
+    rows = db.query(
+        "SELECT s.id, s.trip_id, s.submitted_by, s.updated_at, "
+        "  (SELECT COUNT(*) FROM auto_review_findings f "
+        "    WHERE f.session_id=s.id AND f.status='open') AS open_n "
+        "FROM sessions s WHERE s.status='ai_review' ORDER BY s.updated_at")
+    out = []
+    for r in rows:
+        if not user.is_admin and r["submitted_by"] != user.username:
+            continue
+        if not auth.language_allowed(user, r["trip_id"]):
+            continue
+        out.append({"session_id": r["id"], "trip_id": r["trip_id"],
+                    "submitted_by": r["submitted_by"], "open": r["open_n"],
+                    "updated_at": r["updated_at"]})
+    return {"sessions": out, "count": sum(s["open"] for s in out)}
 
 
 def set_version(sid: str, version: str | None) -> dict:
@@ -2810,7 +2928,7 @@ def validate(sid: str, mode: str = "submit") -> tuple[list[dict], list[dict]]:
     # Gate 1 of the auto-review pipeline: deterministic script-consistency / format checks
     # (docs/auto-review-proposal.md). Hard at APPROVE (staging protection); demoted to
     # loud warnings at SUBMIT so a reviewer is never locked out mid-handover.
-    ac_hard, ac_soft = auto_checks.run_checks(frows, _is_zh_session(sid))
+    ac_hard, ac_soft = auto_checks.run_checks(frows, _is_zh_session(sid), trip_id)
     if mode == "approve":
         hard += ac_hard
     else:
@@ -3147,12 +3265,23 @@ def commit(sid: str, user) -> dict:
 
 def submit(sid: str, user) -> dict:
     """Reviewer/admin (own language): VALIDATE ONLY. On success flip to `submitted`
-    (locked read-only, awaiting admin). NO staging writes, NO master promotion."""
+    (locked read-only, awaiting admin). NO staging writes, NO master promotion.
+
+    From `ai_review` this is the RE-submit that hands the trip back to the admin — and it
+    is blocked until every Gate-2 finding has been answered (dave, 2026-07-13: the whole
+    point of bouncing it back is that the reviewer responds to each one)."""
     srow = _session_row(sid)
     if srow["status"] not in _EDITABLE_STATUSES:
         raise HTTPException(403, detail={
             "error": "locked",
             "detail": f"session is '{srow['status']}' — cannot submit"})
+    open_n = _open_findings_count(sid)
+    if open_n:
+        raise HTTPException(409, detail={
+            "error": "findings_open",
+            "open": open_n,
+            "detail": f"{open_n} AI-review item(s) still need a response — resolve, reject "
+                      "(with a reason), or hand each to the admin before re-submitting"})
     hard, soft = validate(sid)
     if hard:
         return {"ok": False, "validation": hard + soft}

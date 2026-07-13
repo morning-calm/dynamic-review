@@ -18,6 +18,7 @@ from .models import (CreateSession, TextUpdate, SourceUpdate, Regenerate, Fallba
                      ClipCreate, ClipRegen, ClipComment, TrimNoise, TrimCandidate,
                      InsertSilence, RemoveSilence, RequestChanges, CompleteTrip,
                      LocalizationUpdate, VersionSet, ApplySuggestedFix,
+                     FindingResponse, SkipTriage,
                      Heartbeat, Recall, RecallResolve, ExternalReportStatus)
 
 router = APIRouter(prefix="/api")
@@ -224,6 +225,35 @@ def post_apply_suggested_fix(sid: str, body: ApplySuggestedFix):
     """Apply one machine-verified suggested fix (from the latest Gate-2 report) to the
     identified _ZH field, then return the updated field + a fresh Gate-1 pass."""
     return sessions.apply_suggested_fix(sid, body.scene, body.field, body.option)
+
+
+# --- Gate-2 findings triage: the reviewer answers the AI before the admin sees the trip ---
+@router.get("/sessions/{sid}/findings", dependencies=_SCOPE)
+def get_findings(sid: str, user=Depends(auth.require_user)):
+    """Every triage item for this session + how many are unanswered. Reviewers act on
+    these; admins read them (a rejection note is written FOR the admin)."""
+    return sessions.findings(sid)
+
+
+@router.post("/sessions/{sid}/findings/{fid}/respond", dependencies=_EDIT)
+def post_respond_finding(sid: str, fid: int, body: FindingResponse,
+                         user=Depends(auth.require_user)):
+    # _EDIT (scope_sid_editable) is right: answering findings is part of reviewing, and a
+    # session holding open findings is in 'ai_review', which IS editable.
+    return sessions.respond_finding(sid, fid, user, body.action, body.note)
+
+
+@router.post("/sessions/{sid}/findings/skip", dependencies=_SCOPE)
+def post_skip_triage(sid: str, body: SkipTriage, admin=Depends(auth.require_admin)):
+    """ADMIN override: take the trip back from the reviewer without their triage (open
+    findings are marked deferred-to-admin). The escape hatch so the gate can't wedge."""
+    return sessions.skip_findings_triage(sid, admin, body.note)
+
+
+@router.get("/findings/inbox")
+def get_findings_inbox(user=Depends(auth.require_user)):
+    """Nav badge + queue: sessions waiting on THIS user's AI-review triage."""
+    return sessions.findings_inbox(user)
 
 
 # --- External (stage-4b web/VR) bug reports ---

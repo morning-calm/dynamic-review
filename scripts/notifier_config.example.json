@@ -5,5 +5,7 @@
   "from_email": "review-app@dynamiclanguages.org",
   "from_name": "Review App",
   "to_email": "dave@dynamiclanguages.org",
-  "to_name": "Dave"
+  "to_name": "Dave",
+  "app_url": "https://YOUR-TUNNEL-HOSTNAME",
+  "_comment2": "app_url (optional): public base URL of the app; used to deep-link a reviewer to their AI-review items. Omit to send the email without a link."
 }

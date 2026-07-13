@@ -110,6 +110,17 @@ def cmd_set_languages(args) -> None:
     print(f"'{args.username}' languages set to {langs}")
 
 
+def cmd_set_email(args) -> None:
+    """Set (or clear, with --email '') a user's email. Used by the activity notifier to
+    tell a reviewer their Gate-2 findings are waiting; no email = in-app badge only."""
+    _require_user(args.username)
+    email = (args.email or "").strip() or None
+    if email and ("@" not in email or " " in email):
+        sys.exit(f"error: '{email}' doesn't look like an email address")
+    db.execute("UPDATE users SET email=? WHERE username=?", (email, args.username))
+    print(f"'{args.username}' email {'set to ' + email if email else 'cleared'}")
+
+
 def cmd_set_role(args) -> None:
     _require_user(args.username)
     if args.role not in VALID_ROLES:
@@ -126,19 +137,19 @@ def cmd_deactivate(args) -> None:
 
 
 def cmd_list_users(_args) -> None:
-    rows = db.query("SELECT username,role,languages_json,active,created_at FROM users "
+    rows = db.query("SELECT username,role,languages_json,active,email,created_at FROM users "
                     "ORDER BY username")
     if not rows:
         print("(no users — run: py -3.12 manage.py seed)")
         return
-    print(f"{'username':<20} {'role':<9} {'active':<7} languages")
+    print(f"{'username':<20} {'role':<9} {'active':<7} {'email':<28} languages")
     for r in rows:
         try:
             langs = ", ".join(json.loads(r["languages_json"] or "[]"))
         except Exception:
             langs = r["languages_json"]
         print(f"{r['username']:<20} {r['role']:<9} "
-              f"{'yes' if r['active'] else 'NO':<7} {langs}")
+              f"{'yes' if r['active'] else 'NO':<7} {(r['email'] or '—'):<28} {langs}")
 
 
 def _seed_one(username: str, role: str, languages: list[str]) -> None:
@@ -199,6 +210,11 @@ def main() -> None:
     a = sub.add_parser("deactivate")
     a.add_argument("--username", required=True)
     a.set_defaults(func=cmd_deactivate)
+
+    a = sub.add_parser("set-email")
+    a.add_argument("--username", required=True)
+    a.add_argument("--email", required=True, help="'' to clear")
+    a.set_defaults(func=cmd_set_email)
 
     a = sub.add_parser("list-users")
     a.set_defaults(func=cmd_list_users)

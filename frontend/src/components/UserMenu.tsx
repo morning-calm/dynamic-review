@@ -10,6 +10,8 @@ const UserMenu = () => {
   const { user, logout } = useAuth();
   const [bugBadge, setBugBadge] = useState(0);
   const [recallBadge, setRecallBadge] = useState(0);
+  const [aiBadge, setAiBadge] = useState(0);
+  const [aiHref, setAiHref] = useState('/');
   const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
@@ -24,6 +26,31 @@ const UserMenu = () => {
         .catch(() => {});
     load();
     // Light polling so a new report / reply surfaces without a reload.
+    const t = setInterval(load, 60000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [user]);
+
+  // AI-review triage waiting on THIS user (a reviewer sees their own submissions; an admin
+  // sees every trip parked with a reviewer). Links straight into the trip when there's just
+  // one — that's the common case, and it saves hunting for it in the list.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    const load = () =>
+      api
+        .getFindingsInbox()
+        .then((inbox) => {
+          if (cancelled) return;
+          setAiBadge(inbox.count);
+          setAiHref(
+            inbox.sessions.length === 1 ? `/review/${inbox.sessions[0].session_id}` : '/',
+          );
+        })
+        .catch(() => {});
+    load();
     const t = setInterval(load, 60000);
     return () => {
       cancelled = true;
@@ -71,6 +98,8 @@ const UserMenu = () => {
         nativeLabel={nativeLabel}
         bugBadge={bugBadge}
         recallBadge={recallBadge}
+        aiBadge={aiBadge}
+        aiHref={aiHref}
       />
 
       <div className="hidden flex-wrap items-center justify-end gap-2 gap-y-1 text-xs sm:flex">
@@ -105,6 +134,18 @@ const UserMenu = () => {
           </>
         )}
       </div>
+      {aiBadge > 0 && (
+        <Link
+          to={aiHref}
+          className="relative rounded border border-purple-600 bg-purple-900/30 px-2 py-1 text-purple-100 hover:bg-purple-800/50"
+          title={`${aiBadge} AI-review item${aiBadge === 1 ? '' : 's'} waiting for your response`}
+        >
+          AI review
+          <span className="ml-1 rounded-full bg-purple-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+            {aiBadge}
+          </span>
+        </Link>
+      )}
       <Link
         to="/bugs"
         className="relative rounded border border-gray-600 px-2 py-1 text-gray-200 hover:bg-gray-700"
@@ -165,17 +206,21 @@ const MobileMenu = ({
   nativeLabel,
   bugBadge,
   recallBadge,
+  aiBadge,
+  aiHref,
 }: {
   user: AuthUser;
   logout: () => void;
   nativeLabel: string | null;
   bugBadge: number;
   recallBadge: number;
+  aiBadge: number;
+  aiHref: string;
 }) => {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
   // Unseen-activity dot on the closed ⋮ (the recall badge only counts for admins).
-  const totalBadge = bugBadge + (user.role === 'admin' ? recallBadge : 0);
+  const totalBadge = bugBadge + aiBadge + (user.role === 'admin' ? recallBadge : 0);
   const item = 'flex items-center justify-between gap-3 rounded px-3 py-2 text-left text-sm text-gray-200 hover:bg-gray-700';
   const badge = (n: number, cls: string) =>
     n > 0 ? <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${cls}`}>{n}</span> : null;
@@ -202,6 +247,12 @@ const MobileMenu = ({
             <div className="border-b border-gray-800 px-3 py-2 text-xs text-gray-400">
               {user.username} <span className="text-gray-600">·</span> {user.role}
             </div>
+            {aiBadge > 0 && (
+              <Link to={aiHref} className={item} onClick={close}>
+                <span>AI review</span>
+                {badge(aiBadge, 'bg-purple-600 text-white')}
+              </Link>
+            )}
             <Link to="/bugs" className={item} onClick={close}>
               <span>Bug reports</span>
               {badge(bugBadge, 'bg-rose-600 text-white')}

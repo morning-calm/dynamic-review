@@ -40,6 +40,7 @@ const STATUS_BADGE: Record<SessionStatus, { label: string; cls: string }> = {
   approving: { label: 'Approving…', cls: 'bg-blue-500' },
   approved: { label: 'Approved', cls: 'bg-emerald-700' },
   changes_requested: { label: 'Changes requested', cls: 'bg-amber-600' },
+  ai_review: { label: 'AI review — respond', cls: 'bg-purple-600' },
 };
 
 const StatusBadge = ({ trip }: { trip: TripListItem }) => {

@@ -130,3 +130,76 @@ New module `backend/app/auto_checks.py`, called from `submit()` (and exposed as
 Phase 1 `zh_sibling_check` + `partial_change_check` wired into submit (would have stopped
 today's entire incident class at the source), then the Phase 2 runner in shadow mode on the
 next Ted submission. Phase 3 only after dave has seen a few shadow reports he agrees with.
+
+---
+
+# Addendum — 2026-07-13: level checking moves to Gate 1; Gate 2 goes to the REVIEWER
+
+Two changes, both driven by an audit of Ted's six Mandarin scripts (Taichung / Taipei101 /
+KaohsiungLotusPond, HSK12 + HSK3). Full analysis: `docs/reviews/2026-07-13-ted-six-scripts-collated.md`.
+
+## A. "Above level" is now a lookup, not an opinion
+
+**What we found.** Gate 2's prompt asked Sonnet to judge vocabulary level. Across the six
+scripts it made **7 level judgments: 3 correct, 4 wrong** — and it *missed* 5 out-of-band
+words entirely, 4 of which it had explicitly cleared. Concretely, it flagged 离开 (**HSK2**)
+and 保持 (**HSK3**) as above-level, invented band numbers ("保持≈HSK5"), and cleared 旧 as
+"HSK2" when it is **HSK3** — out of band for an HSK12 trip. Meanwhile the content pipeline
+has shipped a real checker all along (`level_check.py`: jieba + `hsk_vocab.xlsx`).
+
+**What we did.**
+- New `backend/app/zh_level.py` — the pipeline's vocabulary rules, in the review app. Wired
+  into Gate 1 (`auto_checks._level_issue`) as a **warn, never a block**: an out-of-band word
+  is a legitimate i+1 authoring choice, it just has to be a *conscious* one.
+- It reports **only what the edit introduced** (diff of orig→cur out-of-band sets). The
+  approved draft's own i+1 words are not the reviewer's to answer for, and nagging about
+  them would be noise they can't act on.
+- **LEVEL was deleted from the Gate-2 prompt.** Don't put it back — the comment in
+  `claude_review.py` says why.
+
+**⚠️ Why we ship a JSON snapshot instead of importing `level_check.py`.** `*.xlsx` is
+**gitignored** in the dynamic-content repo, so `hsk_vocab.xlsx` exists ONLY on the machine
+that built it. The live laptop has the Scripts checkout but **not the xlsx** — an import
+would work on the workstation and silently fail in production (exactly the laptop-env failure
+class that stripped pinyin on 2026-07-08). So `scripts/export_hsk_vocab.py` snapshots the
+reference to `backend/app/data/hsk_vocab.json` (committed), and `zh_level` reads that +
+jieba (which the live venv does have). **Re-run the export whenever the HSK reference or
+hsk_config's proper-noun lists change.**
+
+`zh_level` mirrors `level_check.Checker` exactly — same POS content-word filter, proper-noun
+substring exemption, single-char rule, and **compound rescue** (an unlisted multi-char word
+is in band if every hanzi appears in some in-band word). Compound rescue is what passes 老旧,
+台风, 月台 — worth knowing, because it means the answer to "is 老旧 above HSK3?" is *"it is in
+band by the same rule the drafts were written to."* If that rule is ever judged too lenient,
+that's a pipeline-wide policy change, not a review-app one.
+
+## B. Gate 2's findings go back to the REVIEWER (no longer shadow-only)
+
+Shadow mode put the LLM's findings in front of the **admin**, which is the wrong person: the
+reviewer made the edit, speaks the language, and is the one who can answer. New workflow
+(dave, 2026-07-13):
+
+```
+submit ──► Gate 2 (cron) ──► any warning/needs_human?
+                              │
+                    no ───────┴──────► stays 'submitted' → admin approves (unchanged)
+                    yes ─► findings created, session CAS'd 'submitted' → 'ai_review'
+                           ├─ back in the REVIEWER's queue, EDITABLE again
+                           ├─ admin approve is blocked (approve() only claims 'submitted')
+                           └─ reviewer answers EVERY finding:
+                                 resolved — actioned it (often via "Apply suggested fix")
+                                 rejected — keeps their version; NOTE REQUIRED (admin reads it)
+                                 deferred — it's about the ENGLISH/source → the admin's call
+                           re-submit (blocked by 409 `findings_open` until all answered)
+                              └──► 'submitted' → admin sees each answer + note on /admin/{sid}
+```
+
+- **Escape hatch:** an admin can `POST /sessions/{sid}/findings/skip` ("take it back now") —
+  open findings are marked `deferred` to the admin and the session returns to `submitted`.
+  This is what guarantees the gate can never wedge a trip.
+- **Notification:** in-app badge (`GET /findings/inbox`) + an email to the submitting reviewer
+  (`activity_notifier.notify_reviewer_findings`, watermarked, sent immediately rather than
+  batched behind dave's 1/hour digest gate). A reviewer with no `users.email` is skipped
+  silently — set one with `backend/manage.py set-email`.
+- Still true: the LLM **never** writes text or touches staging. Suggested fixes go through the
+  same autosave path a human uses, and only if `hsk_lib` verified them.

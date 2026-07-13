@@ -105,7 +105,8 @@ const SceneCard = ({ scene, fields, sid, tripId, onFieldUpdate, readOnly = false
   } = useTextSelection(descLive, sceneDesc?.audio.working);
 
   return (
-    <section className="rounded-lg border border-gray-700 bg-gray-800/60 p-4 shadow-sm">
+    // id = the jump target for the AI-review panel's "Go to scene" links.
+    <section id={`scene-${scene.index}`} className="scroll-mt-24 rounded-lg border border-gray-700 bg-gray-800/60 p-4 shadow-sm">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <span className="rounded bg-gray-700 px-2 py-0.5 text-xs font-medium text-gray-200">Scene {scene.index}</span>
         {!scene.has_audio && <span className="text-xs text-gray-500">text-only (no audio)</span>}

@@ -8,6 +8,7 @@ import NavBar from '../components/NavBar';
 import SaveStatus from '../components/SaveStatus';
 import EditableField from '../components/EditableField';
 import FlagControl from '../components/FlagControl';
+import AutoReviewPanel from '../components/AutoReviewPanel';
 import SceneCard from '../components/SceneCard';
 import NarrationControls from '../components/NarrationControls';
 import ZhFieldBlock from '../components/ZhFieldBlock';
@@ -75,7 +76,16 @@ const ReviewBody = () => {
           navigate(`/admin/${sid}`);
         }
       })
-      .catch((e: unknown) => toast.error(`Submit failed: ${e instanceof ApiError ? e.detail : 'network error'}`))
+      .catch((e: unknown) => {
+        // The AI-review gate: don't bury this in a generic failure toast — the reviewer
+        // has unanswered findings and the panel to answer them is right up the page.
+        if (e instanceof ApiError && e.code === 'findings_open') {
+          toast.warn('Answer the AI review items at the top of the page before submitting.');
+          document.getElementById('ai-review-panel')?.scrollIntoView({ behavior: 'smooth' });
+          return;
+        }
+        toast.error(`Submit failed: ${e instanceof ApiError ? e.detail : 'network error'}`);
+      })
       .finally(() => setSubmitting(false));
   }, [allDone, remaining, sid, navigate]);
 
@@ -216,6 +226,20 @@ const ReviewBody = () => {
             <p className="mt-1 text-amber-300/80">Make the changes below, then submit for review again.</p>
           </div>
         )}
+
+        {session.status === 'ai_review' && (
+          <div className="rounded border border-purple-700 bg-purple-900/20 p-3 text-sm text-purple-200">
+            <p className="font-medium">The automated reviewer has questions about your edits.</p>
+            <p className="mt-1 text-purple-300/80">
+              It’s back with you (not the admin) until you answer each one below. Submit again when
+              they’re all answered.
+            </p>
+          </div>
+        )}
+
+        {/* Gate-2 triage — the reviewer answers the AI before the trip returns to the admin.
+            Renders nothing when the session has no findings. */}
+        <AutoReviewPanel session={session} onApplied={reload} />
 
         {(session.status === 'submitted' || session.status === 'approving') && (
           <div className="rounded border border-blue-700 bg-blue-900/30 p-3 text-sm text-blue-200">

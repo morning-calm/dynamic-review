@@ -8,9 +8,16 @@ the Changes-summary page (and gets a one-line verdict in the notifier email) and
 approves manually.
 
 What Claude is asked to judge (per changed field): meaning equivalence across the scripts
-and the English translation, grammar/naturalness, level-appropriateness (HSK band from the
-trip id), and Q&A logic. Deterministic script-consistency is Gate 1's job
-(backend/app/auto_checks.py) and runs at submit — this pass is judgment only.
+and the English translation, grammar/naturalness, and Q&A logic. Deterministic
+script-consistency AND vocabulary level are Gate 1's job (backend/app/auto_checks.py +
+zh_level.py) and run at submit — this pass is judgment only. (LEVEL was removed from the
+prompt on 2026-07-13: on a six-script audit the model's level calls were wrong as often as
+right, while the pipeline's own HSK wordlist gets it exactly right. Don't add it back.)
+
+NO LONGER SHADOW-ONLY: every 'warning'/'needs_human' verdict becomes a triage item the
+SUBMITTING REVIEWER must answer (resolve / reject-with-reason / defer-to-admin), and the
+session bounces from 'submitted' back to 'ai_review' until they do — see
+backend/app/auto_review_ingest.py. Reports still never edit text or touch staging.
 
 Suggested fixes for _ZH fields are POST-VERIFIED with hsk_lib (to_simplified(Hant)==Hans,
 zhuyin_to_pinyin full-confirm) and carry verified:true/false — an unverified suggestion is
@@ -37,6 +44,9 @@ import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO / "backend"))
+from app import auto_review_ingest  # noqa: E402  (shared with the API — see its docstring)
+
 DB_PATH = REPO / "backend" / "review.db"
 STATE_PATH = REPO / "backend" / "autoreview_state.json"
 CLAUDE_BIN = os.environ.get("CLAUDE_BIN", "claude")
@@ -110,10 +120,14 @@ been machine-checked — do not re-check mechanics. Judge:
    says "wind".
 2. LANGUAGE QUALITY: is the edited text natural, grammatical, correctly punctuated for its
    language? (zh trips: Simplified is the spoken/display line.)
-3. LEVEL: trip level is {level}. Flag vocabulary or grammar clearly above the level
-   (HSK12 = HSK 1-2 words; HSK3 = HSK 1-3; A12/B1/B2 = CEFR).
-4. Q&A LOGIC: for questionKey/questionOption fields, is the question still answerable from
+3. Q&A LOGIC: for questionKey/questionOption fields, is the question still answerable from
    the scene description, and is the phrasing consistent with its options?
+
+DO NOT judge VOCABULARY LEVEL (whether a word is above the trip's HSK/CEFR band). That is
+now a deterministic lookup against the real HSK wordlist in Gate 1 (backend/app/zh_level.py),
+and your guesses at it were wrong as often as they were right (2026-07-13: you flagged 离开
+(HSK2) and 保持 (HSK3) as above-level, invented band numbers, and cleared 旧 as "HSK2" when
+it is HSK3). Say nothing about level; the machine has it.
 
 Verdicts per field: "ok" (publishable as-is), "warning" (works, but a human should glance),
 "needs_human" (do not publish without a human decision).
@@ -138,7 +152,7 @@ def _looks_like_limit(*texts: str) -> bool:
 
 
 def call_claude(diff: dict) -> dict:
-    prompt = PROMPT.format(level=diff["level"], diff=json.dumps(diff, ensure_ascii=False, indent=1))
+    prompt = PROMPT.format(diff=json.dumps(diff, ensure_ascii=False, indent=1))
     proc = subprocess.run(
         [CLAUDE_BIN, "-p", prompt, "--output-format", "json", "--model", MODEL],
         capture_output=True, text=True, timeout=TIMEOUT_S)
@@ -230,6 +244,8 @@ def ensure_table(con):
         flag_count INTEGER NOT NULL DEFAULT 0, report_json TEXT NOT NULL DEFAULT '{}')""")
     con.execute("CREATE INDEX IF NOT EXISTS ix_autoreviews_session "
                 "ON auto_reviews(session_id, created_at)")
+    # The runner can reach a DB whose backend hasn't restarted onto the new schema yet.
+    con.executescript(auto_review_ingest.FINDINGS_DDL)
 
 
 def main() -> None:
@@ -297,12 +313,19 @@ def main() -> None:
         if args.dry_run:
             print(json.dumps(report, ensure_ascii=False, indent=1))
             continue
-        con.execute(
+        cur = con.execute(
             "INSERT INTO auto_reviews(session_id, trip_id, created_at, model, status, "
             "ok_count, warn_count, flag_count, report_json) VALUES(?,?,?,?,?,?,?,?,?)",
             (sid, trip_id, time.time(), MODEL, status, ok_n, warn_n, flag_n,
              json.dumps(report, ensure_ascii=False)))
         con.commit()
+        # Turn the non-clean verdicts into triage items for the SUBMITTING REVIEWER and
+        # bounce the session back to them ('submitted' -> 'ai_review'). A clean report (or
+        # an errored one, which has no fields) creates nothing and leaves it for the admin.
+        n = auto_review_ingest.ingest(con, sid, trip_id, cur.lastrowid, report)
+        if n:
+            print(f"[auto-review] {trip_id}: {n} finding(s) sent back to the reviewer "
+                  f"— session is now 'ai_review'.")
     con.close()
 
 

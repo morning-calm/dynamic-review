@@ -7,9 +7,12 @@ import {
   ApiError,
   isEditableStatus,
   type ApproveResponse,
+  type AutoReviewField,
   type AutoReviewReport,
   type ExternalReport,
   type Field,
+  type Finding,
+  type FindingStatus,
   type Session,
   type SubmitResponse,
 } from '../api';
@@ -129,6 +132,10 @@ const ChangesSummaryPage = () => {
   const [sendBackNote, setSendBackNote] = useState('');
   const [sendingBack, setSendingBack] = useState(false);
   const [autoReview, setAutoReview] = useState<AutoReviewReport | null>(null);
+  // The reviewer's answers to the Gate-2 findings — shown against each report item so the
+  // admin sees what was actioned, what was rejected (and why), and what was handed to them.
+  const [findings, setFindings] = useState<Finding[]>([]);
+  const [skippingTriage, setSkippingTriage] = useState(false);
   // Report-field keys whose suggested fix has been applied this visit (disables the button).
   const [appliedFixes, setAppliedFixes] = useState<Set<string>>(new Set());
   const [applyingFix, setApplyingFix] = useState<string | null>(null);
@@ -152,10 +159,35 @@ const ChangesSummaryPage = () => {
       .getAutoReview(sid)
       .then((r) => !cancelled && setAutoReview(r.report))
       .catch(() => undefined);
+    api
+      .getFindings(sid)
+      .then((f) => !cancelled && setFindings(f.findings))
+      .catch(() => undefined);
     return () => {
       cancelled = true;
     };
   }, [sid]);
+
+  /** The reviewer's answer for one report field, keyed the way the report identifies it. */
+  const findingFor = (f: AutoReviewField): Finding | undefined =>
+    findings.find(
+      (x) => x.scene === f.scene && x.field === f.field && (x.option ?? null) === (f.option ?? null),
+    );
+
+  const openFindings = findings.filter((f) => f.status === 'open').length;
+
+  const takeBackFromReviewer = async () => {
+    setSkippingTriage(true);
+    try {
+      const p = await api.skipFindingsTriage(sid);
+      setFindings(p.findings);
+      await load();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.detail || e.code : 'Could not take the trip back');
+    } finally {
+      setSkippingTriage(false);
+    }
+  };
 
   const onUpdate = (f: Field) => setSession((s) => (s ? replaceField(s, f) : s));
 
@@ -356,6 +388,31 @@ const ChangesSummaryPage = () => {
       />
 
       <main className="mx-auto max-w-review space-y-6 px-4 py-6">
+        {/* The AI-review gate: the trip went BACK to the reviewer to answer the findings, so
+            it isn't approvable yet. The override exists so this can never wedge a trip. */}
+        {session.status === 'ai_review' && (
+          <div className="rounded border border-purple-700 bg-purple-900/20 p-3 text-sm text-purple-200">
+            <p className="font-medium">
+              With the reviewer — {openFindings} AI-review item{openFindings === 1 ? '' : 's'} still to
+              answer.
+            </p>
+            <p className="mt-1 text-purple-300/80">
+              It comes back to you once {session.submitted_by || 'the reviewer'} has responded to each
+              one. Approve is disabled until then.
+            </p>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={takeBackFromReviewer}
+                disabled={skippingTriage}
+                className="mt-2 rounded border border-purple-600 px-2 py-1 text-xs text-purple-100 hover:bg-purple-800/40 disabled:opacity-50"
+              >
+                {skippingTriage ? 'Taking back…' : 'Take it back now (unanswered items come to me)'}
+              </button>
+            )}
+          </div>
+        )}
+
         {session.status === 'changes_requested' && (
           <div className="rounded border border-amber-700 bg-amber-900/20 p-3 text-sm text-amber-200">
             <p className="font-medium">Changes requested by the admin.</p>
@@ -426,6 +483,32 @@ const ChangesSummaryPage = () => {
                         {r}
                       </p>
                     ))}
+                    {(() => {
+                      // What the reviewer did about it. `deferred` is the one that needs the
+                      // admin to act — it means "this is about the English, it's your call".
+                      const fd = findingFor(f);
+                      if (!fd) return null;
+                      const chips: Record<FindingStatus, { label: string; cls: string }> = {
+                        open: { label: 'Awaiting the reviewer', cls: 'bg-purple-700' },
+                        resolved: { label: '✓ Reviewer actioned this', cls: 'bg-emerald-700' },
+                        rejected: { label: '✗ Reviewer kept their version', cls: 'bg-gray-600' },
+                        deferred: { label: '→ Handed to you (English)', cls: 'bg-blue-700' },
+                      };
+                      const chip = chips[fd.status];
+                      return (
+                        <div className="mt-1.5">
+                          <span className={`rounded px-2 py-0.5 text-xs text-white ${chip.cls}`}>
+                            {chip.label}
+                            {fd.responded_by ? ` — ${fd.responded_by}` : ''}
+                          </span>
+                          {fd.note && (
+                            <p className="mt-1 whitespace-pre-wrap rounded bg-gray-900/60 p-2 text-gray-300">
+                              {fd.note}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })()}
                     {f.suggested_fix && (
                       <div className="mt-1 rounded bg-gray-900/60 p-2 text-gray-300">
                         <p className="mb-0.5 font-medium text-gray-400">

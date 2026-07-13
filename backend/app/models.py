@@ -131,6 +131,19 @@ class ApplySuggestedFix(BaseModel):
     option: Optional[int] = None
 
 
+class FindingResponse(BaseModel):
+    """The reviewer's answer to ONE Gate-2 finding (auto_review_ingest.RESPONSES):
+    resolved = actioned it · rejected = kept their version (note REQUIRED, the admin reads
+    it) · deferred = it's about the English/source, so it's the admin's call."""
+    action: Literal["resolved", "rejected", "deferred"]
+    note: str = ""
+
+
+class SkipTriage(BaseModel):
+    """ADMIN override: reclaim an 'ai_review' trip without waiting for the reviewer."""
+    note: str = ""
+
+
 class VersionSet(BaseModel):
     """Set the trip's preferred ElevenLabs A/B version (per-session). ``null`` clears
     the pick and returns the session to the V2/V3 side-by-side audition (audio edit

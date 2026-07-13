@@ -198,6 +198,38 @@ audio/text snapshot + reply thread) · `routes_sessions.py` / `routes_audio.py` 
 guide-native` — markdown rendered live per request, cookie-auth, guide picked by role/language;
 editing the guide .md files updates the app with no rebuild).
 
+## Auto-review (two gates) — `docs/auto-review-proposal.md`
+- **Gate 1 (deterministic, in `sessions.validate`)** — `auto_checks.py`: zh script-consistency
+  (Hant↔Hans, zhuyin alignment via `hsk_lib`), stale-sibling, format. Hard at APPROVE, demoted
+  to warnings at SUBMIT. **Plus the HSK level check** (`zh_level.py`, added 2026-07-13): flags
+  vocabulary the edit **introduced** that's above the trip's band (diffed orig→cur, so the
+  draft's own i+1 words aren't the reviewer's problem). **WARN, never blocks.**
+  - ⚠️ `zh_level` MIRRORS the pipeline's `Scripts\…\HSK Mandarin\stages\level_check.py` (POS
+    filter, proper-noun substring rule, single-char rule, **compound rescue**) but does NOT
+    import it: `*.xlsx` is **gitignored** in dynamic-content, so `hsk_vocab.xlsx` exists only on
+    the workstation — importing it would work here and silently fail on the live laptop. It reads
+    the committed snapshot `backend/app/data/hsk_vocab.json` (regenerate with
+    `py -3.12 scripts/export_hsk_vocab.py` whenever the HSK reference or hsk_config's proper
+    nouns change) + jieba. Degrades to silence if jieba/snapshot/band are missing.
+  - Compound rescue = an unlisted multi-char word is IN band if every hanzi appears in some
+    in-band word. That's what passes 老旧/台风/月台. "Is 老旧 above HSK3?" → *in band by the same
+    rule the drafts were written to.* Changing that is a pipeline-wide policy call.
+- **Gate 2 (LLM judgment, cron `scripts/claude_review.py` → `auto_reviews`)** — Sonnet judges
+  MEANING equivalence, language quality, Q&A logic. **NOT level** — that item was deleted
+  2026-07-13 after an audit found its level calls wrong as often as right (it flagged 离开=HSK2
+  and 保持=HSK3 as "above level", invented bands, and cleared 旧 as "HSK2" when it's HSK3).
+  **Don't add it back.** Suggested zh fixes are `hsk_lib`-verified; nothing is ever auto-applied.
+- **Findings go to the REVIEWER, not the admin** (`auto_review_ingest.py`, status `ai_review`):
+  every warning/needs_human becomes a triage item; the session CAS's `submitted`→`ai_review`
+  (back with the reviewer, editable; approve blocked since it only claims from `submitted`).
+  The reviewer answers each — **resolved** (actioned) / **rejected** (keeps their version, note
+  REQUIRED — the admin reads it instead of the change) / **deferred** (it's about the ENGLISH →
+  the admin's call) — then re-submits (409 `findings_open` until all answered). The admin sees
+  every answer + note on the Changes page, and can **"take it back now"**
+  (`POST /sessions/{sid}/findings/skip`, open items → deferred) — the escape hatch that stops
+  the gate ever wedging a trip. Reviewer is told by nav badge + email
+  (`activity_notifier.notify_reviewer_findings`; needs `users.email` — `manage.py set-email`).
+
 ## Bug reports
 Reviewers/admins flag a problem on any audio field from its control row, in any language (the
 "Report a problem" button). The report snapshots the field's text + working/candidate audio into

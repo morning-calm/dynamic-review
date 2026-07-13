@@ -20,7 +20,7 @@ import json
 import re
 import unicodedata
 
-from . import config
+from . import config, zh_level
 
 # Paired punctuation that must balance inside one field's text.
 _PAIRS = [("（", "）"), ("(", ")"), ("「", "」"), ("『", "』"), ("《", "》"),
@@ -166,13 +166,42 @@ def _zh_field_issues(f, loc: dict, hsk) -> list[dict]:
     return issues
 
 
-def run_checks(frows, is_zh: bool) -> tuple[list[dict], list[dict]]:
+def _level_issue(f, loc: dict, lchk) -> dict | None:
+    """WARN if this edit introduced vocabulary above the trip's HSK band (zh_level).
+
+    Never blocks: an out-of-band word is a legitimate i+1 choice, it just has to be a
+    conscious one. Diffed against the ORIGINAL text so the reviewer is only asked about
+    words their own edit added, not ones the approved draft already carried.
+    """
+    cur, orig = loc.get("cur") or {}, loc.get("orig") or {}
+    hans, orig_hans = cur.get("Hans") or "", orig.get("Hans") or ""
+    if not hans or hans == orig_hans:
+        return None
+    try:
+        new_out = zh_level.introduced_out_of_band(orig_hans, hans, lchk)
+    except Exception:  # noqa: BLE001 — a level check must never break a submit
+        return None
+    if not new_out:
+        return None
+    words = "、".join(f"{w} ({lvl})" if lvl != "not-in-list" else w
+                      for w, lvl in new_out.items())
+    return {"scene_index": f["scene_index"], "field_path": _fmt_field(f),
+            "issue": f"this edit introduces {words} — above {zh_level.band_label(lchk.band)} "
+                     "for this trip. Keep it only if the word is worth teaching here; "
+                     "otherwise use a simpler one",
+            "severity": "warn"}
+
+
+def run_checks(frows, is_zh: bool, trip_id: str = "") -> tuple[list[dict], list[dict]]:
     """Gate-1 deterministic checks over a session's field rows.
     Returns (hard, soft) in validate()'s issue shape."""
     hard: list[dict] = []
     soft: list[dict] = []
     hsk = _hsk() if is_zh else None
     hsk_warned = False
+    # None when the trip has no HSK band, or jieba/the vocab snapshot is unavailable
+    # (e.g. a host without the reference) — the level check then simply stays silent.
+    lchk = zh_level.checker_for(trip_id) if is_zh else None
 
     for f in frows:
         loc_raw = _srow_get(f, "localization_json")
@@ -188,6 +217,10 @@ def run_checks(frows, is_zh: bool) -> tuple[list[dict], list[dict]]:
                 hsk_warned = True
             for issue in _zh_field_issues(f, loc, hsk):
                 (hard if issue["severity"] == "block" else soft).append(issue)
+            if lchk is not None:
+                lvl_issue = _level_issue(f, loc, lchk)
+                if lvl_issue:
+                    soft.append(lvl_issue)
             continue
 
         # ---- non-ZH: target text vs its editable English sibling ----
