@@ -10,6 +10,45 @@ code changes need a `systemctl restart review-app.service` in an idle window, FE
 
 ---
 
+## P0 — Waiting on dave (added 2026-07-13)
+
+### 0a. Ted's 8 open bug reports: ElevenLabs voices 2nd tone as 3rd tone
+**What:** reports #7–#14, filed 2026-07-09, ALL still `open`, zero replies. Same defect each
+time: 楼 / 球 / 人 / 城市 — rising-tone syllables rendered as dipping tone. Some say the whole word
+"can't generate".
+**Why it matters:** it is BLOCKING Ted on `Taipei101_HSK12_ZH` (sess_67d43aae2c03) — he has 6
+`edit_required` flags on it and has never submitted it. Biggest single item in the 07-13 audit,
+and nothing in the auto-review work touches it: this is a **voice/model** problem, not a review
+one. Check the trip's voice matches the master's gender/registry entry (`annasu` is female;
+`yu`/`jason` male) before assuming it's a V3 synthesis defect.
+
+### 0b. The 3 already-submitted trips will NOT bounce to Ted on their own
+**What:** `Taipei101_HSK3_ZH` (sess_db4ac31ff3ff), `Taichung_HSK3_ZH` (sess_0ef71bcd3373),
+`KaohsiungLotusPond_HSK12_ZH` (sess_4243b6da1f26) already have Gate-2 reports, so
+`claude_review.pending_sessions` won't re-review them and **no findings rows exist** — they sit in
+dave's approve queue exactly as before, and Ted never sees the AI's comments.
+**To do it:** force a re-review per session — `python scripts/claude_review.py --sid <sid>` on the
+laptop — which ingests findings and bounces each to `ai_review` (out of dave's queue until Ted
+answers). The re-review runs against the NEW prompt, so the level noise (the ten 老旧 warnings on
+Taichung_HSK3) is gone, replaced by the deterministic check.
+**Blocked on:** dave's call — it moves live trips out of his approve queue.
+
+### 0c. Nobody has an email address set
+**What:** `users.email` shipped 2026-07-13 and is empty for every user, so the reviewer-findings
+email silently no-ops (in-app badge still works).
+**To do it:** `py -3.12 backend/manage.py set-email --username ted --email <addr>` on the laptop.
+Needs the address from dave. Also add `app_url: https://review.dynamiclanguages.org` to
+`scripts/notifier_config.json` so the email deep-links to the trip.
+
+### 0d. Two design questions dave deferred
+- Should a carried-forward `rejected` answer survive a **verdict change** (warning→needs_human
+  currently RE-OPENS it)? Chosen behaviour: re-open. Change in `auto_review_ingest.ingest()` (the
+  carry key includes `verdict`).
+- Is **compound rescue** too lenient at HSK3 (it's what passes 老旧)? Changing it is a
+  pipeline-wide policy call affecting the drafts too, not just review.
+
+---
+
 ## P1 — Do next (high value, self-contained, no product decision)
 
 ### 1. "Apply suggested fix" button on the Auto-review panel

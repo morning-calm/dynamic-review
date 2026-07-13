@@ -90,8 +90,25 @@ out-of-band). We must NOT mutate jieba's process-global tokenizer in a long-live
 answer, no global state. Verified: 太阳饼/宫原眼科/彩虹眷村 now exempt, 铁轨 still flagged, and
 Ted's 59-field results are unchanged.
 
+### Deployed (2026-07-13, commit 2167ba6 — LIVE on the laptop)
+DB backed up to R2 first (`review-20260713-101925.db`), then: pull → `npm run build` (bundle hash
+`index-DI8LFKa_.js`, identical to the local build) → `systemctl restart review-app.service`.
+Verified ON THE LAPTOP (the cross-host risk was the whole point):
+- `zh_level.checker_for('Taichung_HSK12_ZH')` → **OK**, 3397 surfaces; 旧→out(HSK3), 离开→in(HSK2),
+  铁轨→out; proper-noun mask works (太阳饼 → no flag); non-HSK trip → None. The committed snapshot +
+  the venv's jieba resolve correctly with no xlsx present.
+- Migrations ran on restart: `users.email` present, `auto_review_findings` created (0 rows).
+- `scripts/claude_review.py` and `activity_notifier.py --dry-run` both run clean on the new code
+  (the shared-ingest import resolves; the findings watermark seeded without blasting history).
+- Public: `https://review.dynamiclanguages.org` HTTP 200 serving the new bundle; the new
+  `/api/findings/inbox` is auth-gated (401 unauth). uvicorn + cloudflared both active.
+
 ### Open / TODO
-- **NOT DEPLOYED.** Nothing pushed to the laptop; awaiting dave's go.
+- ⚠️ **The 3 already-submitted trips will NOT bounce to Ted on their own.** Taipei101_HSK3_ZH,
+  Taichung_HSK3_ZH and KaohsiungLotusPond_HSK12_ZH already have Gate-2 reports, so
+  `pending_sessions` won't re-review them and no findings rows exist for them. To put them through
+  the new triage loop, force a re-review per session (`claude_review.py --sid <sid>`), which
+  bounces them to `ai_review`. **Awaiting dave's call** — it moves live trips out of his queue.
 - **Nobody has an email set** (`users.email` is a new column) — until `manage.py set-email
   --username ted --email …`, Ted gets the in-app badge only.
 - **Ted's 8 open bug reports (2nd→3rd tone TTS) are still unanswered.** Biggest item in the batch;
