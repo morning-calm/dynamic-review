@@ -628,11 +628,16 @@ _BEGINNER_TAIL_SECONDS = 3.0
 _DEFAULT_TAIL_SECONDS = 0.4   # small natural tail kept on all other levels
 
 
-def _target_tail_seconds(trip_id: str) -> float:
-    """Required trailing silence for a trip: 3s on beginner levels (A1-2 / N5 / HSK1-2),
-    otherwise a small 0.4s tail (excess beyond that is trimmed)."""
+def _target_tail_seconds(trip_id: str, field_path: str | None = None) -> float:
+    """Required trailing silence for a clip: the long beginner pause (3s on A1-2 / N5 /
+    HSK1-2) applies ONLY to the NARRATION (SceneDesc) — it's the learner-absorption beat
+    after the scene's description. Questions, question options and titles are short,
+    self-contained prompts; a 3s tail on them is just dead air (dave, 2026-07-15). So any
+    non-SceneDesc field, and every non-beginner level, gets the small 0.4s natural tail."""
     lvl, _ = _level_family(trip_id)
-    return _BEGINNER_TAIL_SECONDS if lvl in _BEGINNER_LEVELS else _DEFAULT_TAIL_SECONDS
+    if field_path == "SceneDesc" and lvl in _BEGINNER_LEVELS:
+        return _BEGINNER_TAIL_SECONDS
+    return _DEFAULT_TAIL_SECONDS
 
 
 def _list_trips_from_scan() -> list[dict]:
@@ -2060,11 +2065,11 @@ def combine(sid: str, fid: int) -> dict:
                                          "detail": "regenerate first"})
     meta = json.loads(frow["splice_meta_json"] or "{}")
     dirs = work_dirs(sid)
-    # Every combined take ends on the trip's required trailing pause: beginner trips
-    # (A1-2 / N5 / HSK1-2) keep 3s, other levels a small 0.4s. A whole TTS candidate
-    # lacks the beginner tail and a segment splice can disturb it, so normalize here
-    # rather than relying on what the candidate happens to carry.
-    tail_target = _target_tail_seconds(srow["trip_id"])
+    # Every combined take ends on the trip's required trailing pause: the 3s beginner
+    # pause is for the NARRATION only (SceneDesc); questions/options/titles keep a small
+    # 0.4s. A whole TTS candidate lacks the beginner tail and a segment splice can disturb
+    # it, so normalize here rather than relying on what the candidate happens to carry.
+    tail_target = _target_tail_seconds(srow["trip_id"], frow["field_path"])
 
     if meta.get("mode") == "whole":
         # whole-block / Q&A: replace working with the candidate take.
@@ -2514,7 +2519,7 @@ def trim_silence(sid: str, fid: int) -> dict:
     dirs = work_dirs(sid)
     base = audio_io.mp3_to_samples(dirs["working"] / frow["mp3_name"])
     sr = audio_io.SR
-    target = _target_tail_seconds(srow["trip_id"])
+    target = _target_tail_seconds(srow["trip_id"], frow["field_path"])
     new = audio_io.set_trailing_silence(base, sr, target)
     if abs(len(new) - len(base)) < int(0.02 * sr):       # <20 ms change → no-op
         return serialize_field(sid, frow)
@@ -4098,9 +4103,27 @@ def complete_trip(user, trip_id: str, note: str = "") -> dict:
 
 
 def uncomplete_trip(user, trip_id: str) -> dict:
-    """ADMIN un-complete: delete the completed_trips row so the trip returns to the main
-    list and becomes openable again. Idempotent (no-op if not completed)."""
+    """ADMIN un-complete: return the trip to the main list AND reopen its approved session
+    for editing. Idempotent (no-op if not completed).
+
+    Why reopen (dave, 2026-07-15): `approved` is the only terminal status, so a fresh open
+    re-seeds a BLANK session from the promoted masters — which, being newest, then shadows
+    the real approved session in the trip list, so the trip looks unreviewed and its edit
+    history is hidden. Flipping the backing session to `changes_requested` (an
+    EDITABLE_STATUS) means the next open RESUMES it — edits, diffs and flags intact —
+    instead of seeding that blank shadow. A manual-only completion (session_id NULL) just
+    drops the row. This is the same shadow-session shape statuses.py was created to kill."""
+    row = db.query_one(
+        "SELECT session_id FROM completed_trips WHERE trip_id=?", (trip_id,))
     db.execute("DELETE FROM completed_trips WHERE trip_id=?", (trip_id,))
+    sid = row["session_id"] if row else None
+    if sid:
+        # Only an `approved` session is reopened here — a manual completion may point at a
+        # still-live session we must not disturb. Guarded on status in the UPDATE itself.
+        db.execute(
+            "UPDATE sessions SET status='changes_requested', "
+            "review_note='Un-completed by admin — reopened for further edits.', "
+            "updated_at=? WHERE id=? AND status='approved'", (time.time(), sid))
     export_completed_trips()   # Stage-9 handshake file (best-effort; row removed)
     return {"ok": True}
 

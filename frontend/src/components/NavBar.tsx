@@ -27,6 +27,18 @@ const NavBar = ({ title, subtitle, right, backTo = '/', backLabel = 'Trips' }: N
       </div>
       <div className="flex w-full flex-wrap items-center justify-end gap-3 sm:w-auto">
         {right}
+        {/* Always-present jump to the trip list (home). The ← back link can point
+            elsewhere (e.g. the structure editor backs to /staging) or read as a subtle
+            breadcrumb, so this is the explicit one-click Home. Hidden only on the trip
+            list itself, which signals "I am home" with backTo={null}. */}
+        {backTo !== null && (
+          <Link
+            to="/"
+            className="rounded border border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-200 hover:bg-gray-700"
+          >
+            🗂 Task list
+          </Link>
+        )}
         <UserMenu />
       </div>
     </div>
