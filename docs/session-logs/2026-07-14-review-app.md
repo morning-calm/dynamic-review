@@ -138,3 +138,45 @@ LAPTOP's live db — NOT the stale workstation copy).
   serve the 15 MB master until re-encoded into `Static-Images-4k-mono`. `upload_review_
   images_r2.py --audit-4k` lists them.
 - Deferred red-team nits (see Verified) — none blocking.
+
+---
+
+## Follow-up round (later same session, into 2026-07-15) — 3 more items
+
+Deployed on `a15aac5` (live on the laptop).
+
+### Nav "Task list" button
+`NavBar` now renders an always-present "🗂 Task list" home button in the right cluster
+(hidden only on the trip list itself via `backTo={null}`). The `←` back link stays but
+can point elsewhere (structure editor → `/staging`), so this is the explicit one-click
+home on every page.
+
+### Q&A 3-second gap (SceneDesc-only tail)
+`_target_tail_seconds(trip_id, field_path)` is now field-aware: the 3s beginner pause
+(A1-2/N5/HSK1-2) applies ONLY to `SceneDesc`. Questions/options/titles keep the small
+0.4s tail at every level. Confirmed the PIPELINE only pads narration
+(`AddSilenceToLowLevelNarration`, `SCENE_RE = ^\d+\.mp3$`) — the Q&A gap came entirely
+from the review app's `combine`/`trim_silence`. Existing Q&A takes self-correct on
+re-combine or "Trim end silence" (now 0.4s for them). Wired at both call sites (combine +
+trim_silence).
+
+### Un-complete reopens the approved session (shadow-session bug)
+**Symptom (dave):** un-completed Blaenavon_A12_EN → the trip list showed it as if never
+reviewed. **Cause:** `approved` is the only terminal status, so opening an un-completed
+trip re-seeded a BLANK session from the promoted masters (`sess_f62…`, all 22 versions =
+seed-time v0), which shadowed the real approved `sess_3cb…` (newest-by-created_at wins in
+`create_or_resume`). Same shadow shape statuses.py exists to kill. **Fix:**
+`uncomplete_trip` reads the completed row's `session_id` before deleting it and flips that
+approved session → `changes_requested` (EDITABLE), so the next open RESUMES it with edits
+intact instead of re-seeding a blank. Manual completions (session_id NULL) just drop the
+row.
+- **One-time laptop cleanup (user-authorised, backup-first):** backed up review.db to R2
+  (`_db-backups/review-20260714-234358.db` + `review-latest.db`), then a guarded txn (asserts
+  both session identities + blank has zero non-seed versions before touching anything)
+  deleted the blank `sess_f62…` + its work dir and flipped `sess_3cb…` →
+  `changes_requested`. Blaenavon now has ONE session showing its real review.
+
+### Note / possible follow-up
+Other trips un-completed BEFORE this fix could carry the same blank-shadow. The code fix
+prevents new ones; a sweep for existing blank-shadow sessions (a newer zero-edit in_review
+session in front of an approved one) was NOT done — raise if wanted.
