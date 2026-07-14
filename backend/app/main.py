@@ -24,7 +24,8 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from . import auth, db, routes_admin, routes_audio, routes_bugs, routes_help, routes_sessions
+from . import (auth, db, review_audio, routes_admin, routes_audio, routes_bugs,
+               routes_help, routes_sessions)
 from .config import CORS_ORIGINS, FRONTEND_DIST, HOST, PORT, SERVE_FRONTEND
 
 app = FastAPI(title="review-app backend", version="1.0",
@@ -88,6 +89,15 @@ async def unhandled(_: Request, exc: Exception):
 @app.on_event("startup")
 def _startup():
     db.init()
+
+
+@app.on_event("shutdown")
+def _shutdown():
+    # Drain the background R2 mirror queue. On a masters-less host the canonical
+    # review-audio key is the only durable home a reviewer's CORRECTED take has, so a
+    # `systemctl restart` landing between a combine and its queued upload must not
+    # strand it. Corrections are the expensive artefact; masters can be regenerated.
+    review_audio.shutdown()
 
 
 @app.get("/api/health")

@@ -4,7 +4,7 @@ import Modal from 'react-modal';
 import { toast } from 'react-toastify';
 import { api, ApiError, type SessionStatus, type TripListItem } from '../api';
 import { useAuth } from '../authContext';
-import UserMenu from '../components/UserMenu';
+import NavBar from '../components/NavBar';
 import PresenceBadge from '../components/PresenceBadge';
 import { usePresence } from '../usePresence';
 
@@ -185,15 +185,16 @@ const TripListPage = () => {
   ];
 
   return (
-    <div className="mx-auto max-w-review px-4 py-8">
-      <div className="mb-1 flex items-start justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-white">Trip review</h1>
-        <UserMenu />
-      </div>
-      <p className="mb-4 text-sm text-gray-400">
-        Trips in Trello lanes 6 (translator review) &amp; 7 (KP confirm), grouped by place. Open a reviewable
-        variant to correct.
-      </p>
+    // The trip list used to hand-roll its own heading + UserMenu, so it was the one page
+    // whose top bar scrolled away. It now uses the same sticky <NavBar> as everywhere
+    // else (no back link — this IS the back link's destination).
+    <>
+      <NavBar title="Trip review" backTo={null} />
+      <div className="mx-auto max-w-review px-4 py-8">
+        <p className="mb-4 text-sm text-gray-400">
+          Trips in Trello lanes 6 (translator review) &amp; 7 (KP confirm), grouped by place. Open a reviewable
+          variant to correct.
+        </p>
 
       <div className="mb-5 flex gap-2">
         {tabs.map(([v, label]) => (
@@ -337,7 +338,8 @@ const TripListPage = () => {
           </button>
         </div>
       </Modal>
-    </div>
+      </div>
+    </>
   );
 };
 

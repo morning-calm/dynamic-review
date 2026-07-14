@@ -23,6 +23,13 @@ interface EditableFieldProps {
   selectionBind?: SelectionBind;
   rows?: number;
   /**
+   * Render the original→current diff ABOVE the textarea instead of below it. Set for
+   * the narration (SceneDesc), where the box is tall enough that a diff underneath it
+   * sits below the fold: you want to see what you changed next to the thing you changed
+   * it from. Short fields (title, options) keep it below.
+   */
+  diffAbove?: boolean;
+  /**
    * The parent sets this to a function that flushes any pending save and resolves
    * once the PUT completes — call it before a segment/highlight regenerate so the
    * server diffs the intended (saved) text (S3).
@@ -48,6 +55,7 @@ const EditableField = ({
   textareaRef,
   selectionBind,
   rows,
+  diffAbove = false,
   flushRef,
 }: EditableFieldProps) => {
   const [value, setValue] = useState(field.current_text);
@@ -158,9 +166,12 @@ const EditableField = ({
     'w-full resize-y rounded border bg-gray-900 px-3 py-2 text-base sm:text-sm text-gray-100 outline-none focus:border-custom-green ' +
     (changed ? 'border-amber-600/60' : 'border-gray-700');
 
+  const diff = changed ? <InlineDiff original={field.original_text} current={diffValue} /> : null;
+
   return (
     <div>
       {label && <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-400">{label}</label>}
+      {diffAbove && diff && <div className="mb-2">{diff}</div>}
       <textarea
         ref={textareaRef}
         {...selectionBind}
@@ -172,7 +183,7 @@ const EditableField = ({
         spellCheck
         className={baseClasses}
       />
-      {changed && <InlineDiff original={field.original_text} current={diffValue} />}
+      {!diffAbove && diff}
       {/* Soft reminder (never blocks): the target text changed but its English sibling
           didn't — if the meaning shifted, the translation must be updated too. */}
       {changed && field.source_text !== '' && field.source_text === field.original_source && (

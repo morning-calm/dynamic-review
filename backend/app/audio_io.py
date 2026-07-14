@@ -364,8 +364,8 @@ def first_silence_after(samples: np.ndarray, sr: int, t0: float, t1: float,
 def trim_trailing_breath(samples: np.ndarray, sr: int = SR, rel_db: float = 26.0,
                          min_speech_ms: float = 80.0, release_ms: float = 90.0,
                          tail_db: float = 50.0, cont_gap_ms: float = 30.0,
-                         burst_gap_ms: float = 250.0, burst_max_ms: float = 160.0
-                         ) -> np.ndarray:
+                         burst_gap_ms: float = 250.0, burst_max_ms: float = 160.0,
+                         speed: float = 1.0) -> np.ndarray:
     """Drop a trailing breath / next-sound bleed that TTS leaves AFTER the last word.
 
     Finds the end of the last sustained voiced run (above peak − ``rel_db`` for ≥
@@ -383,11 +383,26 @@ def trim_trailing_breath(samples: np.ndarray, sr: int = SR, rel_db: float = 26.0
     pause, so it still gets trimmed. Keeps a ``release_ms`` tail so the natural word
     release is intact, and cuts everything after it. Never cuts into sustained
     speech; returns the samples unchanged when the tail beyond the last word is
-    negligible (< 40 ms). Heuristic — sessions.regenerate Whisper-verifies the result
-    on English candidates and drops the trim when the final word went missing."""
+    negligible (< 40 ms).
+
+    ``speed`` is the ElevenLabs generation speed the clip was voiced at (CEFR A12 =
+    0.7, B1 = 0.85). EVERY ms window above was tuned against 1.0x takes, but a 0.7x
+    take stretches the same articulation by 1/0.7 — a word-final sonorant tail that
+    measures 150 ms at 1.0x runs ~215 ms at 0.7x and so blows past ``burst_max_ms``,
+    where it is misread as a breath and the word's own ending is cut off. So the time
+    windows (never the dB bars) are divided by ``speed``. The dB thresholds are level
+    ratios and are speed-invariant. This is a heuristic either way — the hard guard is
+    sessions.regenerate's letter_end floor, which never lets the cut land before the
+    last word's aligned end."""
     n = len(samples)
     if n < int(0.05 * sr):
         return samples
+    stretch = 1.0 / max(0.1, float(speed or 1.0))
+    min_speech_ms *= stretch
+    release_ms *= stretch
+    cont_gap_ms *= stretch
+    burst_gap_ms *= stretch
+    burst_max_ms *= stretch
     times, rms = _frame_rms(samples, sr, frame_ms=10.0, hop_ms=5.0)
     if len(rms) == 0:
         return samples

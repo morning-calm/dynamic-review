@@ -81,6 +81,14 @@ THUMB_KEY_PREFIX = "scene-thumbs/"
 THUMB_PUBLIC_BASE = "https://thumbs.dynamiclanguages.org/"
 THUMB_UPLOAD_CACHE = BACKEND_ROOT / "thumb_upload_cache.json"
 
+# 4K re-encodes of the static-360 panoramas (app/static360.py). The {i}.jpg a PIC scene
+# ships is the 7680×7680 VR master (~15 MB) — fine for the headset, absurd as a review
+# card thumbnail. These are the 4096×2048 mono re-encodes (~1 MB), laid out
+# <Country>/<Region>/<leaf>/<sceneIndex>-4k.jpg. Workstation-only, like the VID-PIC
+# thumbnail trees: the live host resolves them from the R2 mirror instead.
+STATIC_4K_ROOT = Path(os.environ.get(
+    "REVIEW_APP_STATIC_4K_ROOT", r"D:\Final stitch\Re-Encodes\Static-Images-4k-mono"))
+
 # Static-360 stills + flat overlays are served locally from the source-audio trees
 # (OVERLAY_SEARCH_DIRS etc.), which don't exist on the hosted/laptop deployment — so
 # they're ALSO mirrored to R2 (same thumbs bucket, distinct prefix) and served publicly

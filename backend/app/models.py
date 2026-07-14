@@ -185,6 +185,28 @@ class RemoveSilence(BaseModel):
     seconds: float = 1.0     # pause to remove (capped by what the pause can spare)
 
 
+# --- Waveform editor ("Edit waveform") ------------------------------------------
+# These address the audio by TIME, straight off the waveform the reviewer is looking at
+# — no text caret, no Whisper/aligner mapping. Times are seconds into the WORKING take.
+class WaveInsertSilence(BaseModel):
+    at: float                # exact time to open the gap at (no snapping to a pause)
+    seconds: float = 1.0
+
+
+class WaveRange(BaseModel):
+    """A selected span of the working take (delete / silence)."""
+    start: float
+    end: float
+
+
+class WaveMove(BaseModel):
+    """Cut [start, end) out and paste it at ``to`` — all three measured on the clip as
+    it stands NOW (what the reviewer is looking at), before the cut is applied."""
+    start: float
+    end: float
+    to: float
+
+
 class Fallback(BaseModel):
     extent: Literal["sentence", "scene", "custom"]
     text: Optional[str] = None

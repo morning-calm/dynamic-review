@@ -29,6 +29,18 @@ from .review_audio import BUCKET, _r2
 JOBS_PREFIX = "_bus/jobs/"
 SNAPSHOT_PREFIX = "_bus/prod-snapshot/"
 
+# The completed-trips handshake with Stage 9 (Scripts repo). This used to be ONLY a
+# local file next to trips_to_review.json — which silently stopped working the day the
+# server moved to the Ubuntu laptop: the app kept rewriting the file on the laptop while
+# Stage 9 kept reading a Windows copy last touched 2026-07-08, so every approval since
+# the migration was invisible to it. Same bus, same fix as the publish jobs above: put
+# the snapshot on R2, where both machines can reach it even when the laptop is asleep.
+#
+# CURRENT-STATE snapshot, not a log — a plain overwrite of one key. A trip VANISHING
+# from the payload is how "un-completed" is expressed, so every completion event
+# (approve / manual-complete / un-complete) must re-put it.
+COMPLETED_KEY = "_bus/completed_trips.json"
+
 # Trip ids are Firestore doc ids like Taipei101_HSK12_ZH — enforce that shape at queue
 # time so a job never carries an id that breaks the key layout or (defence in depth)
 # could be mistaken for a CLI flag by the workstation executors.
@@ -42,6 +54,36 @@ def _client():
             "error": "bus_unavailable",
             "detail": "R2 credentials unavailable — cannot reach the review bus"})
     return s3
+
+
+def put_completed_snapshot(payload: dict) -> bool:
+    """Mirror the completed-trips snapshot to ``review-audio/_bus/completed_trips.json``.
+
+    BEST-EFFORT, deliberately unlike the publish jobs in this module: those are an
+    explicit admin action, so an R2 failure is theirs to see as an HTTP error. This
+    fires as a side effect of a reviewer's approve, and the approve is the thing that
+    matters — a mirror failure must never fail it. So it logs loudly and returns False.
+
+    The lag that a swallowed failure could hide is detectable downstream instead:
+    ``payload["generated_at"]`` is the snapshot's own timestamp, and the consumer warns
+    when it goes stale."""
+    try:
+        s3 = _r2()
+        if s3 is None:
+            print("[completed-export] !! R2 unavailable (no Cloudfare_* creds) — wrote "
+                  "the LOCAL file only. Stage 9 on another machine will NOT see this "
+                  "until the mirror is repaired: py -3.12 scripts/export_completed.py")
+            return False
+        s3.put_object(
+            Bucket=BUCKET, Key=COMPLETED_KEY,
+            Body=json.dumps(payload, indent=2, ensure_ascii=False).encode("utf-8"),
+            ContentType="application/json")
+        return True
+    except Exception as e:  # noqa: BLE001 — see docstring: never fail the caller's op
+        print(f"[completed-export] !! R2 mirror FAILED ({BUCKET}/{COMPLETED_KEY}): {e} "
+              "— the local file is current but Stage 9 on another machine is now STALE. "
+              "Repair with: py -3.12 scripts/export_completed.py")
+        return False
 
 
 def _job_key(job_id: str) -> str:

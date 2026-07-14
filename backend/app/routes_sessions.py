@@ -17,6 +17,7 @@ from .models import (CreateSession, TextUpdate, SourceUpdate, Regenerate, Fallba
                      PlayedRanges, FlagSet, CommentSet, NarrationSet,
                      ClipCreate, ClipRegen, ClipComment, TrimNoise, TrimCandidate,
                      InsertSilence, RemoveSilence, RequestChanges, CompleteTrip,
+                     WaveInsertSilence, WaveRange, WaveMove,
                      LocalizationUpdate, VersionSet, ApplySuggestedFix,
                      FindingResponse, SkipTriage,
                      Heartbeat, Recall, RecallResolve, ExternalReportStatus)
@@ -120,6 +121,35 @@ async def post_insert_silence(sid: str, fid: int, body: InsertSilence):
 async def post_remove_silence(sid: str, fid: int, body: RemoveSilence):
     # Whisper/aligner + ffmpeg are blocking — keep them off the event loop.
     return await run_in_threadpool(sessions.remove_silence, sid, fid, body.pos, body.seconds)
+
+
+# --- Waveform editor: TIME-addressed edits (no text caret, no Whisper/aligner) ------
+@router.get("/sessions/{sid}/fields/{fid}/waveform", dependencies=_SCOPE)
+async def get_waveform(sid: str, fid: int, track: str = "working"):
+    # ffmpeg decode — blocking.
+    return await run_in_threadpool(sessions.waveform, sid, fid, track)
+
+
+@router.post("/sessions/{sid}/fields/{fid}/wave/insert-silence", dependencies=_EDIT)
+async def post_wave_insert_silence(sid: str, fid: int, body: WaveInsertSilence):
+    return await run_in_threadpool(sessions.wave_insert_silence, sid, fid,
+                                   body.at, body.seconds)
+
+
+@router.post("/sessions/{sid}/fields/{fid}/wave/delete", dependencies=_EDIT)
+async def post_wave_delete(sid: str, fid: int, body: WaveRange):
+    return await run_in_threadpool(sessions.wave_delete, sid, fid, body.start, body.end)
+
+
+@router.post("/sessions/{sid}/fields/{fid}/wave/silence", dependencies=_EDIT)
+async def post_wave_silence(sid: str, fid: int, body: WaveRange):
+    return await run_in_threadpool(sessions.wave_silence, sid, fid, body.start, body.end)
+
+
+@router.post("/sessions/{sid}/fields/{fid}/wave/move", dependencies=_EDIT)
+async def post_wave_move(sid: str, fid: int, body: WaveMove):
+    return await run_in_threadpool(sessions.wave_move, sid, fid,
+                                   body.start, body.end, body.to)
 
 
 @router.post("/sessions/{sid}/fields/{fid}/fallback", dependencies=_EDIT)

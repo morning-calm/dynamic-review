@@ -80,12 +80,24 @@ def plan_whole(cleaned_new: str, used_fallback: bool, voice_id: str,
                model_id: str = audio_core.EL_MODEL) -> RegenPlan:
     """Whole-field regenerate (SceneDesc 'whole' mode + every Q&A field).
 
+    Uses /with-timestamps (not plain TTS) purely so the plan carries ``cand_words``.
+    The candidate is auditioned and combined as a whole clip — the alignment is never
+    used to cut a seam — but sessions.regenerate FLOORS its trailing-breath trim at the
+    last word's aligned ``letter_end``, and without cand_words that floor silently does
+    not apply. That was a real bug: every Q&A/option field and every 'whole' SceneDesc
+    regen ran trim_trailing_breath UNFLOORED, and on a slowed A12 take it ate 250 ms of
+    the final word ("…many peo-"). The floor was added 2026-07-02 but only ever reached
+    the segment-splice path. Same model + settings → same audio; only the response shape
+    differs (both v2 and v3 support the endpoint — cjk_splice already relies on it).
+
     S2: when the Gemini number-cleaner fell back to uncleaned text, the clip is voiced
     from raw numerals/abbreviations — still return the candidate so it can be auditioned,
     but flag edit_required so a human MUST listen before it is accepted."""
-    mp3 = audio_core.generate_audio(cleaned_new, voice_id, voice_settings, model_id)
+    mp3, cand_words = audio_core.generate_with_timestamps(
+        cleaned_new, voice_id, voice_settings, None, None, model_id)
     plan = RegenPlan(candidate_mp3=mp3, whole=True,
-                     meta={"mode": "whole", "text": cleaned_new})
+                     meta={"mode": "whole", "text": cleaned_new,
+                           "cand_words": cand_words})
     if used_fallback:
         plan.edit_required = True
         plan.reason = ("Numbers/abbreviations could not be cleaned reliably — voiced "

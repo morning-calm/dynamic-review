@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import { api, ApiError, type Field, type RegenerateMode } from '../api';
 import type { CapturedSelection } from '../hooks';
 import ManualEditModal from './ManualEditModal';
+import WaveformEditor from './WaveformEditor';
 
 interface RegenerateControlsProps {
   field: Field;
@@ -69,6 +70,7 @@ const RegenerateControls = ({
 }: RegenerateControlsProps) => {
   const [busy, setBusy] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [waveOpen, setWaveOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [bugOpen, setBugOpen] = useState(false);
   const [bugText, setBugText] = useState('');
@@ -419,6 +421,17 @@ const RegenerateControls = ({
       Fix pronunciation…
     </button>
   );
+  const insert3Btn = (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={() => void onInsertSilence(3)}
+      title={`Click at a pause in ${surfaceLabel}, then click to lengthen that pause by 3s (a full beat — e.g. the beginner-trip end pause)`}
+      className={`${btn} border-gray-600 text-gray-200`}
+    >
+      Insert 3s
+    </button>
+  );
   const insert1Btn = (
     <button
       type="button"
@@ -548,9 +561,36 @@ const RegenerateControls = ({
   );
   const busyNote = busy ? <span className="text-xs text-gray-500">working…</span> : null;
 
-  // The tools that read the reviewer's selection exist when a selection surface does.
+  const waveBtn = (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={() => setWaveOpen((o) => !o)}
+      aria-expanded={waveOpen}
+      title="Show the waveform and edit the audio directly — place a cut or a pause exactly where you can see it, instead of via the text"
+      className={`${btn} ${waveOpen ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-gray-600 text-gray-200'}`}
+    >
+      {waveOpen ? 'Hide waveform' : 'Edit waveform'}
+    </button>
+  );
+
+  // The re-voicing tools need a text SELECTION to know which words to re-record.
   const hasSelectionTools = !wholeOnly && hasSelection;
+  // The pause tools only need a CARET, and the backend has always been field-generic —
+  // they were simply never rendered for Q&A/option fields. A question's audio needs a
+  // beat after it as much as a narration does, so they render wherever there is a text
+  // surface to click in (Q&A reads its own textarea, exactly as trim-noise does).
+  const hasPauseTools = Boolean(getSelectionRange) && (wholeOnly || hasSelection);
   const hasChipSelection = Boolean(capturedSelection && capturedSelection.start !== capturedSelection.end);
+  const pauseBtns = (
+    <>
+      {insert3Btn}
+      {insert1Btn}
+      {insertHalfBtn}
+      {remove1Btn}
+      {removeHalfBtn}
+    </>
+  );
 
   // Phone grouping: a native <details> disclosure per tool family (no hover needed).
   const group = (name: string, hint: string, open: boolean, children: ReactNode) => (
@@ -593,6 +633,7 @@ const RegenerateControls = ({
         {wholeOnly && fixPronWholeBtn}
         {wholeOnly && sep}
         {wholeOnly && getSelectionRange && trimNoiseBtn}
+        {wholeOnly && hasPauseTools && pauseBtns}
         {wholeOnly && trimSilenceBtn}
         {!wholeOnly && (
           <>
@@ -606,15 +647,14 @@ const RegenerateControls = ({
                 {fixPronBtn}
                 {sep}
                 {trimNoiseBtn}
-                {insert1Btn}
-                {insertHalfBtn}
-                {remove1Btn}
-                {removeHalfBtn}
+                {pauseBtns}
               </>
             )}
             {trimSilenceBtn}
           </>
         )}
+        {sep}
+        {waveBtn}
         {field.audio.candidate && (
           <>
             {sep}
@@ -665,20 +705,14 @@ const RegenerateControls = ({
           )}
         {group(
           'Pauses & silence',
-          hasSelectionTools ? 'tap where the pause is' : '',
+          hasPauseTools ? 'tap where the pause is' : '',
           false,
           <>
-            {hasSelectionTools && (
-              <>
-                {insert1Btn}
-                {insertHalfBtn}
-                {remove1Btn}
-                {removeHalfBtn}
-              </>
-            )}
+            {hasPauseTools && pauseBtns}
             {trimSilenceBtn}
           </>,
         )}
+        {group('Edit the waveform', 'precise', waveOpen, waveBtn)}
         {group(
           'Takes & history',
           '',
@@ -696,6 +730,8 @@ const RegenerateControls = ({
         </div>
       </div>
 
+      {waveOpen && <WaveformEditor field={field} sid={sid} onFieldUpdate={onFieldUpdate} />}
+
       {helpOpen && (
         <div className="space-y-1 rounded border border-gray-700 bg-gray-900/60 p-2 text-xs text-gray-300">
           <p>
@@ -704,7 +740,14 @@ const RegenerateControls = ({
           </p>
           <p>
             <span className="font-medium text-gray-200">Pause tools</span> — tap in {surfaceLabel} to place the
-            cursor at the pause (usually right after a full stop), then tap Insert/Remove.
+            cursor at the pause (usually right after a full stop), then tap Insert/Remove. They only ever lengthen
+            or shorten a pause that is already there; they never split a word.
+          </p>
+          <p>
+            <span className="font-medium text-gray-200">Edit waveform</span> — shows the audio itself. Click to
+            place the cursor, drag to select, then insert a gap / silence / delete / move that exact span. Use it
+            when the pause tools say “no pause here”, or when the spot you want isn’t at a word boundary. It does
+            exactly what you say, so it <em>can</em> cut through a word — listen back afterwards (Undo always works).
           </p>
           <p>
             <span className="font-medium text-gray-200">Generate / Regenerate</span> — makes a candidate take:

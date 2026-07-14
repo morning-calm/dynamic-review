@@ -377,6 +377,17 @@ export interface LocalizationBlock {
   working_hans?: string | null;
 }
 
+/** Min/max envelope of a take, for the waveform editor. `peaks` is interleaved
+ * [min0, max0, min1, max1, …], one pair per bucket, each -127..127. */
+export interface Waveform {
+  duration: number;
+  buckets: number;
+  peaks: number[];
+  /** Working-take content hash — changes whenever the audio does, so the view can tell
+   * a stale envelope from a current one. */
+  hash: string;
+}
+
 export interface Field {
   fid: number;
   scene_index: number | null;
@@ -812,6 +823,29 @@ export const api = {
   // minimum natural pause always remains — 409 when there's no excess to remove).
   removeSilence: (sid: string, fid: number, pos: number, seconds = 1): Promise<Field> =>
     postJson(field(sid, fid, '/remove-silence'), { pos, seconds }),
+
+  // --- Waveform editor ------------------------------------------------------------
+  // These address the audio by TIME, straight off the waveform, instead of through a
+  // text caret — so they need no Whisper/aligner mapping (fast) and can put a cut
+  // exactly where the reviewer says (precise), at the cost of the text-anchored tools'
+  // safety rails. Every one archives a version and re-locks the Done gate.
+  waveform: (sid: string, fid: number, track: 'working' | 'original' = 'working'): Promise<Waveform> =>
+    getJson(field(sid, fid, `/waveform?track=${track}`)),
+
+  waveInsertSilence: (sid: string, fid: number, at: number, seconds: number): Promise<Field> =>
+    postJson(field(sid, fid, '/wave/insert-silence'), { at, seconds }),
+
+  // Remove the selected span entirely (the two sides are butted together).
+  waveDelete: (sid: string, fid: number, start: number, end: number): Promise<Field> =>
+    postJson(field(sid, fid, '/wave/delete'), { start, end }),
+
+  // Blank the selected span to silence, keeping the clip's length.
+  waveSilence: (sid: string, fid: number, start: number, end: number): Promise<Field> =>
+    postJson(field(sid, fid, '/wave/silence'), { start, end }),
+
+  // Cut [start,end) out and paste it at `to` (all measured on the clip as it stands now).
+  waveMove: (sid: string, fid: number, start: number, end: number, to: number): Promise<Field> =>
+    postJson(field(sid, fid, '/wave/move'), { start, end, to }),
 
   fallback: (
     sid: string,

@@ -34,7 +34,8 @@ from fastapi import HTTPException
 
 from . import config  # noqa: F401  (ensures SCRIPTS_ROOT on sys.path) — keep first
 from . import (audio_core, audio_io, audio_splice, auth, auto_checks, auto_review_ingest,
-               cjk_align, cjk_splice, db, images_r2, review_audio, thumbs)
+               cjk_align, cjk_splice, db, images_r2, review_audio, review_bus, static360,
+               thumbs)
 from .config import (COUNTRY_VOICE_GUESS, COVERAGE_DONE_FRACTION,
                      LANGUAGE_FALLBACK_VOICE, WORK_ROOT)
 from .locks import WHISPER_LOCK
@@ -165,16 +166,25 @@ def _next_version_suffix(ver_dir: Path, stem: str) -> int:
 
 def _r2_upload_working(trip_id: str, dirs: dict, frow) -> None:
     """Best-effort: push the canonical working clip and the latest version snapshot to
-    review-audio/<trip_id>/. Called immediately after _set_working(); never raises."""
+    review-audio/<trip_id>/. Called immediately after _set_working(); never raises.
+
+    The DB/file lookups happen HERE (on the request thread, where the row is valid);
+    only the network PUTs are handed to review_audio's single background worker. The
+    reviewer's edit therefore no longer waits on R2 — a per-edit round-trip that made
+    the pause tools feel slow for something no review step ever reads back."""
     try:
         name = frow["mp3_name"]
         if not name:
             return
-        # Canonical promoted clip (e.g. 3.mp3, 3_q.mp3, 3_a.mp3)
+        # Canonical promoted clip (e.g. 3.mp3, 3_q.mp3, 3_a.mp3). This key is ALSO where
+        # a host with no local masters re-seeds this trip's pristine original from, so it
+        # must not be clobbered without the original being copied aside first —
+        # upload_master_async does that (see review_audio.preserve_original).
         working = dirs["working"] / name
         if working.exists():
-            review_audio.upload(trip_id, working, name)
-        # Latest version snapshot just inserted by _set_working() (e.g. 3v2.mp3)
+            review_audio.upload_master_async(trip_id, working, name)
+        # Latest version snapshot just inserted by _set_working() (e.g. 3v2.mp3) — its own
+        # key, never re-seeded from, so a plain upload is right.
         ver = db.query_one(
             "SELECT path, label FROM audio_versions "
             "WHERE field_id=? ORDER BY n DESC LIMIT 1",
@@ -182,7 +192,7 @@ def _r2_upload_working(trip_id: str, dirs: dict, frow) -> None:
         if ver and ver["path"]:
             vpath = Path(ver["path"])
             if vpath.exists():
-                review_audio.upload(trip_id, vpath, f"{ver['label']}.mp3")
+                review_audio.upload_async(trip_id, vpath, f"{ver['label']}.mp3")
     except Exception as e:  # noqa: BLE001
         print(f"[sessions] R2 upload skipped ({frow['mp3_name']}): {e}")
 
@@ -1090,6 +1100,11 @@ def get_session(sid: str) -> dict:
         if fr["scene_index"] is not None:
             by_scene.setdefault(fr["scene_index"], []).append(f)
 
+    # Every isStaticImage index of this trip — the corroboration static360 needs before
+    # it will trust a 4K folder (see that module: same location, different numbering).
+    static_idx = {i for i, s in enumerate(trip.get("quickTrips") or [])
+                  if (s or {}).get("isStaticImage")}
+
     for i, s in enumerate(trip.get("quickTrips") or []):
         overlays = []
         for si in (s.get("staticImages") or []):
@@ -1097,18 +1112,27 @@ def get_session(sid: str) -> dict:
             if fn:
                 overlays.append({"filename": fn,
                                  "url": f"/overlays/{sid}/{fn}"})
-        # S9: only advertise a static-360 image_url when the {i}.jpg actually resolves —
+        # S9: only advertise a static-360 image_url when the file actually resolves —
         # locally OR on R2 (the hosted/laptop case has no local source trees) — else
         # null, never a URL that 404s. A local hit is mirrored to R2 for other hosts.
+        #
+        # PREFER the 4K re-encode ({i}-4k.jpg, ~1 MB) over the {i}.jpg VR master
+        # (7680×7680, ~15 MB): same picture, and the master was never meant to be
+        # <img>-loaded. Fall back to the master when a trip has no 4K copy.
         image_url = None
         if s.get("isStaticImage"):
-            still = f"{i}.jpg"
-            local_still = _resolve_overlay_file(
-                trip_id, mp3_dir, ogg_dir, still, srow["folder_name"] or "")
-            if local_still is not None:
-                images_r2.ensure_uploaded(_overlay_base(trip_id), still, local_still)
-            if local_still is not None or images_r2.exists(_overlay_base(trip_id), still):
-                image_url = f"/overlays/{sid}/{still}"
+            for still, local in (
+                    (static360.name_for(i),
+                     static360.resolve(trip_id, _image_base_ids(trip_id), static_idx, i)),
+                    (f"{i}.jpg",
+                     _resolve_overlay_file(trip_id, mp3_dir, ogg_dir, f"{i}.jpg",
+                                           srow["folder_name"] or "")),
+            ):
+                if local is not None:
+                    images_r2.ensure_uploaded(_overlay_base(trip_id), still, local)
+                if local is not None or images_r2.exists(_overlay_base(trip_id), still):
+                    image_url = f"/overlays/{sid}/{still}"
+                    break
         scenes_out.append({
             "index": i,
             "video_id": _vimeo_id(s.get("videoUrl")),
@@ -1178,16 +1202,27 @@ def _cleaned_orig(srow, frow) -> tuple[str, bool]:
     return cleaned, fb
 
 
+def _whisper_paths(sid: str, frow) -> tuple[Path, Path, Path] | None:
+    """(audio, cache_json, sidecar) for a field's Whisper word cache, or None."""
+    name = frow["mp3_name"]
+    if not name:
+        return None
+    audio = work_dirs(sid)["working"] / name
+    meta_dir = config.WORK_ROOT / sid / "whisper"
+    return audio, meta_dir / (audio.stem + ".json"), meta_dir / (audio.stem + ".audiohash")
+
+
 def _whisper_orig(srow, frow) -> list[dict]:
     """Word timings for the CURRENT working audio (so cut times track the combined take,
     not the pristine master). Content-hash keyed → re-transcribes after each combine."""
-    audio = work_dirs(srow["id"])["working"] / frow["mp3_name"]
+    paths = _whisper_paths(srow["id"], frow)
+    if paths is None:
+        return []
+    audio, cache_json, sidecar = paths
     if not audio.exists():
         return []
-    meta_dir = config.WORK_ROOT / srow["id"] / "whisper"
+    meta_dir = cache_json.parent
     meta_dir.mkdir(parents=True, exist_ok=True)
-    cache_json = meta_dir / (audio.stem + ".json")
-    sidecar = meta_dir / (audio.stem + ".audiohash")
     cur_hash = _file_hash(audio)
     prev_hash = sidecar.read_text().strip() if sidecar.exists() else None
     refresh = cache_json.exists() and prev_hash != cur_hash
@@ -1196,6 +1231,81 @@ def _whisper_orig(srow, frow) -> list[dict]:
                                 cache_dir=meta_dir, refresh=refresh)
     sidecar.write_text(cur_hash or "")
     return data.get("words") or []
+
+
+def _reindex_word_cache(sid: str, frow, a: float, b: float, ins: float,
+                        new_hash: str | None, pre_hash: str | None) -> None:
+    """Re-time the Whisper word cache after an in-place edit that replaced the working
+    take's audio span ``[a, b)`` with ``ins`` seconds of SILENCE, and re-stamp the
+    audio-hash sidecar so the next read is a cache HIT.
+
+    Why this exists: the cache is keyed on the working mp3's content hash, so EVERY
+    pause edit invalidated it, and the next tool call (another pause, a trim, a
+    'generate from edit') paid a full faster-whisper re-transcription of the whole clip
+    — beam 5, `small`, on the laptop's CPU. That re-transcription was the entire
+    perceived cost of the pause tools.
+
+    It is safe to skip precisely BECAUSE the edited span is silence: no word lives
+    inside [a, b), so the true timings of the new audio are the old ones with every
+    instant after the edit displaced by ``ins - (b - a)``. Each timestamp is mapped
+    independently, so a word whose Whisper-reported end happens to overhang the cut
+    (Whisper routinely stretches a word across an adjacent pause) simply grows to cover
+    the inserted silence — which is what the new audio actually sounds like.
+
+    ONLY call this for pure-silence edits. Anything that removes or re-voices SPEECH
+    (trim-noise, splice, import) must let the cache go stale and re-transcribe.
+
+    ``pre_hash`` is the hash of the working file the edit was applied TO (read before
+    _set_working rewrote it). The re-time is only valid when the cache actually
+    described that audio — the sidecar must match ``pre_hash``. Without this check, a
+    cache left stale by a speech-altering op (combine/import/undo/wave edit) would be
+    shifted and stamped as CURRENT, and the next splice would cut at the old take's
+    word times, silently. On a mismatch we simply leave the cache alone: its sidecar
+    already disagrees with the new file's hash, so the next read re-transcribes.
+
+    Best-effort: on any problem we delete the sidecar, which forces an honest
+    re-transcription — never a silently wrong timeline."""
+    paths = _whisper_paths(sid, frow)
+    if paths is None:
+        return
+    _audio, cache_json, sidecar = paths
+    if not cache_json.exists():
+        return                       # never transcribed → nothing to re-time
+    prev = sidecar.read_text().strip() if sidecar.exists() else None
+    if not pre_hash or prev != pre_hash:
+        return                       # cache was already stale → let it re-transcribe
+    delta = float(ins) - (float(b) - float(a))
+
+    def remap(t: float) -> float:
+        if t <= a:
+            return t
+        if t >= b:
+            return t + delta
+        return a                     # inside the replaced span (silence) → clamp to its start
+
+    try:
+        data = json.loads(cache_json.read_text(encoding="utf-8"))
+        new_dur = None
+        if data.get("duration") is not None:
+            new_dur = max(0.0, round(float(data["duration"]) + delta, 3))
+            data["duration"] = new_dur
+        for w in data.get("words") or []:
+            for k in ("start", "end"):
+                if w.get(k) is not None:
+                    t = round(remap(float(w[k])), 3)
+                    # trim_silence is modelled end-anchored (times unchanged, duration
+                    # shrunk), so a final-word `end` Whisper stretched into the old
+                    # trailing silence can overhang the new clip end — clamp it, exactly
+                    # as a re-transcription would report it.
+                    if new_dur is not None:
+                        t = min(t, new_dur)
+                    w[k] = t
+        cache_json.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        sidecar.write_text(new_hash or "")
+    except Exception as e:  # noqa: BLE001
+        print(f"[sessions] word-cache re-time failed ({cache_json.name}): {e} "
+              "— falling back to re-transcription")
+        sidecar.unlink(missing_ok=True)
 
 
 # --------------------------------------------------------------------------- #
@@ -1695,14 +1805,31 @@ def _cjk_caret_seed(srow, frow, cjk, caret: int) -> float:
     return en
 
 
-def _commit_working_edit(sid: str, srow, frow, samples: np.ndarray, kind: str) -> dict:
+def _commit_working_edit(sid: str, srow, frow, samples: np.ndarray, kind: str,
+                         silence_edit: tuple[float, float, float] | None = None) -> dict:
     """Archive + persist an in-place working-take edit (the trim/pause tools): new
     version, R2 upload, and DROP any pending regenerate candidate — its tL/tR were read
     from the pre-edit audio, so combining it now would splice at stale offsets (mirrors
     undo/redo/revert). Call only when the take actually changed (no-op early returns stay
-    in the callers)."""
+    in the callers).
+
+    ``silence_edit`` = ``(a, b, ins)``: this edit replaced the audio span [a, b) with
+    ``ins`` seconds of SILENCE and touched no speech. Pass it ONLY for such edits — it
+    lets the Whisper word cache be re-timed arithmetically instead of re-transcribed
+    (see _reindex_word_cache). Omit it for anything that alters speech (trim-noise,
+    splice, import): the cache then goes stale on the content hash and is honestly
+    rebuilt, which is the safe default."""
     dirs = work_dirs(sid)
+    pre_hash = None
+    if silence_edit is not None:
+        # Hash of the audio the edit was applied TO — must be read BEFORE _set_working
+        # rewrites the file. _reindex_word_cache only trusts the cached words when their
+        # sidecar matches this (i.e. the cache described the pre-edit take).
+        paths = _whisper_paths(sid, frow)
+        pre_hash = _file_hash(paths[0]) if paths else None
     whash = _set_working(sid, frow, samples=samples, kind=kind)
+    if silence_edit is not None:
+        _reindex_word_cache(sid, frow, *silence_edit, whash, pre_hash)
     _r2_upload_working(srow["trip_id"], dirs, frow)
     patch = {"working_audio_hash": whash, "splice_confidence": None,
              "candidate_mp3_path": None}
@@ -1888,14 +2015,23 @@ def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
             cw = [_shift(w) for w in cw]
             plan.meta["cand_words"] = cw
     plan.meta["cand_front_trim_s"] = round(front_s, 3)
-    trimmed = audio_io.trim_trailing_breath(cand_samples, audio_io.SR)
+    # The trim's ms windows were tuned on 1.0x takes; a slowed CEFR take (A12 0.7,
+    # B1 0.85) stretches every articulation by 1/speed, so hand it the speed the clip
+    # was actually voiced at rather than letting it judge a 0.7x word-tail by 1.0x rules.
+    gen_speed = _effective_speed(srow)
+    trimmed = audio_io.trim_trailing_breath(cand_samples, audio_io.SR, speed=gen_speed)
     # The trim's energy heuristics are take-dependent (every threshold so far met a
     # take that beat it — docs/splice-end-cutoff-analysis.md), so FLOOR the cut at the
     # last word's aligned LETTER end (+pad). The final punctuation char's `end` absorbs
     # the clip's trailing silence (useless), but the last letter's end lands within
-    # ~50 ms of the audible word end — the trim must never cut before it.
+    # ~50 ms of the audible word end — the trim must never cut before it. The pad is a
+    # natural release, so it stretches with the take like every other duration.
+    # NB this floor is why plan_whole now asks for /with-timestamps: without cand_words
+    # it silently does not apply, which is exactly how whole/Q&A regens lost their
+    # final word.
     if cw and cw[-1].get("letter_end"):
-        floor_n = int(round((float(cw[-1]["letter_end"]) + _CAND_TAIL_FLOOR_PAD_S)
+        floor_n = int(round((float(cw[-1]["letter_end"])
+                             + _CAND_TAIL_FLOOR_PAD_S / max(0.1, gen_speed))
                             * audio_io.SR))
         if len(trimmed) < floor_n:
             trimmed = cand_samples[:min(len(cand_samples), floor_n)]
@@ -2382,15 +2518,13 @@ def trim_silence(sid: str, fid: int) -> dict:
     new = audio_io.set_trailing_silence(base, sr, target)
     if abs(len(new) - len(base)) < int(0.02 * sr):       # <20 ms change → no-op
         return serialize_field(sid, frow)
-    whash = _set_working(sid, frow, samples=new, kind="silence_trim")
-    _r2_upload_working(srow["trip_id"], dirs, frow)
-    # Working take changed → drop any pending candidate (its cut times are now stale).
-    patch = {"working_audio_hash": whash, "splice_confidence": None,
-             "candidate_mp3_path": None}
-    patch.update(_clear_coverage_and_done(frow))
-    db.update_fields(fid, **patch)
-    db.touch_session(sid)
-    return serialize_field(sid, _field_row(sid, fid))
+    # Only END silence moved (set_trailing_silence never touches a voiced sample), so no
+    # word time changes at all — model it as an edit at the very end of the OLD clip and
+    # the cache survives with just its duration adjusted.
+    end = len(base) / sr
+    return _commit_working_edit(
+        sid, srow, frow, new, "silence_trim",
+        silence_edit=(end, end, (len(new) - len(base)) / sr))
 
 
 def insert_silence(sid: str, fid: int, pos: int, seconds: float = 1.0) -> dict:
@@ -2429,7 +2563,7 @@ def insert_silence(sid: str, fid: int, pos: int, seconds: float = 1.0) -> dict:
         gap = np.zeros(int(round(seconds * sr)), dtype=np.float32)
         return _commit_working_edit(
             sid, srow, frow, np.concatenate([base[:cut], gap, base[cut:]]),
-            "insert_silence")
+            "insert_silence", silence_edit=(cut / sr, cut / sr, seconds))
 
     # Map the caret to the end-time of the last spoken word before it (same char→audio
     # alignment the highlight/trim tools use). pos<=0 → the clip's lead-in.
@@ -2462,16 +2596,9 @@ def insert_silence(sid: str, fid: int, pos: int, seconds: float = 1.0) -> dict:
     mid = (run[0] + run[1]) / 2.0            # drop the gap inside the existing silence
     cut = max(0, min(int(round(mid * sr)), n))
     gap = np.zeros(int(round(seconds * sr)), dtype=np.float32)
-    new = np.concatenate([base[:cut], gap, base[cut:]])
-    whash = _set_working(sid, frow, samples=new, kind="insert_silence")
-    _r2_upload_working(srow["trip_id"], dirs, frow)
-    # Working take changed → drop any pending candidate (its cut times are now stale).
-    patch = {"working_audio_hash": whash, "splice_confidence": None,
-             "candidate_mp3_path": None}
-    patch.update(_clear_coverage_and_done(frow))
-    db.update_fields(fid, **patch)
-    db.touch_session(sid)
-    return serialize_field(sid, _field_row(sid, fid))
+    return _commit_working_edit(
+        sid, srow, frow, np.concatenate([base[:cut], gap, base[cut:]]),
+        "insert_silence", silence_edit=(cut / sr, cut / sr, seconds))
 
 
 # The longest natural pause remove_silence always leaves in place: an inter-sentence gap
@@ -2548,7 +2675,164 @@ def remove_silence(sid: str, fid: int, pos: int, seconds: float = 1.0) -> dict:
     a = max(0, min(int(round(c0 * sr)), len(base)))
     b = max(a, min(int(round((c0 + remove) * sr)), len(base)))
     return _commit_working_edit(
-        sid, srow, frow, np.concatenate([base[:a], base[b:]]), "remove_silence")
+        sid, srow, frow, np.concatenate([base[:a], base[b:]]), "remove_silence",
+        silence_edit=(a / sr, b / sr, 0.0))
+
+
+# --------------------------------------------------------------------------- #
+# Waveform editor — TIME-addressed edits ("Edit waveform")
+#
+# Every tool above addresses the audio through the TEXT: a caret/selection in the
+# narration box is mapped to an audio time via Whisper (English) or the MMS aligner
+# (CJK). That is what makes them safe — and also what makes them coarse (you can only
+# act at a word boundary the aligner agrees with) and slow (a mapping costs a
+# transcription). These tools address the audio DIRECTLY: the reviewer sees the
+# waveform and says exactly where. No text, no aligner, no Whisper — so they are also
+# the fast path.
+#
+# The trade is that they are genuinely destructive: nothing here checks that a cut sits
+# in silence, because the whole point is to let a human put it where the machine won't.
+# The safety net is the one already in place for every audio op — each edit archives a
+# version (undo/redo), drops any pending candidate, and clears the coverage + `done`
+# gate, so the clip must be listened to end-to-end again before it can be signed off.
+# --------------------------------------------------------------------------- #
+_WAVEFORM_BUCKETS = 1600      # ~2 px per bucket on a wide screen; keeps the JSON small
+
+
+def waveform(sid: str, fid: int, track: str = "working") -> dict:
+    """Min/max envelope of a field's audio for the waveform editor.
+
+    Returned as two int8-ish arrays (``peaks`` = interleaved min,max per bucket, each
+    -128..127) rather than raw floats: a 60 s clip is 2.6 M samples, and the UI only
+    ever draws ~1600 columns of it."""
+    _session_row(sid)
+    frow = _field_row(sid, fid)
+    if not (frow["has_audio"] and frow["mp3_name"]):
+        raise HTTPException(400, detail={"error": "no_audio", "detail": "text field"})
+    path = _orig_path(sid, frow) if track == "original" else (
+        work_dirs(sid)["working"] / frow["mp3_name"])
+    if not path or not Path(path).exists():
+        raise HTTPException(404, detail={"error": "no_audio", "detail": track})
+    samples = audio_io.mp3_to_samples(path)
+    sr = audio_io.SR
+    n = len(samples)
+    if n == 0:
+        return {"duration": 0.0, "buckets": 0, "peaks": []}
+    buckets = min(_WAVEFORM_BUCKETS, max(1, n // 16))
+    # Pad to a whole number of buckets so the reshape is exact (cheaper + clearer than
+    # a Python loop over 1600 slices).
+    per = int(np.ceil(n / buckets))
+    pad = per * buckets - n
+    block = np.concatenate([samples, np.zeros(pad, dtype=np.float32)]).reshape(buckets, per)
+    lo = np.clip(block.min(axis=1) * 127.0, -127, 127).astype(np.int8)
+    hi = np.clip(block.max(axis=1) * 127.0, -127, 127).astype(np.int8)
+    peaks: list[int] = np.stack([lo, hi], axis=1).reshape(-1).astype(int).tolist()
+    return {"duration": round(n / sr, 3), "buckets": buckets, "peaks": peaks,
+            "hash": (frow["working_audio_hash"] or "")[:8] if track == "working" else ""}
+
+
+def _wave_base(sid: str, fid: int):
+    """(srow, frow, samples, sr, duration) for a waveform edit, or 400 if the field has
+    no audio."""
+    srow = _session_row(sid)
+    frow = _field_row(sid, fid)
+    if not (frow["has_audio"] and frow["mp3_name"]):
+        raise HTTPException(400, detail={"error": "no_audio", "detail": "text field"})
+    base = audio_io.mp3_to_samples(work_dirs(sid)["working"] / frow["mp3_name"])
+    sr = audio_io.SR
+    return srow, frow, base, sr, audio_io.duration_seconds(base, sr)
+
+
+def _span(dur: float, start: float, end: float, what: str) -> tuple[float, float]:
+    """Validate + clamp a [start, end) selection against the clip, or 422."""
+    a, b = max(0.0, float(start)), min(float(dur), float(end))
+    if b - a < 0.01:
+        raise HTTPException(422, detail={
+            "error": "bad_range",
+            "detail": f"Select at least 10 ms of audio to {what}."})
+    return a, b
+
+
+# A seam between two pieces of audio that were never adjacent will click unless it is
+# ramped. 8 ms is short enough to be inaudible as a fade and long enough to kill the
+# discontinuity — the same order as the splice engine's own seam fades.
+_WAVE_SEAM_MS = 8.0
+
+
+def wave_insert_silence(sid: str, fid: int, at: float, seconds: float) -> dict:
+    """Insert ``seconds`` of silence at EXACTLY time ``at`` — no snapping to a pause.
+
+    Unlike the caret-driven insert_silence (which refuses anywhere but a genuine
+    silence run, because it can't see what the reviewer meant), this trusts the
+    waveform: the reviewer is looking at the gap they clicked in."""
+    srow, frow, base, sr, dur = _wave_base(sid, fid)
+    seconds = max(0.05, min(float(seconds), 10.0))
+    t = max(0.0, min(float(at), dur))
+    cut = int(round(t * sr))
+    gap = np.zeros(int(round(seconds * sr)), dtype=np.float32)
+    return _commit_working_edit(
+        sid, srow, frow, np.concatenate([base[:cut], gap, base[cut:]]),
+        "wave_insert_silence", silence_edit=(cut / sr, cut / sr, seconds))
+
+
+def wave_delete(sid: str, fid: int, start: float, end: float) -> dict:
+    """Delete the selected span outright and butt the two sides together (an 8 ms
+    equal-power seam so the join can't click). This is the 'cut' half of cut/paste and
+    the one op here that can remove SPEECH — the word cache is deliberately NOT re-timed
+    (it goes stale on the content hash and is honestly rebuilt), because after this the
+    text and the audio genuinely no longer agree."""
+    srow, frow, base, sr, dur = _wave_base(sid, fid)
+    a, b = _span(dur, start, end, "delete")
+    sa, sb = int(round(a * sr)), int(round(b * sr))
+    kept = audio_io.crossfade_join([base[:sa], base[sb:]], sr, _WAVE_SEAM_MS)
+    if len(kept) < int(0.05 * sr):
+        raise HTTPException(422, detail={
+            "error": "would_empty",
+            "detail": "That would delete nearly the whole clip — regenerate it instead."})
+    return _commit_working_edit(sid, srow, frow, kept, "wave_delete")
+
+
+def wave_silence(sid: str, fid: int, start: float, end: float) -> dict:
+    """Replace the selected span with silence, KEEPING the clip's length (so nothing
+    after it shifts). The precise version of 'trim highlighted noise': for a cough or a
+    click the reviewer can see, where the text-mapped tool has no word to hang off."""
+    srow, frow, base, sr, dur = _wave_base(sid, fid)
+    a, b = _span(dur, start, end, "silence")
+    sa, sb = int(round(a * sr)), int(round(b * sr))
+    out = base.copy()
+    out[sa:sb] = 0.0
+    # Ramp into and out of the blanked span so the surrounding audio doesn't click.
+    f = min(int(sr * _WAVE_SEAM_MS / 1000), (sb - sa) // 2)
+    if f > 0:
+        ramp = np.linspace(1.0, 0.0, f, dtype=np.float32)
+        out[sa:sa + f] = base[sa:sa + f] * ramp
+        out[sb - f:sb] = base[sb - f:sb] * ramp[::-1]
+    # The span may have contained speech, so the cached word timings are now a lie about
+    # WHAT is said (though not about when) — let them rebuild.
+    return _commit_working_edit(sid, srow, frow, out, "wave_silence")
+
+
+def wave_move(sid: str, fid: int, start: float, end: float, to: float) -> dict:
+    """Cut the selected span out and paste it back in at time ``to`` (measured on the
+    CURRENT clip, i.e. before the cut is applied — that is what the reviewer is looking
+    at). ``to`` inside the selection is a no-op and is refused rather than silently
+    doing nothing."""
+    srow, frow, base, sr, dur = _wave_base(sid, fid)
+    a, b = _span(dur, start, end, "move")
+    t = max(0.0, min(float(to), dur))
+    if a <= t <= b:
+        raise HTTPException(422, detail={
+            "error": "paste_inside_selection",
+            "detail": "Drop the selection somewhere outside itself."})
+    sa, sb, st = (int(round(x * sr)) for x in (a, b, t))
+    piece = base[sa:sb]
+    rest_head, rest_tail = base[:sa], base[sb:]
+    if st <= sa:                       # paste BEFORE the selection's old home
+        pieces = [base[:st], piece, base[st:sa], rest_tail]
+    else:                              # paste AFTER it (st >= sb)
+        pieces = [rest_head, base[sb:st], piece, base[st:]]
+    return _commit_working_edit(
+        sid, srow, frow, audio_io.crossfade_join(pieces, sr, _WAVE_SEAM_MS), "wave_move")
 
 
 def played(sid: str, fid: int, ranges: list[list[float]],
@@ -3306,6 +3590,21 @@ def commit(sid: str, user) -> dict:
             n = _next_version_suffix(ver_dir, stem)
             audio_io.mp3_to_mp3_copy(master, ver_dir / f"{stem}v{n}.mp3")
         audio_io.mp3_to_mp3_copy(working, master)
+        # Mirror the promoted master to R2 SYNCHRONOUSLY, here, at the moment the
+        # correction becomes the deliverable.
+        #
+        # This is not belt-and-braces on the combine-time mirror — on a host with no
+        # local master trees (the live Ubuntu laptop) `resolve_audio_dir` hands back an
+        # ephemeral seed cache, so the `master` we just wrote above lives in a CACHE
+        # DIRECTORY. The R2 key is the corrected take's only durable home, and it must
+        # not be sitting in a background queue that a restart could drop. A master can be
+        # regenerated by the pipeline; a confirmed take is hours of human work.
+        # Best-effort (never fails an approve) but loud, and it also self-heals a
+        # combine-time mirror that failed earlier.
+        if not review_audio.upload_master(trip_id, working, name):
+            print(f"[commit] !! R2 mirror FAILED for the promoted master {trip_id}/{name} "
+                  f"— the corrected take is on disk at {working} but NOT on R2. "
+                  "Re-run the approve or re-upload before this host is rebuilt.")
         promoted.append(name)
 
     return {"written": written, "promoted_mp3": promoted}
@@ -3674,7 +3973,17 @@ def review_queue() -> list[dict]:
 # Machine-readable mirror of the completed_trips table, next to trips_to_review.json,
 # so the Scripts/Stage-9 side can see which trips are finished WITHOUT touching
 # review.db. CURRENT-STATE snapshot, not an event log: an un-complete removes the row.
-COMPLETED_EXPORT_PATH = config.REVIEW_APP_ROOT / "completed_trips.json"
+#
+# Written to TWO places, and the R2 one is the contract:
+#   * this local file — only useful to a Stage 9 running on the SAME machine as the app;
+#   * review-audio/_bus/completed_trips.json (review_bus.COMPLETED_KEY) — the
+#     cross-machine surface, and the one Stage 9 should read first.
+# The local-only design broke the moment the server moved to the Ubuntu laptop: the app
+# went on writing this file on the laptop while Stage 9 read a Windows copy frozen at
+# 2026-07-08. Anything that writes one must write the other.
+COMPLETED_EXPORT_PATH = Path(os.environ.get(
+    "REVIEW_APP_COMPLETED_EXPORT",
+    str(config.REVIEW_APP_ROOT / "completed_trips.json")))
 
 
 def _iso(ts: float | None) -> str | None:
@@ -3718,16 +4027,30 @@ def write_completed_export(payload: dict,
 
 
 def export_completed_trips() -> None:
-    """Refresh completed_trips.json from the table. Called on approve, manual
-    complete, and un-complete. BEST-EFFORT: an export hiccup must never fail the
-    API operation that triggered it (the one-shot script can always rebuild)."""
+    """Refresh the completed-trips snapshot — the LOCAL file and the R2 mirror
+    (review_bus.COMPLETED_KEY), which is the surface Stage 9 actually reads now that the
+    app and the pipeline live on different machines.
+
+    Called on approve, manual complete, AND un-complete: the snapshot is current-state,
+    so a trip disappearing from it is how an un-complete is communicated — skip the push
+    on that path and the consumer would keep finalising a withdrawn trip.
+
+    BEST-EFFORT throughout: an export hiccup must never fail the API operation that
+    triggered it (an approve is worth more than its mirror, and the one-shot script
+    scripts/export_completed.py can always rebuild both)."""
     try:
         rows = db.query(
             "SELECT trip_id, completed_by, completed_at, method, session_id, note "
             "FROM completed_trips ORDER BY completed_at")
-        write_completed_export(completed_export_payload(rows))
+        payload = completed_export_payload(rows)
     except Exception as e:  # noqa: BLE001 — see docstring
-        print(f"[completed-export] skipped: {e}")
+        print(f"[completed-export] skipped (could not read the table): {e}")
+        return
+    try:
+        write_completed_export(payload)
+    except Exception as e:  # noqa: BLE001
+        print(f"[completed-export] local file skipped: {e}")
+    review_bus.put_completed_snapshot(payload)     # loud on failure, never raises
 
 
 def completed(user) -> list[dict]:
@@ -3850,7 +4173,8 @@ def _image_base_ids(trip_id: str) -> list[str]:
 
 
 def _resolve_overlay_file(trip_id: str, mp3_dir: Path | None, ogg_dir: Path | None,
-                          filename: str, folder_name: str = "") -> Path | None:
+                          filename: str, folder_name: str = "",
+                          static_indices: set[int] | None = None) -> Path | None:
     """Pure resolver (no DB) for an overlay / static-360 image, display only. Static-360
     stills ({i}.jpg) live in the OGG folder; flat overlays live under the trip's data
     cache — for leveled/target-language trips both live under the BASE trip's folders
@@ -3861,6 +4185,13 @@ def _resolve_overlay_file(trip_id: str, mp3_dir: Path | None, ogg_dir: Path | No
     from .config import (AUDIO_GENERATION_OGG, EXTRA_IMAGE_OGG_ROOTS,
                          OVERLAY_SEARCH_DIRS, RW_DATA_ROOTS)
     safe = Path(filename).name
+    # `{i}-4k.jpg` is not in any of the trees below — it is the 4K panorama re-encode,
+    # which lives in its own tree and is index-matched (static360). Resolve it there or
+    # not at all; falling through would silently miss.
+    m4k = static360.NAME_RE.match(safe)
+    if m4k:
+        return static360.resolve(trip_id, _image_base_ids(trip_id),
+                                 static_indices or set(), int(m4k.group(1)))
     candidates = [
         OVERLAY_SEARCH_DIRS[0] / trip_id / "static_images" / safe,
         OVERLAY_SEARCH_DIRS[0] / trip_id / safe,
@@ -3899,13 +4230,16 @@ def overlay_path(sid: str, filename: str) -> Path | None:
     trees (the Ubuntu laptop) can serve it via the R2 fallback."""
     srow = _session_row(sid)
     trip_id = srow["trip_id"]
+    trip = json.loads(srow["loaded_trip_json"])
     try:
-        _p = paths_for(json.loads(srow["loaded_trip_json"]), trip_id)
+        _p = paths_for(trip, trip_id)
         mp3_dir, ogg_dir = _p["mp3_dir"], _p["ogg_dir"]
     except SystemExit:
         mp3_dir = ogg_dir = None
+    static_idx = {i for i, s in enumerate(trip.get("quickTrips") or [])
+                  if (s or {}).get("isStaticImage")}
     local = _resolve_overlay_file(trip_id, mp3_dir, ogg_dir, filename,
-                                  srow["folder_name"] or "")
+                                  srow["folder_name"] or "", static_idx)
     if local is not None:
         images_r2.ensure_uploaded(_overlay_base(trip_id), filename, local)
     return local

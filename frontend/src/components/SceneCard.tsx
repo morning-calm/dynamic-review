@@ -244,6 +244,9 @@ const SceneCard = ({
                     selectionBind={descSelectionBind}
                     flushRef={descFlushRef}
                     rows={descRows}
+                    // The narration box is tall; the original→new changelog belongs above
+                    // it, next to the text it describes, not below the fold.
+                    diffAbove
                   />
                 </div>
                 {isJp && (

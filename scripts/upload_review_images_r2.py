@@ -36,11 +36,17 @@ MANIFEST = ROOT / "trips_to_review.json"
 
 
 def _image_names(trip: dict) -> list[str]:
-    """Every display image filename for a trip: static-360 stills ({i}.jpg for a
-    static scene) + each scene's flat overlay filenames."""
+    """Every display image filename for a trip: static-360 panoramas + each scene's flat
+    overlay filenames.
+
+    A static scene contributes BOTH names: ``{i}-4k.jpg`` (the 4096×2048 re-encode the
+    app now prefers) and ``{i}.jpg`` (the 7680×7680 VR master it falls back to when a
+    trip has no 4K copy). Both are mirrored — the live host has neither tree locally, so
+    whichever the app asks for has to be there."""
     names: list[str] = []
     for i, s in enumerate(trip.get("quickTrips") or []):
         if s.get("isStaticImage"):
+            names.append(f"{i}-4k.jpg")
             names.append(f"{i}.jpg")
         for si in (s.get("staticImages") or []):
             fn = si.get("filename")
@@ -66,10 +72,16 @@ def process(trip_id: str, apply: bool) -> tuple[int, int, int]:
     except SystemExit:
         mp3_dir = ogg_dir = None
     base = sessions._overlay_base(trip_id)
+    # The 4K resolver refuses a folder that doesn't cover every static scene of this trip
+    # (two folders for one location can number their scenes differently) — so it needs
+    # the trip's full static-index set, exactly as the app passes it.
+    static_idx = {i for i, s in enumerate(trip.get("quickTrips") or [])
+                  if (s or {}).get("isStaticImage")}
 
     found = uploaded = missing = 0
     for fn in _image_names(trip):
-        local = sessions._resolve_overlay_file(trip_id, mp3_dir, ogg_dir, fn, folder_name)
+        local = sessions._resolve_overlay_file(trip_id, mp3_dir, ogg_dir, fn, folder_name,
+                                               static_idx)
         if local is None:
             missing += 1
             continue
@@ -84,10 +96,47 @@ def process(trip_id: str, apply: bool) -> tuple[int, int, int]:
     return (found, uploaded, missing)
 
 
+def audit_4k(ids: list[str]) -> None:
+    """Which queued trips still serve the 7680×7680 master because no 4K re-encode of
+    their panoramas exists? Printed by name so the gap is actionable (re-encode them
+    into STATIC_4K_ROOT) instead of silently costing every reviewer 15 MB a scene."""
+    from app import static360
+
+    total = covered = 0
+    gaps: list[tuple[str, list[int]]] = []
+    for tid in ids:
+        try:
+            trip = staging.get_trip(tid)
+        except (Exception, SystemExit):  # noqa: BLE001
+            continue
+        want = {i for i, s in enumerate(trip.get("quickTrips") or [])
+                if (s or {}).get("isStaticImage")}
+        if not want:
+            continue
+        base_ids = sessions._image_base_ids(tid)
+        missing = [i for i in sorted(want)
+                   if static360.resolve(tid, base_ids, want, i) is None]
+        total += len(want)
+        covered += len(want) - len(missing)
+        if missing:
+            gaps.append((tid, missing))
+
+    print(f"\n4K static-360 coverage: {covered}/{total} panoramas "
+          f"({total - covered} still on the full-size master)")
+    if gaps:
+        print(f"\nTrips with NO 4K re-encode for one or more static scenes ({len(gaps)}):")
+        for tid, missing in gaps:
+            print(f"    {tid:<38} scenes {missing}")
+        print("\nThese fall back to the 7680×7680 master (~15 MB each). Re-encode them "
+              f"into {config.STATIC_4K_ROOT} as <sceneIndex>-4k.jpg to close the gap.")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--trip", help="one trip id (default: every trip in trips_to_review.json)")
     ap.add_argument("--apply", action="store_true", help="actually upload (default: dry-run)")
+    ap.add_argument("--audit-4k", action="store_true",
+                    help="also report which trips have no 4K panorama re-encode")
     args = ap.parse_args()
 
     if args.trip:
@@ -105,6 +154,8 @@ def main() -> None:
         tu += u
         tm += m
     print(f"\nTotal: {tf} resolved / {tu} uploaded / {tm} missing across {len(ids)} trip(s).")
+    if args.audit_4k:
+        audit_4k(ids)
     if not args.apply:
         print("Dry-run — re-run with --apply to upload.")
 
