@@ -811,7 +811,8 @@ export const api = {
   trimNoise: (sid: string, fid: number, start: number, end: number): Promise<Field> =>
     postJson(field(sid, fid, '/trim'), { start, end }),
 
-  // Normalize the trailing pause to the trip's level requirement (beginner = 3s, else trim).
+  // Normalize the trailing pause: beginner-trip NARRATION (SceneDesc) = 3s; questions,
+  // options and every other level keep a small 0.4s tail (excess trimmed).
   trimSilence: (sid: string, fid: number): Promise<Field> =>
     postJson(field(sid, fid, '/trim-silence')),
 

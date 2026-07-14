@@ -2507,9 +2507,10 @@ def trim_noise(sid: str, fid: int, start: int, end: int) -> dict:
 
 
 def trim_silence(sid: str, fid: int) -> dict:
-    """Normalize the trailing pause on the working take to the trip's level requirement:
-    beginner trips (A1-2 / N5 / HSK1-2) keep 3s of end silence, every other level has its
-    excess trailing silence removed. Only touches end-silence (never voiced audio); when
+    """Normalize the trailing pause on the working take to the clip's requirement:
+    beginner-trip (A1-2 / N5 / HSK1-2) NARRATION (SceneDesc) keeps 3s of end silence;
+    every other field or level has its excess trailing silence removed (small 0.4s tail).
+    Only touches end-silence (never voiced audio); when
     nothing needs changing the working take is left untouched. Archives a version + resets
     the done gate; revertable."""
     srow = _session_row(sid)
@@ -4115,15 +4116,22 @@ def uncomplete_trip(user, trip_id: str) -> dict:
     drops the row. This is the same shadow-session shape statuses.py was created to kill."""
     row = db.query_one(
         "SELECT session_id FROM completed_trips WHERE trip_id=?", (trip_id,))
-    db.execute("DELETE FROM completed_trips WHERE trip_id=?", (trip_id,))
     sid = row["session_id"] if row else None
+    # REOPEN BEFORE DELETE (order matters for crash-recovery): db.execute autocommits per
+    # statement, so if the process dies between these two writes we want the survivable
+    # state. Reopen-then-delete: a crash after the reopen leaves the trip still completed
+    # (row present) but its session already editable — re-running uncomplete is a clean
+    # no-op reopen (the status guard) + the delete, fully recovered. The reverse order
+    # would strand the trip un-completed with a still-`approved` session AND no row left
+    # to find the session through, reviving the blank-shadow bug with no API remedy.
+    # Only an `approved` session is reopened — a manual completion points at NULL, and the
+    # `status='approved'` guard means a non-approved session is never disturbed.
     if sid:
-        # Only an `approved` session is reopened here — a manual completion may point at a
-        # still-live session we must not disturb. Guarded on status in the UPDATE itself.
         db.execute(
             "UPDATE sessions SET status='changes_requested', "
             "review_note='Un-completed by admin — reopened for further edits.', "
             "updated_at=? WHERE id=? AND status='approved'", (time.time(), sid))
+    db.execute("DELETE FROM completed_trips WHERE trip_id=?", (trip_id,))
     export_completed_trips()   # Stage-9 handshake file (best-effort; row removed)
     return {"ok": True}
 

@@ -316,7 +316,7 @@ const RegenerateControls = ({
       type="button"
       disabled={busy}
       onClick={onTrimSilence}
-      title="Trim the silence at the end of this clip (beginner trips keep a 3s tail; other levels remove excess)"
+      title="Trim the silence at the end of this clip (beginner-trip narration keeps a 3s tail; questions, options and every other level keep a small tail)"
       className={`${btn} border-gray-600 text-gray-200`}
     >
       Trim end silence
