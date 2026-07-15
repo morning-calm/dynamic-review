@@ -192,6 +192,11 @@ Scripts note via GitHub Desktop.
 ---
 
 ## Done
+- **2026-07-16** — **Finalised-bus consumer** (f9fad71, LIVE on the laptop). The app now reads
+  Stage 9's `review-audio/_bus/finalised_trips.json` (read-only, best-effort) and marks completed
+  trips **Published** (shipped, greyed, sunk to bottom of Completed) or **Re-finalise pending**
+  (re-approved since shipped). Red-teamed (Opus, no defects). Scripts-side publisher is the
+  dynamic-content half; until its first publish the snapshot is empty and behaviour is unchanged.
 - **2026-07-13 (session 2)** — **Blank-session incident + status-vocabulary consolidation**
   (af11d9a, LIVE). Opening an `ai_review` trip re-seeded a BLANK session that then shadowed the
   reviewer's real one (2 reached production; no work lost). Root cause was a hand-copied status

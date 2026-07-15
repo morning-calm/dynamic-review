@@ -25,8 +25,19 @@ Completed list, and re-approved-since-shipped trips show **Re-finalise pending**
 exercised (shipped / restale-on-re-approval / absent / junk timestamps) — all correct;
 `get_finalised_snapshot()` with no creds degraded silently to `{}`.
 
-**Not done / next steps**
-- NOT yet deployed to the live laptop — per protocol, run **/red-opus** on these
-  changes first, then deploy (pull + uvicorn restart; check cloudflared).
-- Scripts side (`stage9/completed.py` publisher) is handled separately in
-  dynamic-content per the prompt — no action here.
+## Red-team + deploy (same session)
+
+- **/red-opus** (clean-context Opus): no correctness bugs, no edits. Confirmed the R2
+  read can't raise into `/api/completed`, restale-before-shipped ordering is right,
+  JSX balances, gates pass. Its one cosmetic note (li-level `opacity-60` dimmed the
+  Published divider) was applied — opacity moved to the inner row div.
+- Committed **f9fad71**, pushed; **deployed to the Ubuntu laptop**: journal showed no
+  reviewer traffic for 30 min → pull, `npm run build`, NOPASSWD
+  `systemctl restart review-app.service`. Verified: review-app + review-tunnel active,
+  tunnel 200, no R2-creds warning at service startup, `get_finalised_snapshot()` = 0
+  trips (expected — Scripts hasn't published the key yet).
+
+**Next steps**
+- Scripts side (`stage9/completed.py` publisher) lands separately in dynamic-content;
+  once it first publishes, shipped trips flip to Published on the next Completed load.
+- Backlog updated (Done entry 2026-07-16).
