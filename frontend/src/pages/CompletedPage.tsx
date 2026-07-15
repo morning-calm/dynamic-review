@@ -18,6 +18,22 @@ const METHOD_BADGE: Record<CompletionMethod, { label: string; cls: string }> = {
   manual: { label: 'Manual', cls: 'bg-gray-600' },
 };
 
+/** Stage-9 finalised-bus state (best-effort, read-only). `shipped` = the current
+ * approval was finalised + uploaded — published, nothing left to do; `restale` =
+ * shipped once but re-approved since, so a re-finalise is pending. */
+const FINALISED_BADGE: Record<'shipped' | 'restale', { label: string; cls: string; title: string }> = {
+  shipped: {
+    label: 'Published',
+    cls: 'bg-sky-800',
+    title: 'Finalised & shipped by Stage 9 — this approval is live',
+  },
+  restale: {
+    label: 'Re-finalise pending',
+    cls: 'bg-amber-700',
+    title: 'Shipped once, but re-approved since — the new approval has not been shipped yet',
+  },
+};
+
 /** Both roles: trips that are done — approved through the normal submit→approve
  * flow, or admin-marked-complete as a bypass for work already finished in the
  * old system. Reviewers see only their languages (server-filtered). Rows with a
@@ -85,19 +101,40 @@ const CompletedPage = () => {
 
         {items !== null && items.length > 0 && (
           <ul className="divide-y divide-gray-700/60 overflow-hidden rounded-lg border border-gray-700 bg-gray-800/60">
-            {items.map((it) => {
+            {items.map((it, idx) => {
               const badge = METHOD_BADGE[it.method];
+              const fin = it.finalised ? FINALISED_BADGE[it.finalised] : null;
+              const shipped = it.finalised === 'shipped';
+              // The server sinks shipped trips to the bottom; label the boundary once.
+              const firstShipped = shipped && (idx === 0 || items[idx - 1].finalised !== 'shipped');
               return (
-                <li key={it.trip_id} className="flex items-center justify-between gap-4 px-4 py-3">
+                <li key={it.trip_id}>
+                  {firstShipped && (
+                    <p className="border-b border-gray-700/60 bg-gray-900/40 px-4 py-1.5 text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                      Published (finalised &amp; shipped)
+                    </p>
+                  )}
+                  <div
+                    className={`flex items-center justify-between gap-4 px-4 py-3${shipped ? ' opacity-60' : ''}`}
+                  >
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="truncate text-sm text-gray-200">{it.title || it.trip_id}</p>
                       <span className={`rounded px-2 py-0.5 text-[11px] font-medium text-white ${badge.cls}`}>
                         {badge.label}
                       </span>
+                      {fin && (
+                        <span
+                          title={fin.title}
+                          className={`rounded px-2 py-0.5 text-[11px] font-medium text-white ${fin.cls}`}
+                        >
+                          {fin.label}
+                        </span>
+                      )}
                     </div>
                     <p className="truncate text-[11px] text-gray-500">
                       {it.trip_id} · {it.language} · completed by {it.completed_by} · {formatCompletedAt(it.completed_at)}
+                      {shipped && it.finalised_at != null && <> · published {formatCompletedAt(it.finalised_at)}</>}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
@@ -121,6 +158,7 @@ const CompletedPage = () => {
                         {busyId === it.trip_id ? 'Un-completing…' : 'Un-complete'}
                       </button>
                     )}
+                  </div>
                   </div>
                 </li>
               );

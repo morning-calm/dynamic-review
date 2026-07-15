@@ -41,6 +41,12 @@ SNAPSHOT_PREFIX = "_bus/prod-snapshot/"
 # (approve / manual-complete / un-complete) must re-put it.
 COMPLETED_KEY = "_bus/completed_trips.json"
 
+# The reverse handshake: Stage 9 publishes its finalise ledger here at the end of every
+# finalise run that actually uploaded. The app is STRICTLY READ-ONLY on this key (mirror
+# of the rule that Scripts never writes COMPLETED_KEY). Same current-state semantics: a
+# trip vanishing means "no longer considered finalised", newest generated_at is truth.
+FINALISED_KEY = "_bus/finalised_trips.json"
+
 # Trip ids are Firestore doc ids like Taipei101_HSK12_ZH — enforce that shape at queue
 # time so a job never carries an id that breaks the key layout or (defence in depth)
 # could be mistaken for a CLI flag by the workstation executors.
@@ -84,6 +90,27 @@ def put_completed_snapshot(payload: dict) -> bool:
               "— the local file is current but Stage 9 on another machine is now STALE. "
               "Repair with: py -3.12 scripts/export_completed.py")
         return False
+
+
+def get_finalised_snapshot() -> dict[str, dict]:
+    """The Stage-9 finalised-trips snapshot, keyed by trip_id. BEST-EFFORT and
+    READ-ONLY: any failure (no creds, NoSuchKey before Scripts first publishes,
+    network) degrades to {} = "nothing finalised yet" — it must never break the
+    completed-list load, exactly like put_completed_snapshot never fails an approve.
+    NoSuchKey is expected pre-first-publish, so only unexpected errors log."""
+    try:
+        s3 = _r2()
+        if s3 is None:
+            return {}
+        obj = s3.get_object(Bucket=BUCKET, Key=FINALISED_KEY)
+        data = json.loads(obj["Body"].read().decode("utf-8"))
+        return {t["trip_id"]: t for t in data.get("trips", [])
+                if isinstance(t, dict) and t.get("trip_id")}
+    except Exception as e:  # noqa: BLE001 — see docstring
+        if "NoSuchKey" not in type(e).__name__ and "NoSuchKey" not in str(e):
+            print(f"[finalised-bus] read failed ({BUCKET}/{FINALISED_KEY}): {e} "
+                  "— treating as nothing finalised")
+        return {}
 
 
 def _job_key(job_id: str) -> str:

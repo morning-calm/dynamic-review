@@ -4059,20 +4059,60 @@ def export_completed_trips() -> None:
     review_bus.put_completed_snapshot(payload)     # loud on failure, never raises
 
 
+def _parse_bus_ts(s) -> float | None:
+    """Tolerant ISO-8601 → epoch seconds for finalised-bus timestamps (values may
+    carry a Z or an offset; treat naive as UTC). None on anything unparseable."""
+    if not s:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(s).replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            from datetime import timezone
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.timestamp()
+    except ValueError:
+        return None
+
+
+def _finalised_state(fin: dict | None, completed_at: float) -> tuple[str | None, float | None]:
+    """Cross-reference a completed trip against its Stage-9 finalised-bus entry.
+
+    Returns (state, finalised_at_epoch): 'shipped' = the CURRENT approval was
+    finalised + uploaded; 'restale' = it was shipped once but the trip has been
+    re-approved since (Scripts' pending() calls this restale too — re-finalise
+    pending); None = never finalised. The join key is the entry's completed_at —
+    the approval timestamp Stage 9 finalised against — with a 1 s slop because it
+    round-trips through ISO seconds."""
+    if not fin:
+        return None, None
+    f_at = _parse_bus_ts(fin.get("finalised_at"))
+    fc_at = _parse_bus_ts(fin.get("completed_at"))
+    if fc_at is not None and completed_at > fc_at + 1.0:
+        return "restale", f_at
+    if f_at is not None and f_at + 1.0 >= completed_at:
+        return "shipped", f_at
+    return "restale", f_at
+
+
 def completed(user) -> list[dict]:
     """The completed queue (approved + admin-marked-complete). BOTH roles; reviewers are
-    filtered to their languages (admins see all). Newest first. View-only — an admin
-    un-completes to return a trip to the active list."""
+    filtered to their languages (admins see all). Newest first, except SHIPPED trips
+    (Stage-9-finalised, per the read-only finalised bus) sink to the bottom — they need
+    no further attention. View-only — an admin un-completes to return a trip to the
+    active list. The bus is re-fetched on every load (no caching) so a just-shipped
+    trip flips to Published without a hard reload."""
     from . import auth   # lazy (auth imports sessions) — no module-load cycle
     rows = db.query(
         "SELECT trip_id, completed_by, completed_at, method, session_id "
         "FROM completed_trips ORDER BY completed_at DESC")
+    fin_map = review_bus.get_finalised_snapshot()   # best-effort; {} = none finalised
     out: list[dict] = []
     for r in rows:
         tid = r["trip_id"]
         if not auth.language_allowed(user, tid):
             continue
         meta = _trip_meta(tid)
+        fin_state, fin_at = _finalised_state(fin_map.get(tid), r["completed_at"])
         out.append({
             "trip_id": tid,
             "title": meta.get("title") or tid,
@@ -4081,7 +4121,11 @@ def completed(user) -> list[dict]:
             "completed_by": r["completed_by"],
             "completed_at": r["completed_at"],
             "session_id": r["session_id"],
+            "finalised": fin_state,        # None | 'shipped' | 'restale'
+            "finalised_at": fin_at,        # epoch seconds | None
         })
+    # Stable partition: unshipped (newest-first) above, shipped sunk to the bottom.
+    out.sort(key=lambda it: it["finalised"] == "shipped")
     return out
 
 

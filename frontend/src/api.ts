@@ -92,6 +92,12 @@ export interface CompletedItem {
   completed_at: number;
   /** The approved session, when method is `approved`; null for `manual`. */
   session_id: string | null;
+  /** Stage-9 finalised-bus cross-reference (read-only, best-effort): `shipped` =
+   * the current approval was finalised + uploaded (published); `restale` = shipped
+   * once but re-approved since (re-finalise pending); null = not finalised. */
+  finalised: 'shipped' | 'restale' | null;
+  /** When Stage 9 last finalised this trip (epoch seconds); null if never. */
+  finalised_at: number | null;
 }
 
 export type BugStatusValue = 'open' | 'investigating' | 'resolved';
