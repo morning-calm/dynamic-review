@@ -143,13 +143,20 @@ def registry_list() -> list[dict]:
     ]
 
 
+_EU_LANG_SUFFIXES = {"_ES": "Spanish", "_FR": "French", "_DE": "German", "_IT": "Italian"}
+
+
 def language_of(trip_id: str) -> str:
-    """Narration language inferred from the trip-id suffix (`_JP`/`_ZH`/`_EN`)."""
+    """Narration language inferred from the trip-id suffix (`_JP`/`_ZH`/`_ES`/`_FR`/
+    `_DE`/`_IT`; anything else — including `_EN` — is English)."""
     t = (trip_id or "").upper()
     if t.endswith("_JP"):
         return "Japanese"
     if t.endswith("_ZH"):
         return "Mandarin"
+    for suf, lang in _EU_LANG_SUFFIXES.items():
+        if t.endswith(suf):
+            return lang
     return "English"
 
 
@@ -167,6 +174,14 @@ def voice_for_gender(language: str, country: str, gender: str) -> str | None:
         if g == "female":
             return "annasu"
         return "yu" if c == "Taiwan" else "jason"
+    if language == "Spanish":
+        return "martin" if g == "male" else "sara"
+    if language == "French":
+        return "sebastien" if g == "male" else "yvonne"
+    if language == "German":
+        return "noah" if g == "male" else "dana"
+    if language == "Italian":
+        return "marco" if g == "male" else "linda"
     # English (default): Scotland has its own female voice; UK male is Harry.
     if g == "female":
         return "isla" if c == "Scotland" else "andrea"
@@ -174,19 +189,25 @@ def voice_for_gender(language: str, country: str, gender: str) -> str | None:
 
 
 def speed_for_trip(trip_id: str) -> float:
-    """CEFR English narration speed by level — eleven_multilingual_v2 honours `speed`,
-    so a regenerated clip must match the original take's level:
-        A1-A2  (`_A12_EN`) -> 0.7
-        B1     (`_B1_EN`)  -> 0.85
-        B2+ and native `_EN` -> 1.0
-    NB Japanese AND Mandarin use the v3 API where speed is always 1.0 (Mandarin went
-    V3-only 2026-07-02, so the old HSK3 v2 @ 0.85 no longer applies). Only CEFR English
-    (v2) branches on level here."""
+    """Narration speed by level — eleven_multilingual_v2 honours `speed`, so a
+    regenerated clip must match the original take's level:
+        A1-A2  (`_A12_EN`, `_A12_{ES,FR,DE,IT}`)  -> 0.7
+        Beg EU (`_Beg_{ES,FR,DE,IT}`)             -> 0.7
+        B1     (`_B1_EN`, `_B1_{ES,FR,DE,IT}`)    -> 0.85
+        B2+ and native                            -> 1.0
+    Mirrors run_eu.py's `is_low_level()` on the pipeline side (EU low-level trips are
+    generated at 0.7x). NB Japanese AND Mandarin use the v3 API where speed is always
+    1.0 (Mandarin went V3-only 2026-07-02); only v2 languages branch on level here."""
     t = (trip_id or "").upper()
     if t.endswith("_A12_EN"):
         return 0.7
     if t.endswith("_B1_EN"):
         return 0.85
+    for lang in ("ES", "FR", "DE", "IT"):
+        if t.endswith(f"_A12_{lang}") or t.endswith(f"_BEG_{lang}"):
+            return 0.7
+        if t.endswith(f"_B1_{lang}"):
+            return 0.85
     return 1.0
 
 GEMINI_DELAY = 0.1

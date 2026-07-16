@@ -184,4 +184,8 @@ LANGUAGE_FALLBACK_VOICE = {
     "English": "harry",
     "Japanese": "daisuke",
     "Mandarin": "yu",
+    "Spanish": "sara",
+    "French": "yvonne",
+    "German": "dana",
+    "Italian": "linda",
 }

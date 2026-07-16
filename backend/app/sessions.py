@@ -607,7 +607,13 @@ _LEVEL_SUFFIXES = [
     ("_Beg_N5_JP", "N5"), ("_Beg_N4_JP", "N4"), ("_N5_JP", "N5"), ("_N4_JP", "N4"),
     ("_Beg_JP", "N5"),   # real N5 ids use _Beg_JP (e.g. Tokyo_07_Olympic_Beg_JP)
     ("_HSK12_ZH", "HSK1-2"), ("_HSK3_ZH", "HSK3"),
+    # EU languages (2026-07-16): _A12_* joins _BEGINNER_LEVELS (3s SceneDesc tail);
+    # _Beg_* EU trips are 0.7x speed but do NOT take the beginner tail.
+    ("_A12_ES", "A12"), ("_A12_FR", "A12"), ("_A12_DE", "A12"), ("_A12_IT", "A12"),
+    ("_B1_ES", "B1"), ("_B1_FR", "B1"), ("_B1_DE", "B1"), ("_B1_IT", "B1"),
+    ("_Beg_ES", "ES-Beg"), ("_Beg_FR", "FR-Beg"), ("_Beg_DE", "DE-Beg"), ("_Beg_IT", "IT-Beg"),
     ("_EN", "EN"), ("_ZH", "ZH"), ("_JP", "JP"),
+    ("_ES", "ES"), ("_FR", "FR"), ("_DE", "DE"), ("_IT", "IT"),
 ]
 
 
