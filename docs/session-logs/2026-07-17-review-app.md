@@ -81,6 +81,11 @@ assumptions, make the changes.
 samples identical, duration 13.897 s unchanged); `py_compile` + `import app.sessions`
 clean; laptop pulled `5ea958e`, service restarted, `review-app` + `review-tunnel` active.
 
-**Open:** the pipeline session flagged a `Tokyo_01` TripGroup duplicate `tripId`
-(`Tokyo_01_Beg_JP` twice; `Beginner+` presumably should be `Tokyo_01_Beg_N4_JP`) —
-data fix awaiting dave, not code.
+**Tokyo_01 TripGroup duplicate `tripId` — RESOLVED (by dave, in staging directly).**
+I verified the defect live (entries 1+2 both `Tokyo_01_Beg_JP`), confirmed the sibling
+convention (Tokyo_03/04/05 third button → `<id>_Beg_N4_JP`; no other group has dupes),
+and was about to apply the same fix when dave corrected it himself — my write was
+assert-guarded on the pre-fix state, so nothing double-applied. End state verified:
+`Tokyo_01_EN` / `Tokyo_01_Beg_JP` / `Tokyo_01_Beg_N4_JP`, N4 Trips doc exists.
+Cosmetic leftovers (dave's call): Tokyo_01 says "Beginner+" where siblings say
+"Intermediate", and its tooltip still reads "For beginner learners.".
