@@ -30,7 +30,19 @@ import time
 from app import config  # noqa: F401  (sys.path + .env bootstrap) — keep first
 from app import auth, db
 
-VALID_LANGUAGES = ("English", "Japanese", "Mandarin")
+# Must stay in step with audio_core.language_of(), which is what language_allowed()
+# compares against: a language it can return but that is missing here cannot be
+# granted to a reviewer, so those trips would be admin-only forever (the EU four
+# were in language_of from 2026-07-16 but unlistable here until 2026-07-17).
+VALID_LANGUAGES = (
+    "English",
+    "Japanese",
+    "Mandarin",
+    "Spanish",
+    "French",
+    "German",
+    "Italian",
+)
 VALID_ROLES = ("admin", "reviewer")
 _LANG_CANON = {l.lower(): l for l in VALID_LANGUAGES}
 
