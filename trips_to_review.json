@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-08T13:26:30+01:00",
+  "generated_at": "2026-07-17T10:07:43+01:00",
   "source": "trello 6,7",
   "trips": [
     {
@@ -700,32 +700,100 @@
       "pos": 140737488879616
     },
     {
-      "trip_id": "A._A. Milne and Rudyard Kipling_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "A._A. Milne and Rudyard Kipling",
-      "voice": "andrea",
+      "trip_id": "Ainsa_A12_ES",
+      "lane": "6",
+      "level": "ES-A12",
+      "family": "Ainsa_Beg",
+      "voice": "sara",
       "gender": "female",
-      "title": "A._A. Milne and Rudyard Kipling_A12_EN",
-      "labels": [
-        "EN"
-      ],
-      "card_url": "https://trello.com/c/p7TBN1I1",
-      "pos": 140737488322560
+      "title": "Ainsa_A12_ES",
+      "labels": [],
+      "card_url": "https://trello.com/c/tEeI4LZp",
+      "pos": 140737488896000
     },
     {
-      "trip_id": "Blaenavon_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Blaenavon",
-      "voice": "andrea",
+      "trip_id": "Baden-Baden_A12_DE",
+      "lane": "6",
+      "level": "DE-A12",
+      "family": "Baden-Baden_Beg_DE",
+      "voice": "noah",
+      "gender": "male",
+      "title": "Baden-Baden_A12_DE",
+      "labels": [],
+      "card_url": "https://trello.com/c/6qQsM297",
+      "pos": 140737488912384
+    },
+    {
+      "trip_id": "CastellodiBrolio_A12_IT",
+      "lane": "6",
+      "level": "IT-A12",
+      "family": "CastellodiBrolio_Beg_IT",
+      "voice": "marco",
+      "gender": "male",
+      "title": "CastellodiBrolio_A12_IT",
+      "labels": [],
+      "card_url": "https://trello.com/c/z66hXasz",
+      "pos": 140737488928768
+    },
+    {
+      "trip_id": "Cordoba3_A12_ES",
+      "lane": "6",
+      "level": "ES-A12",
+      "family": "Cordoba3_Beg",
+      "voice": "martin",
+      "gender": "male",
+      "title": "Cordoba3_A12_ES",
+      "labels": [],
+      "card_url": "https://trello.com/c/P0WI2e2R",
+      "pos": 140737488945152
+    },
+    {
+      "trip_id": "Florence_Duomo_A12_IT",
+      "lane": "6",
+      "level": "IT-A12",
+      "family": "Florence_Duomo_Beg_IT",
+      "voice": "linda",
       "gender": "female",
-      "title": "Blaenavon_A12_EN",
-      "labels": [
-        "EN"
-      ],
-      "card_url": "https://trello.com/c/TGVNXlxS",
-      "pos": 140737488338944
+      "title": "Florence_Duomo_A12_IT",
+      "labels": [],
+      "card_url": "https://trello.com/c/VilUFFDk",
+      "pos": 140737488961536
+    },
+    {
+      "trip_id": "Hirsau_Abbey_A12_DE",
+      "lane": "6",
+      "level": "DE-A12",
+      "family": "Hirsau_Abbey_Beg_DE",
+      "voice": "dana",
+      "gender": "female",
+      "title": "Hirsau_Abbey_A12_DE",
+      "labels": [],
+      "card_url": "https://trello.com/c/a2qeFqqg",
+      "pos": 140737488977920
+    },
+    {
+      "trip_id": "Hyeres_A12_FR",
+      "lane": "6",
+      "level": "FR-A12",
+      "family": "Hyeres_Beg_FR",
+      "voice": "yvonne",
+      "gender": "female",
+      "title": "Hyeres_A12_FR",
+      "labels": [],
+      "card_url": "https://trello.com/c/GqdU69yz",
+      "pos": 140737488994304
+    },
+    {
+      "trip_id": "Reims3_A12_FR",
+      "lane": "6",
+      "level": "FR-A12",
+      "family": "Reims3_Beg_FR",
+      "voice": "sebastien",
+      "gender": "male",
+      "title": "Reims3_A12_FR",
+      "labels": [],
+      "card_url": "https://trello.com/c/qCkP1jVo",
+      "pos": 140737489010688
     },
     {
       "trip_id": "Taichung_EN",
@@ -777,34 +845,6 @@
       ],
       "card_url": "https://trello.com/c/5fy4E76e",
       "pos": 140737488388096
-    },
-    {
-      "trip_id": "Bath1_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Bath1",
-      "voice": "harry",
-      "gender": "male",
-      "title": "Bath1_A12_EN",
-      "labels": [
-        "EN"
-      ],
-      "card_url": "https://trello.com/c/8bMPlLuB",
-      "pos": 140737488404480
-    },
-    {
-      "trip_id": "Bath2_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Bath2",
-      "voice": "harry",
-      "gender": "male",
-      "title": "Bath2_A12_EN",
-      "labels": [
-        "EN"
-      ],
-      "card_url": "https://trello.com/c/OfybYPN7",
-      "pos": 140737488420864
     },
     {
       "trip_id": "Fowey_A12_EN",
