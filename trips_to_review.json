@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-17T20:26:16+01:00",
+  "generated_at": "2026-07-17T20:35:10+01:00",
   "source": "trello 6,7",
   "trips": [
     {
@@ -3178,7 +3178,7 @@
       "lane": "7",
       "level": "FR-Beg",
       "family": "Monaco1_Beg_FR",
-      "voice": "sbastien",
+      "voice": "sebastien",
       "gender": "male",
       "title": "Monaco1_Beg_FR",
       "labels": [],
@@ -3190,7 +3190,7 @@
       "lane": "7",
       "level": "FR-Beg",
       "family": "Monaco2_Beg_FR",
-      "voice": "sbastien",
+      "voice": "sebastien",
       "gender": "male",
       "title": "Monaco2_Beg_FR",
       "labels": [],
