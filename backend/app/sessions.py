@@ -1223,9 +1223,33 @@ def _whisper_paths(sid: str, frow) -> tuple[Path, Path, Path] | None:
     return audio, meta_dir / (audio.stem + ".json"), meta_dir / (audio.stem + ".audiohash")
 
 
+# Whisper transcription language by narration language. Transcribing in the WRONG
+# language poisons the whole splice path: the tokens barely align with the cleaned
+# text, so _whisper_index_map goes sparse and _silence_cut "expands" through words
+# that were never mapped — heard in the field (2026-07-17, Hirsau_Abbey_A12_DE) as a
+# highlight of one sentence re-voicing the next sentence too. CJK trips normally use
+# the MMS aligner, but map them honestly anyway.
+_WHISPER_LANGS = {"English": "en", "Spanish": "es", "French": "fr",
+                  "German": "de", "Italian": "it", "Japanese": "ja", "Mandarin": "zh"}
+
+
+def _whisper_lang(trip_id: str) -> str:
+    return _WHISPER_LANGS.get(audio_core.language_of(trip_id), "en")
+
+
+def _split_sidecar(text: str | None) -> tuple[str | None, str]:
+    """Sidecar format ``<audiohash>|<lang>``. Pre-2026-07-17 sidecars hold just the
+    hash — those caches were all transcribed as 'en', so that's the implied lang."""
+    if not text:
+        return None, "en"
+    hash_part, _, lang_part = text.partition("|")
+    return hash_part or None, (lang_part or "en")
+
+
 def _whisper_orig(srow, frow) -> list[dict]:
     """Word timings for the CURRENT working audio (so cut times track the combined take,
-    not the pristine master). Content-hash keyed → re-transcribes after each combine."""
+    not the pristine master). Content-hash + language keyed → re-transcribes after each
+    combine, and when a cache was built in the wrong language (the forced-'en' EU caches)."""
     paths = _whisper_paths(srow["id"], frow)
     if paths is None:
         return []
@@ -1234,13 +1258,15 @@ def _whisper_orig(srow, frow) -> list[dict]:
         return []
     meta_dir = cache_json.parent
     meta_dir.mkdir(parents=True, exist_ok=True)
+    lang = _whisper_lang(srow["trip_id"])
     cur_hash = _file_hash(audio)
-    prev_hash = sidecar.read_text().strip() if sidecar.exists() else None
-    refresh = cache_json.exists() and prev_hash != cur_hash
+    prev_hash, prev_lang = _split_sidecar(
+        sidecar.read_text().strip() if sidecar.exists() else None)
+    refresh = cache_json.exists() and (prev_hash != cur_hash or prev_lang != lang)
     with WHISPER_LOCK:
-        data = transcribe_words(audio, lang="en", model_name="small",
+        data = transcribe_words(audio, lang=lang, model_name="small",
                                 cache_dir=meta_dir, refresh=refresh)
-    sidecar.write_text(cur_hash or "")
+    sidecar.write_text(f"{cur_hash or ''}|{lang}")
     return data.get("words") or []
 
 
@@ -1282,9 +1308,12 @@ def _reindex_word_cache(sid: str, frow, a: float, b: float, ins: float,
     _audio, cache_json, sidecar = paths
     if not cache_json.exists():
         return                       # never transcribed → nothing to re-time
-    prev = sidecar.read_text().strip() if sidecar.exists() else None
-    if not pre_hash or prev != pre_hash:
+    prev_hash, prev_lang = _split_sidecar(
+        sidecar.read_text().strip() if sidecar.exists() else None)
+    if not pre_hash or prev_hash != pre_hash:
         return                       # cache was already stale → let it re-transcribe
+    if prev_lang != _whisper_lang(_session_row(sid)["trip_id"]):
+        return                       # wrong-language cache → let it re-transcribe
     delta = float(ins) - (float(b) - float(a))
 
     def remap(t: float) -> float:
@@ -1312,7 +1341,7 @@ def _reindex_word_cache(sid: str, frow, a: float, b: float, ins: float,
                         t = min(t, new_dur)
                     w[k] = t
         cache_json.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
-        sidecar.write_text(new_hash or "")
+        sidecar.write_text(f"{new_hash or ''}|{prev_lang}")
     except Exception as e:  # noqa: BLE001
         print(f"[sessions] word-cache re-time failed ({cache_json.name}): {e} "
               "— falling back to re-transcription")

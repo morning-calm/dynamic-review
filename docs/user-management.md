@@ -19,8 +19,14 @@ Run from any PowerShell/Git-Bash prompt on the workstation:
 
 ```bash
 ssh review-laptop "cd ~/Desktop/Server/review-app/backend && \
+  REVIEW_APP_SCRIPTS_ROOT=/home/dynamic-languages/Desktop/Server/Scripts \
   /home/dynamic-languages/Desktop/Server/Scripts/.venv/bin/python manage.py <subcommand> ..."
 ```
+
+The `REVIEW_APP_SCRIPTS_ROOT=` prefix is REQUIRED over SSH: `manage.py` imports
+`app.config`, which needs the Scripts repo on `sys.path`. The systemd unit sets that
+env for the server, but a plain SSH shell does not — without it the import dies with
+`ModuleNotFoundError: pronunciation_overrides`.
 
 No service restart is needed for any user change — the backend reads `users` /
 `auth_sessions` from the DB on every request.
