@@ -56,6 +56,21 @@ def mp3_to_mp3_copy(src: str | Path, dst: str | Path) -> None:
     Path(dst).write_bytes(Path(src).read_bytes())
 
 
+# The pipeline's beginner-pad step (Scripts\AddSilenceToLowLevelNarration-EditMe.py::
+# pad_dirs) is idempotent via this exact ffprobe-visible comment tag; it pads any
+# scene-narration mp3 that lacks it. Our numpy→WAV→mp3 encode path cannot preserve
+# input metadata, so a corrected master must re-claim the tag at promote or Stage 9
+# pads the already-padded clip a second time (~6 s tail on one scene).
+LOWLEVEL_PAD_MARKER = "lowlevel_silence_pad"
+
+
+def tag_pad_marker(src: str | Path, dst: str | Path) -> None:
+    """Stream-copy ``src`` to ``dst`` (no re-encode, audio bytes unchanged) adding the
+    pipeline's pad-idempotence marker as the mp3's comment tag."""
+    _run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-c:a", "copy",
+          "-metadata", f"comment={LOWLEVEL_PAD_MARKER}", str(dst)])
+
+
 def mp3_duration_seconds(path: str | Path) -> float:
     """Cheap container duration via ffprobe (no full decode)."""
     p = subprocess.run(

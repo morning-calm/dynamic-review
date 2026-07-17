@@ -150,6 +150,12 @@ un-complete by `sessions.export_completed_trips`; rebuild any time with
 - **Submit** writes changed **text** to staging Trip + TripGroup (desc + re-derived
   `tripCategories`) and leaves the corrected `<i>.mp3` masters in place — **Stage 9**
   (`stage9_finalise.py` / the CEFR `run_levels.py`) does the mp3→ogg + subtitles + S3.
+  At promote, a corrected **beginner SceneDesc** master (A12/N5/HSK1-2) is re-tagged
+  `comment=lowlevel_silence_pad` (stream-copy, `audio_io.tag_pad_marker`) IF its ~3s
+  tail is measurably present — our numpy→WAV→mp3 encode strips all metadata, and
+  without the tag the pipeline's `pad_dirs` (idempotent via that ffprobe tag) would
+  pad the already-padded clip a second time (~6s dead air on one scene). The tagged
+  copy is what hits BOTH the local master and R2 (the bytes Stage 9 syncs back).
 
 ## Cloudflare R2
 - **Thumbnails:** `thumbs.py` maps scene `videoUrl` → `VRD\VideoIds-…json` (stem from the
