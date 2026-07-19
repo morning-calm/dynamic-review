@@ -23,6 +23,7 @@ import hashlib
 import json
 import os
 import re
+import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -35,7 +36,7 @@ from fastapi import HTTPException
 from . import config  # noqa: F401  (ensures SCRIPTS_ROOT on sys.path) — keep first
 from . import (audio_core, audio_io, audio_splice, auth, auto_checks, auto_review_ingest,
                cjk_align, cjk_splice, db, images_r2, review_audio, review_bus, static360,
-               thumbs)
+               thumbs, trello)
 from .config import (COUNTRY_VOICE_GUESS, COVERAGE_DONE_FRACTION,
                      LANGUAGE_FALLBACK_VOICE, WORK_ROOT)
 from .locks import WHISPER_LOCK
@@ -1097,6 +1098,8 @@ def serialize_field(sid: str, frow) -> dict:
 
 def get_session(sid: str) -> dict:
     srow = _session_row(sid)
+    if srow["status"] in EDITABLE_STATUSES:
+        warm_whisper_async(sid)   # pre-warm word-timing caches for fast first edits
     frows = db.query(
         "SELECT * FROM field_edits WHERE session_id=? ORDER BY id", (sid,))
     fields = [serialize_field(sid, f) for f in frows]
@@ -1252,10 +1255,23 @@ def _split_sidecar(text: str | None) -> tuple[str | None, str]:
     return hash_part or None, (lang_part or "en")
 
 
-def _whisper_orig(srow, frow) -> list[dict]:
+_FG_WHISPER_LOCK = threading.Lock()   # guards _fg_whisper_count
+_fg_whisper_count = 0                 # foreground callers waiting on / holding WHISPER_LOCK
+_WARM_STATE_LOCK = threading.Lock()   # guards the two warm-tracking structures below
+_WARM_SESSIONS: set[str] = set()      # sids with a session-wide warm thread in flight
+_WARM_LAST: dict[str, float] = {}     # sid → last session-wide warm start (throttle)
+_WARM_THROTTLE_S = 60.0
+
+
+def _whisper_orig(srow, frow, background: bool = False) -> list[dict]:
     """Word timings for the CURRENT working audio (so cut times track the combined take,
     not the pristine master). Content-hash + language keyed → re-transcribes after each
-    combine, and when a cache was built in the wrong language (the forced-'en' EU caches)."""
+    combine, and when a cache was built in the wrong language (the forced-'en' EU caches).
+
+    ``background=True`` marks a cache pre-warm call: it yields to any foreground caller
+    (a reviewer waiting on a regen) before taking WHISPER_LOCK, so warming never adds
+    more than one in-flight file's latency to a real request."""
+    global _fg_whisper_count
     paths = _whisper_paths(srow["id"], frow)
     if paths is None:
         return []
@@ -1269,11 +1285,83 @@ def _whisper_orig(srow, frow) -> list[dict]:
     prev_hash, prev_lang = _split_sidecar(
         sidecar.read_text().strip() if sidecar.exists() else None)
     refresh = cache_json.exists() and (prev_hash != cur_hash or prev_lang != lang)
-    with WHISPER_LOCK:
-        data = transcribe_words(audio, lang=lang, model_name="small",
-                                cache_dir=meta_dir, refresh=refresh)
+    if not background:
+        with _FG_WHISPER_LOCK:
+            _fg_whisper_count += 1
+    else:
+        # Yield: don't queue a warm transcription ahead of a waiting reviewer.
+        while True:
+            with _FG_WHISPER_LOCK:
+                if _fg_whisper_count == 0:
+                    break
+            time.sleep(0.25)
+    try:
+        with WHISPER_LOCK:
+            data = transcribe_words(audio, lang=lang, model_name="small",
+                                    cache_dir=meta_dir, refresh=refresh)
+    finally:
+        if not background:
+            with _FG_WHISPER_LOCK:
+                _fg_whisper_count -= 1
     sidecar.write_text(f"{cur_hash or ''}|{lang}")
     return data.get("words") or []
+
+
+def _warm_whisper_session(sid: str) -> None:
+    """Background thread body: pre-transcribe every audio field's working take so the
+    first highlight/pause edit doesn't pay a full faster-whisper pass. SceneDesc first
+    (where highlight-fix happens), in scene order. Pure optimisation — swallow everything."""
+    try:
+        srow = _session_row(sid)
+        frows = db.query(
+            "SELECT * FROM field_edits WHERE session_id=? ORDER BY "
+            "CASE WHEN field_path='SceneDesc' THEN 0 ELSE 1 END, scene_index, id",
+            (sid,))
+        for frow in frows:
+            if not (frow["has_audio"] and frow["mp3_name"]):
+                continue
+            try:
+                _whisper_orig(srow, frow, background=True)
+            except Exception:  # noqa: BLE001
+                pass
+    except Exception:  # noqa: BLE001
+        pass
+    finally:
+        with _WARM_STATE_LOCK:
+            _WARM_SESSIONS.discard(sid)
+
+
+def _warm_whisper_field(sid: str, fid: int) -> None:
+    try:
+        srow = _session_row(sid)
+        frow = _field_row(sid, fid)
+        if frow["has_audio"] and frow["mp3_name"]:
+            _whisper_orig(srow, frow, background=True)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def warm_whisper_async(sid: str, fid: int | None = None) -> None:
+    """Fire-and-forget Whisper cache warm: the whole session (on trip open, throttled +
+    single-flight) or one field (right after an op replaced its working audio). Never
+    raises, never blocks the caller."""
+    try:
+        if fid is None:
+            now = time.time()
+            with _WARM_STATE_LOCK:
+                if sid in _WARM_SESSIONS:
+                    return
+                if now - _WARM_LAST.get(sid, 0.0) < _WARM_THROTTLE_S:
+                    return
+                _WARM_SESSIONS.add(sid)
+                _WARM_LAST[sid] = now
+            threading.Thread(target=_warm_whisper_session, args=(sid,),
+                             daemon=True, name=f"whisper-warm-{sid}").start()
+        else:
+            threading.Thread(target=_warm_whisper_field, args=(sid, fid),
+                             daemon=True, name=f"whisper-warm-{sid}-{fid}").start()
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def _reindex_word_cache(sid: str, frow, a: float, b: float, ins: float,
@@ -2081,7 +2169,36 @@ def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
                             * audio_io.SR))
         if len(trimmed) < floor_n:
             trimmed = cand_samples[:min(len(cand_samples), floor_n)]
-    if front_s > 0.0 or len(trimmed) < len(cand_samples):
+    # Level-match the AUDITION copy to the retained working context — the same S1 gain
+    # the combine applies (gated RMS, ±12 dB) — so what the reviewer hears pre-combine is
+    # what the splice will sound like. Safe against double-apply: combine re-measures the
+    # (now leveled) candidate against the same context, so its own gain lands ≈ 0 dB.
+    cand_gain_db = 0.0
+    if plan.meta.get("span_only") and frow["mp3_name"]:
+        wpath = dirs["working"] / frow["mp3_name"]
+        if wpath.exists():
+            try:
+                base = audio_io.mp3_to_samples(wpath)
+                tL = float(plan.meta.get("tL") or 0.0)
+                tR = (audio_io.duration_seconds(base, audio_io.SR)
+                      if plan.meta.get("tR") is None else float(plan.meta["tR"]))
+                bL = max(0, min(int(round(tL * audio_io.SR)), len(base)))
+                bR = max(bL, min(int(round(tR * audio_io.SR)), len(base)))
+                retained = (np.concatenate([base[:bL], base[bR:]])
+                            if (bL or bR < len(base)) else base)
+                ref_db = audio_io.gated_rms_db(retained, audio_io.SR)
+                cnd_db = audio_io.gated_rms_db(trimmed, audio_io.SR)
+                if ref_db > -119 and cnd_db > -119:
+                    g = float(np.clip(ref_db - cnd_db, -12.0, 12.0))
+                    if abs(g) > 0.25:      # skip inaudible corrections
+                        trimmed = audio_io.limit_peak(
+                            audio_io.apply_gain_db(trimmed, g),
+                            audio_splice.TRUE_PEAK_CEILING_DB)
+                        cand_gain_db = g
+            except Exception:  # noqa: BLE001 — preview-only nicety, never block a regen
+                cand_gain_db = 0.0
+    plan.meta["cand_gain_db"] = round(cand_gain_db, 2)
+    if front_s > 0.0 or cand_gain_db != 0.0 or len(trimmed) < len(cand_samples):
         audio_io.samples_to_mp3(trimmed, cand_path)
     plan.meta["cand_trim_ms"] = round(
         (len(cand_samples) - len(trimmed)) / audio_io.SR * 1000.0, 1)
@@ -2124,6 +2241,7 @@ def combine(sid: str, fid: int) -> dict:
         patch.update(_zh_working_hans_patch(frow))   # re-baseline ZH OLD to this take
         db.update_fields(fid, **patch)
         db.touch_session(sid)
+        warm_whisper_async(sid, fid)   # re-transcribe the new take in the background
         return serialize_field(sid, _field_row(sid, fid))
 
     # segment splice — into the CURRENT working take, so successive edits accumulate
@@ -2150,6 +2268,7 @@ def combine(sid: str, fid: int) -> dict:
             f"manual edit.")
     db.update_fields(fid, **patch)
     db.touch_session(sid)
+    warm_whisper_async(sid, fid)   # re-transcribe the new take in the background
     return serialize_field(sid, _field_row(sid, fid))
 
 
@@ -2181,7 +2300,13 @@ def trim_candidate(sid: str, fid: int, delta_ms: float) -> dict:
     new_trim = min(max(0.0, float(meta.get("cand_trim_ms", 0.0)) + float(delta_ms)),
                    max_trim_ms)
     keep = max(0, n - int(round(new_trim / 1000.0 * sr)))
-    audio_io.samples_to_mp3(samples[:keep], Path(cand))
+    out = samples[:keep]
+    # Re-apply the audition level-match regenerate made (pristine is un-leveled).
+    gain = float(meta.get("cand_gain_db") or 0.0)
+    if gain:
+        out = audio_io.limit_peak(audio_io.apply_gain_db(out, gain),
+                                  audio_splice.TRUE_PEAK_CEILING_DB)
+    audio_io.samples_to_mp3(out, Path(cand))
     meta["cand_trim_ms"] = round(new_trim, 1)
     db.update_fields(fid, splice_meta_json=json.dumps(meta))
     db.touch_session(sid)
@@ -2237,6 +2362,7 @@ def import_mp3(sid: str, fid: int, data: bytes) -> dict:
     patch.update(_clear_coverage_and_done(frow))
     db.update_fields(fid, **patch)
     db.touch_session(sid)
+    warm_whisper_async(sid, fid)   # re-transcribe the imported take in the background
     return serialize_field(sid, _field_row(sid, fid))
 
 
@@ -3027,6 +3153,7 @@ def _restore_audio_version(sid: str, fid: int, target_n: int) -> dict:
     db.update_fields(fid, **patch)
     _r2_upload_working(_session_row(sid)["trip_id"], dirs, frow)
     db.touch_session(sid)
+    warm_whisper_async(sid, fid)   # re-transcribe the restored take in the background
     return serialize_field(sid, _field_row(sid, fid))
 
 
@@ -3752,6 +3879,9 @@ def approve(sid: str, user) -> dict:
             "method='approved', session_id=excluded.session_id",
             (tid, getattr(user, "username", None), now, sid))
         export_completed_trips()   # Stage-9 handshake file (best-effort)
+        trello.notify(tid, move=True, comment=(
+            f"Approved in review-app by {getattr(user, 'username', 'admin')} — "
+            f"corrected masters promoted + text written to staging. Moved to lane 9."))
         return {"ok": True, "validation": soft, "written": result["written"],
                 "promoted_mp3": result["promoted_mp3"], "awaiting_stage9": True,
                 "zh_warnings": result.get("zh_warnings") or []}
@@ -4208,6 +4338,10 @@ def complete_trip(user, trip_id: str, note: str = "") -> dict:
         "method='manual', session_id=NULL, note=excluded.note",
         (trip_id, getattr(user, "username", None), now, note or ""))
     export_completed_trips()   # Stage-9 handshake file (best-effort)
+    trello.notify(trip_id, move=False, comment=(
+        f"Marked complete (manual) in review-app by "
+        f"{getattr(user, 'username', 'admin')} — workflow marker only, nothing "
+        f"written; card left in place." + (f" Note: {note}" if note else "")))
     return {"ok": True}
 
 
@@ -4241,6 +4375,9 @@ def uncomplete_trip(user, trip_id: str) -> dict:
             "updated_at=? WHERE id=? AND status='approved'", (time.time(), sid))
     db.execute("DELETE FROM completed_trips WHERE trip_id=?", (trip_id,))
     export_completed_trips()   # Stage-9 handshake file (best-effort; row removed)
+    trello.notify(trip_id, move=False, comment=(
+        f"Un-completed in review-app by {getattr(user, 'username', 'admin')} — trip "
+        f"reopened for further edits. Card NOT moved back automatically."))
     return {"ok": True}
 
 
