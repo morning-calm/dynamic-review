@@ -13,6 +13,21 @@ Stage 1 (now): admins use it themselves; **single combined role**, no login wall
   `REQUIREMENTS.md` (requirement→implementation map), `README.md` (quick run),
   `backend/README.md`, `frontend/README.md`.
 
+## ⚠️ LIVE host = the Ubuntu laptop (read first)
+Since **2026-07-04** the production app runs on the **Ubuntu laptop**
+(`dynamic-languages-Lenovo-Z580`), NOT this Windows workstation — it has been the live
+host for a long time now. That's where the real `review.db`, `work/`, secrets, and the
+`cloudflared` tunnel live; reviewers reach it only through the tunnel. The Windows repo/DB
+is a dev checkout and its `review.db` is stale. **Any operational change (DB edits, cache
+clears, restarts, verifying a fix "in prod") must be done on the laptop** —
+`ssh review-laptop` from this workstation (key-based, set up 2026-07-04). App paths there:
+`~/Desktop/Server/review-app` (this app) + `~/Desktop/Server/Scripts` (the pipeline repo,
+`REVIEW_APP_SCRIPTS_ROOT`). The service venv is `~/Desktop/Server/Scripts/.venv`; env
+`REVIEW_APP_SCRIPTS_ROOT=/home/.../Server/Scripts`, `REVIEW_APP_SERVE_FRONTEND=1`. cloudflared
+runs as `review-tunnel.service`. Runbook: `docs/server-migration.md`. **"App is up" = uvicorn
+AND cloudflared, BOTH** (see below). Launch Claude in `D:\Projects\WebApp\review-app` for
+code work (this CLAUDE.md loads), but remember the running system is on the laptop.
+
 ## ⚠️ Cross-repo dependency (read first)
 The **backend imports modules from `D:\Dynamic Languages\Scripts`** (the VR content
 pipeline repo — `dynamic-content`): `stage9.common`, `stage9.whisper_timing`,
@@ -65,6 +80,11 @@ hid Tokyo_06-10 + the Hida/Takayama-family N4/N5 from the queue until 2026-07-02
 backfilled via `backfill_review_blocks.py --apply`, which now PRESERVES the blocks' `voice=`
 annotations instead of stripping them). Every export also prints an **audit** of audio-ready
 drafts that sit on NO lane-6/7 card, so a stale block can't hide trips silently again.
+**Native EU `_<LANG>` rungs are first-class since 2026-07-20** (`review_block.native_tl_id`
+derives `Monaco1_FR` from the family sid `Monaco1_Beg_FR`; lane 7 default): each EU family
+is expected to carry the full `_A12`/`_B1`/native ladder, and the native rung lists
+automatically once its mp3s are canonical (local `Audio Generation/<cid>/` or R2). The app
+needed no changes — bare `_FR`-style ids already resolve language/speed 1.0/voice.
 
 ## Completed-trips export (Stage-9 handshake)
 `completed_trips.json` (repo root, next to the manifest; **gitignored** — server-written
