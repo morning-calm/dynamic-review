@@ -64,3 +64,13 @@ already resolve French / speed 1.0 / gendered voice in `audio_core`):
 
 **Next steps:** none for the app. Future native rungs: place audio canonically → sync →
 export (documented in Scripts CLAUDE.md § 5a/5c).
+
+## Checkpoint 2 — Monaco to the top of the reviewer list
+
+Dave wants Monaco 1+2 (all families) first. Reviewer order = manifest order =
+(lane, **Trello card position**, trip_id); admin in-app **pin** floats above that
+ad hoc. Moved the 4 Monaco family cards to the top of lane 6 via the Trello API
+(order Monaco1 FR/IT, Monaco2 FR/IT), re-ran the export (manifest pushed), laptop
+pulled. Verified: lane 6 opens Monaco1_A12_FR/IT, Monaco2_A12_FR/IT; lane 7 opens
+Monaco1_Beg_FR, Monaco1_FR, Monaco2_Beg_FR, Monaco2_FR. Survives future re-exports
+(drag-order is the durable mechanism; pins are per-trip overrides).
