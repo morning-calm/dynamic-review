@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-17T23:58:43+01:00",
+  "generated_at": "2026-07-20T18:56:27+01:00",
   "source": "trello 6,7",
   "trips": [
     {
@@ -2021,62 +2021,6 @@
       ],
       "card_url": "https://trello.com/c/5fy4E76e",
       "pos": 140737488388096
-    },
-    {
-      "trip_id": "Fowey_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Fowey",
-      "voice": "andrea",
-      "gender": "female",
-      "title": "Fowey_A12_EN",
-      "labels": [
-        "EN"
-      ],
-      "card_url": "https://trello.com/c/339Zex1s",
-      "pos": 140737488437248
-    },
-    {
-      "trip_id": "Hyde_Park, Holland Park Richmond Park_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Hyde_Park, Holland Park Richmond Park",
-      "voice": "harry",
-      "gender": "male",
-      "title": "Hyde_Park, Holland Park Richmond Park_A12_EN",
-      "labels": [
-        "EN"
-      ],
-      "card_url": "https://trello.com/c/w4aIFcAJ",
-      "pos": 140737488453632
-    },
-    {
-      "trip_id": "Kent_Coastline II_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Kent_Coastline II",
-      "voice": "andrea",
-      "gender": "female",
-      "title": "Kent_Coastline II_A12_EN",
-      "labels": [
-        "EN"
-      ],
-      "card_url": "https://trello.com/c/FmyXPHqx",
-      "pos": 140737488470016
-    },
-    {
-      "trip_id": "Lake_District3_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Lake_District3",
-      "voice": "harry",
-      "gender": "male",
-      "title": "Lake_District3_A12_EN",
-      "labels": [
-        "EN"
-      ],
-      "card_url": "https://trello.com/c/0mGHqLUS",
-      "pos": 140737488486400
     },
     {
       "trip_id": "Lake_District4_A12_EN",
