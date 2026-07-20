@@ -1,7 +1,55 @@
 {
-  "generated_at": "2026-07-20T20:14:54+01:00",
+  "generated_at": "2026-07-20T20:39:28+01:00",
   "source": "trello 6,7",
   "trips": [
+    {
+      "trip_id": "Monaco1_A12_FR",
+      "lane": "6",
+      "level": "FR-A12",
+      "family": "Monaco1_Beg_FR",
+      "voice": "sebastien",
+      "gender": "male",
+      "title": "Monaco1_A12_FR",
+      "labels": [],
+      "card_url": "https://trello.com/c/7MMuTozA",
+      "pos": 140737488289792
+    },
+    {
+      "trip_id": "Monaco1_A12_IT",
+      "lane": "6",
+      "level": "IT-A12",
+      "family": "Monaco1_Beg_IT",
+      "voice": "marco",
+      "gender": "male",
+      "title": "Monaco1_A12_IT",
+      "labels": [],
+      "card_url": "https://trello.com/c/duVvwKxF",
+      "pos": 140737488306176
+    },
+    {
+      "trip_id": "Monaco2_A12_FR",
+      "lane": "6",
+      "level": "FR-A12",
+      "family": "Monaco2_Beg_FR",
+      "voice": "sebastien",
+      "gender": "male",
+      "title": "Monaco2_A12_FR",
+      "labels": [],
+      "card_url": "https://trello.com/c/9JlJR6Gc",
+      "pos": 140737488322560
+    },
+    {
+      "trip_id": "Monaco2_A12_IT",
+      "lane": "6",
+      "level": "IT-A12",
+      "family": "Monaco2_Beg_IT",
+      "voice": "marco",
+      "gender": "male",
+      "title": "Monaco2_A12_IT",
+      "labels": [],
+      "card_url": "https://trello.com/c/1hzuxQE0",
+      "pos": 140737488338944
+    },
     {
       "trip_id": "Taichung_HSK12_ZH",
       "lane": "6",
@@ -866,30 +914,6 @@
       "labels": [],
       "card_url": "https://trello.com/c/iS3QELVP",
       "pos": 140737489108992
-    },
-    {
-      "trip_id": "Monaco1_A12_IT",
-      "lane": "6",
-      "level": "IT-A12",
-      "family": "Monaco1_Beg_IT",
-      "voice": "marco",
-      "gender": "male",
-      "title": "Monaco1_A12_IT",
-      "labels": [],
-      "card_url": "https://trello.com/c/duVvwKxF",
-      "pos": 140737489125376
-    },
-    {
-      "trip_id": "Monaco2_A12_IT",
-      "lane": "6",
-      "level": "IT-A12",
-      "family": "Monaco2_Beg_IT",
-      "voice": "marco",
-      "gender": "male",
-      "title": "Monaco2_A12_IT",
-      "labels": [],
-      "card_url": "https://trello.com/c/1hzuxQE0",
-      "pos": 140737489141760
     },
     {
       "trip_id": "Pisa_A12_IT",
@@ -1948,28 +1972,52 @@
       "pos": 140737490583552
     },
     {
-      "trip_id": "Monaco1_A12_FR",
-      "lane": "6",
-      "level": "FR-A12",
+      "trip_id": "Monaco1_Beg_FR",
+      "lane": "7",
+      "level": "FR-Beg",
       "family": "Monaco1_Beg_FR",
       "voice": "sebastien",
       "gender": "male",
-      "title": "Monaco1_A12_FR",
+      "title": "Monaco1_Beg_FR",
       "labels": [],
       "card_url": "https://trello.com/c/7MMuTozA",
-      "pos": 140737490599936
+      "pos": 140737488289792
     },
     {
-      "trip_id": "Monaco2_A12_FR",
-      "lane": "6",
-      "level": "FR-A12",
+      "trip_id": "Monaco1_FR",
+      "lane": "7",
+      "level": "FR",
+      "family": "Monaco1_FR",
+      "voice": "sebastien",
+      "gender": "male",
+      "title": "Monaco1_FR",
+      "labels": [],
+      "card_url": "https://trello.com/c/7MMuTozA",
+      "pos": 140737488289792
+    },
+    {
+      "trip_id": "Monaco2_Beg_FR",
+      "lane": "7",
+      "level": "FR-Beg",
       "family": "Monaco2_Beg_FR",
       "voice": "sebastien",
       "gender": "male",
-      "title": "Monaco2_A12_FR",
+      "title": "Monaco2_Beg_FR",
       "labels": [],
       "card_url": "https://trello.com/c/9JlJR6Gc",
-      "pos": 140737490616320
+      "pos": 140737488322560
+    },
+    {
+      "trip_id": "Monaco2_FR",
+      "lane": "7",
+      "level": "FR",
+      "family": "Monaco2_FR",
+      "voice": "sebastien",
+      "gender": "male",
+      "title": "Monaco2_FR",
+      "labels": [],
+      "card_url": "https://trello.com/c/9JlJR6Gc",
+      "pos": 140737488322560
     },
     {
       "trip_id": "Taichung_EN",
@@ -3548,54 +3596,6 @@
       "labels": [],
       "card_url": "https://trello.com/c/9qOT6oHK",
       "pos": 140737490567168
-    },
-    {
-      "trip_id": "Monaco1_Beg_FR",
-      "lane": "7",
-      "level": "FR-Beg",
-      "family": "Monaco1_Beg_FR",
-      "voice": "sebastien",
-      "gender": "male",
-      "title": "Monaco1_Beg_FR",
-      "labels": [],
-      "card_url": "https://trello.com/c/7MMuTozA",
-      "pos": 140737490599936
-    },
-    {
-      "trip_id": "Monaco1_FR",
-      "lane": "7",
-      "level": "FR",
-      "family": "Monaco1_FR",
-      "voice": "sebastien",
-      "gender": "male",
-      "title": "Monaco1_FR",
-      "labels": [],
-      "card_url": "https://trello.com/c/7MMuTozA",
-      "pos": 140737490599936
-    },
-    {
-      "trip_id": "Monaco2_Beg_FR",
-      "lane": "7",
-      "level": "FR-Beg",
-      "family": "Monaco2_Beg_FR",
-      "voice": "sebastien",
-      "gender": "male",
-      "title": "Monaco2_Beg_FR",
-      "labels": [],
-      "card_url": "https://trello.com/c/9JlJR6Gc",
-      "pos": 140737490616320
-    },
-    {
-      "trip_id": "Monaco2_FR",
-      "lane": "7",
-      "level": "FR",
-      "family": "Monaco2_FR",
-      "voice": "sebastien",
-      "gender": "male",
-      "title": "Monaco2_FR",
-      "labels": [],
-      "card_url": "https://trello.com/c/9JlJR6Gc",
-      "pos": 140737490616320
     }
   ]
 }
