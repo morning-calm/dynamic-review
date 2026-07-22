@@ -23,6 +23,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import threading
 import time
 import uuid
@@ -35,8 +36,8 @@ from fastapi import HTTPException
 
 from . import config  # noqa: F401  (ensures SCRIPTS_ROOT on sys.path) — keep first
 from . import (audio_core, audio_io, audio_splice, auth, auto_checks, auto_review_ingest,
-               cjk_align, cjk_splice, db, images_r2, review_audio, review_bus, static360,
-               thumbs, trello)
+               cjk_align, cjk_splice, db, deltas, images_r2, review_audio, review_bus,
+               static360, thumbs, trello)
 from .config import (COUNTRY_VOICE_GUESS, COVERAGE_DONE_FRACTION,
                      LANGUAGE_FALLBACK_VOICE, WORK_ROOT)
 from .locks import WHISPER_LOCK
@@ -274,6 +275,32 @@ def resolve_audio_dir(trip_id: str, trip: dict) -> Path:
     if review_audio.download_dir(trip_id, seed_cache) and _has_scene_mp3(seed_cache):
         return seed_cache
     return ag / trip_id
+
+
+def _delta_seed_dir(trip_id: str, delta: dict) -> Path:
+    """Audio source for a DELTA session: the manifest's clips, downloaded FRESH from
+    R2 ``review-audio/<cid>/`` into a per-trip scratch dir (cleared each seed).
+
+    R2 is deliberately the ONLY source here — the local master trees and the
+    ``_r2_seed_cache`` (which never re-downloads once populated) can both still hold
+    the PRE-remediation takes, and a delta exists precisely because the R2 copies
+    changed after the trip completed. A fetched clip is also copied over any existing
+    seed-cache entry so a later full re-review of the trip doesn't seed stale quiz
+    audio. A clip missing on R2 just isn't downloaded — the field then seeds
+    text-only via the per-field master.exists() degrade."""
+    dest = WORK_ROOT / "_delta_seed" / trip_id
+    if dest.exists():
+        shutil.rmtree(dest, ignore_errors=True)
+    dest.mkdir(parents=True, exist_ok=True)
+    cache = WORK_ROOT / "_r2_seed_cache" / trip_id
+    for stem in deltas.clip_stems(delta):
+        name = f"{stem}.mp3"
+        if review_audio.download_file(trip_id, name, dest / name) and cache.is_dir():
+            try:
+                shutil.copy2(dest / name, cache / name)
+            except OSError as e:
+                print(f"[delta] WARN could not refresh seed cache {trip_id}/{name}: {e}")
+    return dest
 
 
 # --------------------------------------------------------------------------- #
@@ -706,7 +733,8 @@ def _is_en_source_of_nonenglish_group(trip_id: str, tg: dict | None) -> bool:
 
 def create_or_resume(trip_id: str, user, *,
                      allow_completed: bool = False,
-                     allow_no_audio: bool = False) -> dict:
+                     allow_no_audio: bool = False,
+                     delta: dict | None = None) -> dict:
     # [P0-1] Language gate at the TOP — the create is keyed on trip_id, so the
     # per-{sid} scoping dependency structurally can't cover it. Admins bypass.
     from . import auth   # lazy import (auth imports sessions) — no module-load cycle
@@ -717,8 +745,17 @@ def create_or_resume(trip_id: str, user, *,
     # Completed trips are view-only — an admin must un-complete before it can be reviewed
     # again (checked before resume/seed so a leftover session can't reopen a done trip).
     # allow_completed=True is the ADMIN staging-editor path (routes_admin.open) only.
-    if not allow_completed and db.query_one(
-            "SELECT 1 FROM completed_trips WHERE trip_id=?", (trip_id,)):
+    # A DELTA open inverts the gate: it exists only for trips that already completed
+    # (an un-completed trip is back in the full-review flow, which supersedes the delta).
+    completed_row = db.query_one(
+        "SELECT 1 FROM completed_trips WHERE trip_id=?", (trip_id,))
+    if delta is not None:
+        if not completed_row:
+            raise HTTPException(409, detail={
+                "error": "not_completed",
+                "detail": "trip is not completed — review the changed clips through "
+                          "the normal full-review flow instead"})
+    elif not allow_completed and completed_row:
         raise HTTPException(409, detail={
             "error": "completed",
             "detail": "trip is completed — un-complete it to review"})
@@ -729,10 +766,16 @@ def create_or_resume(trip_id: str, user, *,
     # The set is DERIVED (statuses.ACTIVE_STATUSES), never hand-listed: a missing status
     # here re-seeds a blank session which, being the newest, permanently shadows the
     # reviewer's real one — see statuses.py for the incident this cost.
+    # Full and delta sessions resume SEPARATELY: a delta session holds only the
+    # manifest's fields, so letting the full-review open resume one would show a
+    # near-empty trip (the shadow-session shape again, from the other direction).
     ph = ",".join("?" * len(ACTIVE_STATUSES))
+    delta_clause = ("AND delta_json IS NOT NULL" if delta is not None
+                    else "AND delta_json IS NULL")
     existing = db.query_one(
         f"SELECT id FROM sessions WHERE trip_id=? AND status IN ({ph}) "
-        "ORDER BY created_at DESC LIMIT 1", (trip_id, *ACTIVE_STATUSES))
+        f"{delta_clause} ORDER BY created_at DESC LIMIT 1",
+        (trip_id, *ACTIVE_STATUSES))
     if existing:
         return get_session(existing["id"])
 
@@ -759,22 +802,38 @@ def create_or_resume(trip_id: str, user, *,
 
     # Audio source: the V3 voice-test take drives the seed for pre-final Mandarin trips (no
     # Quicktrips masters); otherwise the normal masters (incl. a finalised _ZH trip).
-    mp3_dir = v3_set if v3_set else resolve_audio_dir(trip_id, trip)
-    if not _has_scene_mp3(mp3_dir):
-        # allow_no_audio (admin staging editor): seed anyway — every audio field
-        # degrades to text-only via the per-field master.exists() fallback below, and
-        # get_session surfaces `audio_unavailable` so the FE shows a soft warning.
-        if not allow_no_audio:
+    # A DELTA session seeds its clips FRESH from R2 instead (see _delta_seed_dir — the
+    # local trees/seed cache may still hold the pre-remediation takes).
+    if delta is not None:
+        mp3_dir = _delta_seed_dir(trip_id, delta)
+        if not any(mp3_dir.glob("*.mp3")):
             raise HTTPException(status_code=422, detail={
-                "error": "bad_folder",
-                "detail": f"{trip_id}: no MP3 masters under the Quicktrips tree or "
-                          f"Audio Generation/{trip_id}"})
+                "error": "delta_audio_missing",
+                "detail": f"{trip_id}: none of the delta's clips are on R2 "
+                          f"review-audio/{trip_id}/ — re-upload them before reviewing"})
+    else:
+        mp3_dir = v3_set if v3_set else resolve_audio_dir(trip_id, trip)
+        if not _has_scene_mp3(mp3_dir):
+            # allow_no_audio (admin staging editor): seed anyway — every audio field
+            # degrades to text-only via the per-field master.exists() fallback below, and
+            # get_session surfaces `audio_unavailable` so the FE shows a soft warning.
+            if not allow_no_audio:
+                raise HTTPException(status_code=422, detail={
+                    "error": "bad_folder",
+                    "detail": f"{trip_id}: no MP3 masters under the Quicktrips tree or "
+                              f"Audio Generation/{trip_id}"})
 
     voice = resolve_voice(trip_id, country)
     voice_id, voice_settings = audio_core.VOICES[voice]
     voice_settings = {**voice_settings, "speed": audio_core.speed_for_trip(trip_id)}
     tg_id, tg = get_tripgroup(trip_id)
-    skip_en_questions = _is_en_source_of_nonenglish_group(trip_id, tg)
+    # A delta manifest names its quiz clips explicitly — they were regenerated and must
+    # be confirmable even on a trip the source-of-group heuristic would normally skip.
+    skip_en_questions = (False if delta is not None
+                         else _is_en_source_of_nonenglish_group(trip_id, tg))
+    # The manifest's reviewable fields; everything else (incl. the trip-level title /
+    # description, whose scene_index is None) is left out of a delta session entirely.
+    delta_wanted = deltas.field_keys(delta) if delta is not None else None
     categories = (tg or {}).get("tripCategories") or trip.get("tripCategories") or []
     # Prefer the TripGroup description; fall back to the Trip doc's own descriptionTarget
     # (leveled English trips — Bath1_A12_EN — nest in the base group, so their TripGroup
@@ -791,11 +850,22 @@ def create_or_resume(trip_id: str, user, *,
          "{}", "{}", json.dumps(trip, default=str), json.dumps(categories),
          "in_review", 1 if zh_mode else 0, now, now))
     _ZH_IS_CACHE[sid] = zh_mode
+    if delta is not None:
+        # Marks the session as a delta review: get_session trims it to the changed
+        # scenes, approve() consumes the R2 manifest, and the full-review resume
+        # query skips it (delta_json IS NULL).
+        db.execute("UPDATE sessions SET delta_json=? WHERE id=?",
+                   (json.dumps(delta, ensure_ascii=False), sid))
 
     dirs = work_dirs(sid)
 
     def add_field(scene_index, field_path, original_text, has_audio,
                   option_index=None, source_text=""):
+        # Delta sessions seed ONLY the manifest's fields — one guard here covers every
+        # call site below (trip-level fields have scene_index None, never in the set).
+        if delta_wanted is not None and (
+                (scene_index, field_path, option_index) not in delta_wanted):
+            return None
         name = mp3_name(field_path, scene_index, option_index) if has_audio else None
         cur_path = None
         whash = None
@@ -1182,6 +1252,13 @@ def get_session(sid: str) -> dict:
             "fields": by_scene.get(i, []),
         })
 
+    # Delta review: only the manifest's scenes carry fields — drop the rest so the
+    # reviewer sees a compact card of the changed clips, not the whole trip.
+    delta_raw = _srow_get(srow, "delta_json")
+    delta_doc = json.loads(delta_raw) if delta_raw else None
+    if delta_doc is not None:
+        scenes_out = [s for s in scenes_out if s["fields"]]
+
     return {
         "id": sid,
         "trip_id": srow["trip_id"],
@@ -1211,6 +1288,14 @@ def get_session(sid: str) -> dict:
                 or (s or {}).get("questionOptionKeys")
                 for s in trip.get("quickTrips") or [])
             and not any(fr["has_audio"] for fr in frows)),
+        # Delta review summary (null for a normal session): why this compact session
+        # exists and how many clips it covers — the FE banner's content.
+        "delta": (None if delta_doc is None else {
+            "created": delta_doc.get("created") or "",
+            "reason": delta_doc.get("reason") or "",
+            "n_clips": sum(len(sc.get("clips") or [])
+                           for sc in delta_doc.get("scenes") or []),
+        }),
         "trip_fields": trip_fields,
         "scenes": scenes_out,
     }
@@ -3854,8 +3939,15 @@ def submit(sid: str, user) -> dict:
 def approve(sid: str, user) -> dict:
     """ADMIN ONLY: claim-first CAS (submitted -> approving), re-validate against live
     staging, run `commit` (Firebase text + master promotion), then approved + audit.
-    409 if the session isn't currently `submitted`. Any failure reverts to `submitted`."""
-    _session_row(sid)   # 404 if missing
+    409 if the session isn't currently `submitted`. Any failure reverts to `submitted`.
+
+    A DELTA session (delta_json set) approves through the identical path — same
+    validation, same commit, same approvals/completed_trips bookkeeping (the
+    completed_at bump is exactly the re-finalise signal Stage 9 keys on) — and then
+    CONSUMES its R2 ``_delta/<cid>.json`` manifest, which is how the Scripts side
+    verifies the delta was reviewed (docs/delta-review.md)."""
+    srow = _session_row(sid)   # 404 if missing
+    is_delta = bool(_srow_get(srow, "delta_json"))
     claimed = db.execute_rowcount(
         "UPDATE sessions SET status='approving', updated_at=? "
         "WHERE id=? AND status='submitted'",
@@ -3895,9 +3987,26 @@ def approve(sid: str, user) -> dict:
             "method='approved', session_id=excluded.session_id",
             (tid, getattr(user, "username", None), now, sid))
         export_completed_trips()   # Stage-9 handshake file (best-effort)
-        trello.notify(tid, move=True, comment=(
-            f"Approved in review-app by {getattr(user, 'username', 'admin')} — "
-            f"corrected masters promoted + text written to staging. Moved to lane 9."))
+        if is_delta:
+            # Consume the manifest — object-gone is the Scripts-side "delta reviewed"
+            # signal. On failure the card stays hidden anyway (delta_cards skips a
+            # delta whose newest delta session approved after the file appeared),
+            # but the file must still be removed for the pipeline's own bookkeeping.
+            if not deltas.delete_object(tid):
+                print(f"[approve] !! delta manifest review-audio/_delta/{tid}.json "
+                      "could NOT be deleted — the Scripts side will still see it as "
+                      "unconsumed; delete it manually (the approve itself succeeded)")
+            # The trip's Trello card left lanes 6/7 at its original approval — comment
+            # only, never move anything.
+            trello.notify(tid, move=False, comment=(
+                f"Delta re-review approved in review-app by "
+                f"{getattr(user, 'username', 'admin')} — the changed clips were "
+                f"confirmed/corrected; masters + staging text updated where edited. "
+                f"Stage 9 should re-finalise (completed_at bumped)."))
+        else:
+            trello.notify(tid, move=True, comment=(
+                f"Approved in review-app by {getattr(user, 'username', 'admin')} — "
+                f"corrected masters promoted + text written to staging. Moved to lane 9."))
         return {"ok": True, "validation": soft, "written": result["written"],
                 "promoted_mp3": result["promoted_mp3"], "awaiting_stage9": True,
                 "zh_warnings": result.get("zh_warnings") or []}
@@ -4163,7 +4272,7 @@ def review_queue() -> list[dict]:
     """ADMIN ONLY: the submitted sessions awaiting approval. (submitted_at is the row's
     updated_at — a session is locked once submitted, so it stays the submit time.)"""
     rows = db.query(
-        "SELECT id, trip_id, submitted_by, updated_at FROM sessions "
+        "SELECT id, trip_id, submitted_by, updated_at, delta_json FROM sessions "
         "WHERE status='submitted' ORDER BY updated_at")
     out: list[dict] = []
     for r in rows:
@@ -4179,8 +4288,86 @@ def review_queue() -> list[dict]:
             "submitted_by": r["submitted_by"],
             "submitted_at": r["updated_at"],
             "edit_required": er is not None,
+            # Delta re-review of a completed trip (changed clips only) — badge it so
+            # the admin knows approving it re-finalises rather than first-ships.
+            "delta": bool(r["delta_json"]),
         })
     return out
+
+
+# --------------------------------------------------------------------------- #
+# Delta reviews (deltas.py + docs/delta-review.md): changed-clips re-review of
+# already-completed trips, driven by R2 review-audio/_delta/<cid>.json manifests.
+# --------------------------------------------------------------------------- #
+def delta_cards(user) -> list[dict]:
+    """The delta cards for the trip list: one per R2 ``_delta/`` manifest whose trip is
+    in ``completed_trips`` (a trip mid-full-review is not, so an open full review
+    supersedes its delta — plan rule 4 — with no extra logic) and whose language the
+    caller holds (same ACL as the trip itself). Best-effort: no R2 → no cards."""
+    from . import auth   # lazy (auth imports sessions) — no module-load cycle
+    entries = deltas.list_all()
+    if not entries:
+        return []
+    done = {r["trip_id"] for r in db.query("SELECT trip_id FROM completed_trips")}
+    out: list[dict] = []
+    for e in entries:
+        tid = e["trip_id"]
+        if tid not in done:
+            continue
+        if user is not None and not auth.language_allowed(user, tid):
+            continue
+        srow = db.query_one(
+            "SELECT id, status, updated_at FROM sessions "
+            "WHERE trip_id=? AND delta_json IS NOT NULL "
+            "ORDER BY created_at DESC LIMIT 1", (tid,))
+        # Consumed-but-undeleted guard: approve() deletes the manifest, but if that
+        # delete failed the card must not resurface — an approved delta session newer
+        # than the manifest means this delta was already reviewed. A manifest uploaded
+        # AFTER that approval (a second remediation round) is newer and shows again.
+        if (srow and srow["status"] == "approved"
+                and srow["updated_at"] >= e["last_modified"]):
+            continue
+        active = bool(srow and srow["status"] in ACTIVE_STATUSES)
+        meta = _trip_meta(tid)
+        lvl, fam = _level_family(tid)
+        doc = e["doc"]
+        out.append({
+            "trip_id": tid,
+            "title": meta.get("title") or tid,
+            "level": lvl,
+            "family": fam,
+            "created": doc.get("created") or "",
+            "reason": doc.get("reason") or "",
+            "scenes": doc.get("scenes") or [],
+            "n_clips": sum(len(sc.get("clips") or [])
+                           for sc in doc.get("scenes") or []),
+            "has_session": active,
+            "status": srow["status"] if active else None,
+        })
+    return out
+
+
+def open_delta(trip_id: str, user) -> dict:
+    """Open (or resume) the delta session for a completed trip's manifest. The trip's
+    completed status is NOT touched — only approving the session refreshes it."""
+    doc = deltas.fetch(trip_id)   # fresh, uncached — the open must see the live manifest
+    if doc is None:
+        # Manifest gone (consumed, or removed by hand) but an in-flight delta session
+        # must still resume — the reviewer's work outlives the manifest.
+        from . import auth   # lazy (auth imports sessions) — no module-load cycle
+        if auth.language_allowed(user, trip_id):
+            ph = ",".join("?" * len(ACTIVE_STATUSES))
+            existing = db.query_one(
+                f"SELECT id FROM sessions WHERE trip_id=? AND status IN ({ph}) "
+                "AND delta_json IS NOT NULL ORDER BY created_at DESC LIMIT 1",
+                (trip_id, *ACTIVE_STATUSES))
+            if existing:
+                return get_session(existing["id"])
+        raise HTTPException(404, detail={
+            "error": "no_delta",
+            "detail": f"no delta manifest on R2 for {trip_id} — it may have just "
+                      "been consumed; refresh the trip list"})
+    return create_or_resume(trip_id, user, delta=doc)
 
 
 # --------------------------------------------------------------------------- #

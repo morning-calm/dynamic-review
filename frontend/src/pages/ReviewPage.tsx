@@ -251,6 +251,21 @@ const ReviewBody = () => {
       />
 
       <main className="mx-auto max-w-review space-y-6 px-4 py-6">
+        {session.delta && (
+          <div className="rounded border border-sky-700 bg-sky-900/20 p-3 text-sm text-sky-200">
+            <p className="font-medium">
+              Delta review — {session.delta.n_clips} changed clip{session.delta.n_clips === 1 ? '' : 's'} only.
+            </p>
+            <p className="mt-1 text-sky-300/80">
+              This trip was already reviewed and stays completed; some clips were regenerated afterwards
+              {[session.delta.reason, session.delta.created].filter(Boolean).length > 0 &&
+                ` (${[session.delta.reason, session.delta.created].filter(Boolean).join(', ')})`}
+              . Only the changed scenes are shown below — listen to each clip, correct anything wrong, mark each
+              done and submit as usual.
+            </p>
+          </div>
+        )}
+
         {session.audio_unavailable && (
           <div className="rounded border border-amber-700 bg-amber-900/20 p-3 text-sm text-amber-200">
             <p className="font-medium">Audio unavailable for this trip.</p>

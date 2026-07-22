@@ -43,6 +43,21 @@ def get_voices(user=Depends(auth.require_user)):
     return sessions.get_voices()
 
 
+# --- Delta reviews: changed clips on already-completed trips (docs/delta-review.md) ---
+@router.get("/deltas")
+def get_deltas(user=Depends(auth.require_user)):
+    # Cards for R2 _delta/<cid>.json manifests on COMPLETED trips, language-filtered
+    # the same way as the trip list (admins see all).
+    return sessions.delta_cards(user)
+
+
+@router.post("/deltas/{trip_id}/open")
+def post_delta_open(trip_id: str, user=Depends(auth.require_user)):
+    # Language gate lives at the top of create_or_resume (keyed on trip_id, same as
+    # POST /sessions). trip_id may contain spaces/periods; FastAPI URL-decodes it.
+    return sessions.open_delta(trip_id, user)
+
+
 @router.post("/sessions")
 def post_session(body: CreateSession, user=Depends(auth.require_user)):
     # [P0-1] language gate is enforced at the TOP of create_or_resume (keyed on trip_id).

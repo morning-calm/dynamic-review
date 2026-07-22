@@ -112,6 +112,19 @@ should re-finalise when a trip's `completed_at` is newer than its ledger entry).
 un-complete by `sessions.export_completed_trips`; rebuild any time with
 `py -3.12 scripts/export_completed.py` (opens review.db read-only; works with the server down).
 
+## Delta reviews (changed clips on COMPLETED trips) — `docs/delta-review.md`
+When the pipeline regenerates a few clips on an already-approved trip, Scripts uploads
+`review-audio/_delta/<cid>.json` (which scenes/clips changed; new audio already at
+`review-audio/<cid>/`, new text already in staging). The app (`deltas.py`) shows a
+"N changed clips" card on the trip list for trips in `completed_trips` (full review
+supersedes: not-completed ⇒ no card). Opening seeds a **delta session** — a normal
+session holding ONLY the changed fields (`sessions.delta_json`; full/delta resumes
+are disjoint), audio pulled FRESH from R2 (never the stale-able seed cache). Same
+review → submit → approve flow; approve also DELETES the manifest (**object gone =
+consumed**, the Scripts-side signal) and bumps `completed_at` (Stage-9 re-finalise).
+Completed status is never reset. First real batch: 12 A12 quiz-variety manifests,
+2026-07-22/23.
+
 ## Audio (MP3 end-to-end)
 - **Sources** (`sessions.resolve_audio_dir`): Quicktrips masters
   (`stage9.common.paths_for`) → `Audio Generation/<trip>/` (England A12/B1) →

@@ -345,6 +345,12 @@ def init() -> None:
         if "preferred_version" not in have:
             # the trip's chosen ElevenLabs A/B version: 'v2' | 'v3' | NULL (undecided).
             conn.execute("ALTER TABLE sessions ADD COLUMN preferred_version TEXT")
+        if "delta_json" not in have:
+            # Delta review (deltas.py): the R2 _delta/<cid>.json manifest this session
+            # was seeded from — NULL for every normal full-review session. A delta
+            # session holds ONLY the manifest's changed fields, and the two kinds
+            # resume separately (full resume filters delta_json IS NULL).
+            conn.execute("ALTER TABLE sessions ADD COLUMN delta_json TEXT")
         # Reviewer email — so the notifier can tell a reviewer their Gate-2 findings are
         # waiting (2026-07-13). NULL = don't email that user; the in-app badge still works.
         ucols = {r["name"] for r in conn.execute("PRAGMA table_info(users)")}

@@ -198,6 +198,27 @@ def shutdown(wait: bool = True) -> None:
         pool.shutdown(wait=wait)
 
 
+def download_file(content_id: str, name: str, dest_path: "str | Path") -> bool:
+    """Pull ONE object (``review-audio/<content_id>/<name>``) down to *dest_path*.
+
+    The delta-review seed uses this instead of download_dir: a delta's clips must come
+    FRESH from R2 (the remediation's authoritative home) every time — the seed-cache
+    short-circuit in resolve_audio_dir would hand back pre-remediation takes. Returns
+    False (WARN, never raises) when the object is absent or R2 is unreachable.
+    """
+    try:
+        s3 = _r2()
+        if s3 is None:
+            return False
+        dest = Path(dest_path)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        s3.download_file(BUCKET, f"{content_id}/{name}", str(dest))
+        return True
+    except Exception as e:  # noqa: BLE001
+        print(f"[review_audio] WARN download_file failed {content_id}/{name}: {e}")
+        return False
+
+
 def download_dir(content_id: str, dest_dir: "str | Path") -> bool:
     """Seed-time fallback for hosts with no local master audio (the Ubuntu
     server, per docs/server-migration.md Phase 2): pull every object directly under

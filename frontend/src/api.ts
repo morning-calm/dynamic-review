@@ -77,6 +77,37 @@ export interface ReviewQueueItem {
   submitted_by: string | null;
   submitted_at: number | null;
   edit_required: boolean;
+  /** Delta re-review of a completed trip (changed clips only) — approving it
+   * re-finalises rather than first-ships. */
+  delta: boolean;
+}
+
+// --- Delta reviews: changed clips on already-completed trips -----------------
+
+/** One changed scene from a `review-audio/_delta/<cid>.json` manifest. The
+ * questionKey/questionOptionKeys mirror staging and are display hints only —
+ * the session itself always shows live staging text. */
+export interface DeltaScene {
+  index: number;
+  clips: string[];
+  questionKey?: string;
+  questionOptionKeys?: string[];
+}
+
+/** A compact "N changed clips" card for a COMPLETED trip whose audio/text was
+ * partially regenerated after approval. Opening it seeds a session holding only
+ * the changed fields; approving that session consumes the manifest. */
+export interface DeltaCard {
+  trip_id: string;
+  title: string;
+  level: string;
+  family: string;
+  created: string;
+  reason: string;
+  scenes: DeltaScene[];
+  n_clips: number;
+  has_session: boolean;
+  status: SessionStatus | null;
 }
 
 /** `approved` = completed via the normal submit→approve flow (has a session);
@@ -548,6 +579,9 @@ export interface Session {
   language: string;
   /** Reviewer's per-trip V2/V3 pick for the A/B audition; null until chosen. */
   preferred_version: PreferredVersion | null;
+  /** Delta review summary (null for a normal full-review session): this session
+   * holds ONLY the changed clips of an already-completed trip. */
+  delta: { created: string; reason: string; n_clips: number } | null;
   trip_fields: Field[];
   scenes: Scene[];
 }
@@ -736,6 +770,15 @@ export const api = {
   health: (): Promise<{ ok: boolean }> => getJson('/api/health'),
 
   listTrips: (): Promise<TripListItem[]> => getJson('/api/trips'),
+
+  /** Delta cards: completed trips with an unconsumed `_delta/<cid>.json` manifest
+   * on R2 (changed clips awaiting re-confirmation). Language-filtered server-side. */
+  listDeltas: (): Promise<DeltaCard[]> => getJson('/api/deltas'),
+
+  /** Open (or resume) the delta session for a completed trip — a normal session
+   * seeded with only the manifest's changed fields. Never resets completed status. */
+  openDelta: (tripId: string): Promise<Session> =>
+    postJson(`/api/deltas/${encodeURIComponent(tripId)}/open`),
 
   listVoices: (): Promise<VoicesResponse> => getJson('/api/voices'),
 

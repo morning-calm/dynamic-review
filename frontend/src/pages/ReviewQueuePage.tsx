@@ -154,6 +154,14 @@ const ReviewQueuePage = () => {
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="truncate text-sm text-gray-200">{it.title || it.trip_id}</p>
+                    {it.delta && (
+                      <span
+                        className="rounded bg-sky-700 px-2 py-0.5 text-[11px] font-medium text-white"
+                        title="Delta re-review of a completed trip — only its changed clips; approving consumes the delta manifest and asks Stage 9 to re-finalise"
+                      >
+                        Delta
+                      </span>
+                    )}
                     {it.edit_required && (
                       <span
                         className="rounded bg-amber-600 px-2 py-0.5 text-[11px] font-medium text-white"

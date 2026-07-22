@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Modal from 'react-modal';
 import { toast } from 'react-toastify';
-import { api, ApiError, type SessionStatus, type TripListItem } from '../api';
+import { api, ApiError, type DeltaCard, type SessionStatus, type TripListItem } from '../api';
 import { useAuth } from '../authContext';
 import NavBar from '../components/NavBar';
 import PresenceBadge from '../components/PresenceBadge';
@@ -65,6 +65,7 @@ const TripListPage = () => {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const [trips, setTrips] = useState<TripListItem[] | null>(null);
+  const [deltas, setDeltas] = useState<DeltaCard[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
   const [lane, setLane] = useState<LaneFilter>('all');
@@ -89,6 +90,14 @@ const TripListPage = () => {
         setError(msg);
         setTrips([]);
       });
+    // Delta cards (changed clips on completed trips) — independent of the main list;
+    // a failure here just hides the section, never breaks the page.
+    api
+      .listDeltas()
+      .then((d) => {
+        if (!cancelled) setDeltas(d);
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -178,6 +187,20 @@ const TripListPage = () => {
       });
   };
 
+  // Delta card open: a session holding ONLY the changed clips; the trip's completed
+  // status is untouched. Keyed separately from openTrip so the spinners can't collide.
+  const openDelta = (tripId: string) => {
+    setOpening(`delta:${tripId}`);
+    api
+      .openDelta(tripId)
+      .then((session) => navigate(`/review/${session.id}`))
+      .catch((e: unknown) => {
+        const msg = e instanceof ApiError ? e.detail || e.code : 'Could not open delta review';
+        toast.error(msg);
+        setOpening(null);
+      });
+  };
+
   const tabs: [LaneFilter, string][] = [
     ['all', 'All'],
     ['6', `Translator · 6 (${laneCounts['6']})`],
@@ -220,6 +243,62 @@ const TripListPage = () => {
       )}
 
       {trips !== null && groups.length === 0 && !error && <p className="text-gray-400">No trips in this lane.</p>}
+
+      {deltas.length > 0 && (
+        <section className="mb-6">
+          <h2 className="mb-1 text-sm font-semibold text-white">Changed after approval</h2>
+          <p className="mb-3 text-xs text-gray-400">
+            These trips are already completed, but a few of their clips were regenerated afterwards. Only the
+            changed clips need re-confirming — the trip itself stays completed.
+          </p>
+          <ul className="space-y-2">
+            {deltas.map((d) => (
+              <li
+                key={d.trip_id}
+                className="flex flex-wrap items-center justify-between gap-3 gap-y-2 rounded-lg border border-sky-800/70 bg-sky-950/30 px-4 py-2.5"
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="shrink-0 rounded bg-sky-900/50 px-1.5 py-0.5 text-[11px] font-medium text-sky-300">
+                    {d.level || '—'}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate text-sm text-gray-200">{d.title || d.trip_id}</p>
+                      <span className="rounded bg-sky-700 px-2 py-0.5 text-[11px] font-medium text-white">
+                        {d.n_clips} changed clip{d.n_clips === 1 ? '' : 's'}
+                      </span>
+                    </div>
+                    <p className="truncate text-[11px] text-gray-500">
+                      {d.trip_id}
+                      {d.reason && <> · {d.reason}</>}
+                      {d.created && <> · {d.created}</>}
+                      {' · scenes '}
+                      {d.scenes.map((s) => s.index).join(', ')}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 sm:shrink-0">
+                  {d.has_session && d.status ? (
+                    <span className={`rounded px-2 py-0.5 text-xs text-white ${STATUS_BADGE[d.status].cls}`}>
+                      {STATUS_BADGE[d.status].label}
+                    </span>
+                  ) : (
+                    <span className="rounded bg-gray-700 px-2 py-0.5 text-xs text-gray-300">Not started</span>
+                  )}
+                  <button
+                    type="button"
+                    disabled={opening === `delta:${d.trip_id}`}
+                    onClick={() => openDelta(d.trip_id)}
+                    className="rounded bg-custom-green px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                  >
+                    {opening === `delta:${d.trip_id}` ? 'Opening…' : d.has_session ? 'Resume' : 'Open'}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <ul className="space-y-3">
         {groups.map((g) => (
