@@ -65,3 +65,17 @@ quiz-variety manifests uploaded to R2 `review-audio/_delta/` on 2026-07-22/23).
 
 **Next steps.** Deploy to the laptop (git pull + restart uvicorn; tunnel stays up),
 then confirm the 12 cards appear for the English reviewer ACL.
+
+## Checkpoint 2 — deployed + Scripts-repo handoff
+
+- **Deployed live**: pushed `3c4a857`, laptop pulled, frontend rebuilt, service
+  restarted (tunnel stayed up, health ok, no reviewers were live). Verified on the
+  laptop: `/api/deltas` route registered (401 unauth as expected) and a real
+  `delta_cards` run returns **all 12 cards** (all trips `approved` in
+  completed_trips).
+- **Scripts-repo handoff** (dynamic-content, per dave): wrote the producer runbook
+  `Scripts/docs/plans/2026-07-23-review-app-delta-handoff.md` (contract, checklist
+  order R2-audio → staging-text → manifest, consumption polling snippet, the
+  round-2 don't-upload-until-consumed warning) and appended a REPLY section to the
+  originating prompt `Scripts/docs/plans/2026-07-22-review-app-delta-prompt.md`.
+  Left uncommitted — dave commits dynamic-content via GitHub Desktop.
