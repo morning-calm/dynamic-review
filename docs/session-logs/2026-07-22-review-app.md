@@ -63,3 +63,22 @@ only it can do. Then red-team the whole handoff.
   is an **enhancement, not a blocker** — the 35 are reviewable (audio+text) without it.
 - Commit the Scripts-repo docs (`REVIEW_QUEUE_HANDOFF.md`, `REVIEW_APP_REPLY.md`) in
   dynamic-content.
+
+## Checkpoint 2 — thumbnails verified + image fallback DEPLOYED (~12:45)
+
+- **Thumbnail audit:** all 35 rungs now have per-scene stills on R2
+  `review-overlays/<cid>/<i>.jpg` — **387/387 scenes** (content side did the §B upload since
+  checkpoint 1; earlier check found 0). 84 VID scenes also resolve the stitched
+  `scene-thumbs` path. Alignment (scene↔image index) still worth an in-app spot-check.
+- **Spanish ACL already set:** live laptop has a dedicated `spanish` reviewer (active,
+  `languages=["Spanish"]`) — plus french/german/italian. No `set-languages` write needed;
+  verified via `manage.py list-users`. ACL is NOT the blocker.
+- **Deployed the image fallback** (2455916) to the laptop: commit+push → `git pull`
+  (fast-forward) → `sudo systemctl restart review-app.service` (NOPASSWD; done after
+  confirming with dave — an admin session was active/editing). Verified: `review-app` +
+  `review-tunnel` both `active`, new uvicorn PID, clean startup, local API 401, **public URL
+  401 in 0.4s** (end-to-end). NB: `review-tunnel.service` restarted alongside the backend
+  (they're linked — ~2-3s external blip), reconnected fine.
+- **Still pending (Scripts side):** run `REVIEW_APP_REPLY.md` §A to put the 35 in the
+  manifest — until then the trips aren't openable, so the deployed fallback can't be
+  end-to-end-verified against a live gallery trip (logic is red-opus-proven + deployed).
