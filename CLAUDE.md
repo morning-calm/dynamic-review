@@ -72,7 +72,8 @@ default `dev-token`). uvicorn binds 127.0.0.1 only; the FE Vite proxy forwards `
 `Scripts\Trello\export_review_trips.py` from Trello lists **6** (Human Translator Review)
 and **7** (Human KP Confirm). Each entry has `lane`, `reviewable`, `title`, `card_url`.
 `reviewable` = the trip's mp3 masters resolve locally. Excludes are in the export's
-`EXCLUDE` set (currently `LionDance_EN`). Re-run `py -3.12 Trello/export_review_trips.py`
+`EXCLUDE` set (currently `LionDance_EN` + 4 retired EN B1/B2 rungs — see
+`export_review_trips.EXCLUDE`). Re-run `py -3.12 Trello/export_review_trips.py`
 to refresh (commits+pushes this repo's manifest). The export reads each card's `[review]`
 block; `review_block.source_en_id_of` now falls back to a **name-derived** source id when a
 draft data dir has no `source.json` (the pre-source.json JP drafting generation — that gap
@@ -85,6 +86,18 @@ derives `Monaco1_FR` from the family sid `Monaco1_Beg_FR`; lane 7 default): each
 is expected to carry the full `_A12`/`_B1`/native ladder, and the native rung lists
 automatically once its mp3s are canonical (local `Audio Generation/<cid>/` or R2). The app
 needed no changes — bare `_FR`-style ids already resolve language/speed 1.0/voice.
+
+**⇒ Adding trips to the queue is a documented, well-trodden path — see
+`docs/adding-trips-to-review.md`** (the authoritative runbook for BOTH new pipeline trips
+and legacy/off-pipeline batches) + its Scripts-side twin `Scripts/Trello/REVIEW_QUEUE_HANDOFF.md`.
+The short of it: the queue is ONLY the Trello-6/7 → export → manifest → laptop-pull path
+(no app-side override). A trip is *reviewable* once its staging `Trips/{cid}` doc exists,
+its audio is on R2 `review-audio/<cid>/`, and the reviewer holds the language ACL (value =
+language NAME e.g. `"Spanish"`, not `"es"` — `manage.py set-languages`). Voice/speed/language
+resolve automatically from the id suffix. Off-pipeline drafts need a `source.json` (real
+parent id) on EXACTLY the rungs to review before `make_eu_review_cards` + `backfill_review_blocks`
+(NOT `--sync`, which writes staging TripGroups). Worked example: the 35 Spanish gallery Sara
+rungs, 2026-07-22 (`Scripts/…/Gallery Spain/REVIEW_APP_REPLY.md`).
 
 ## Completed-trips export (Stage-9 handshake)
 `completed_trips.json` (repo root, next to the manifest; **gitignored** — server-written
@@ -191,6 +204,11 @@ un-complete by `sessions.export_completed_trips`; rebuild any time with
   data roots' `<base>/static_images/`. Display-only best-effort. (JP/Taiwan trips have no
   stage-9 COUNTRY_CFG, so `paths_for` ogg/mp3 candidates are always None for them — the
   base-id search is what actually resolves; before 2026-07-02 these images 404'd.)
+  **Since 2026-07-22 a VID scene whose stitched `thumb_url` doesn't resolve also falls back
+  to this still** (`get_session`: `elif thumb_url is None`) — so a legacy/gallery trip whose
+  Vimeo ids aren't in the VideoIds snapshot still shows scene images, provided the producer
+  uploads each scene's still to R2 `review-overlays/<cid>/<i>.jpg` (`_overlay_base` applies no
+  reduction to `_ES` ids → keyed by the exact rung id). Uniform key for VID + static scenes.
 - **Review audio:** `review_audio.py` (+ `Scripts\upload_review_audio_r2.py` for bulk, +
   the stage-5c hook in `run_levels.py`) push mp3s to bucket **`review-audio`** key
   `<contentID>/<file>.mp3`, served at **`https://reviewaudio.dynamiclanguages.org/`**. On

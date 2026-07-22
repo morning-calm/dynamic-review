@@ -1140,6 +1140,7 @@ def get_session(sid: str) -> dict:
         # (7680×7680, ~15 MB): same picture, and the master was never meant to be
         # <img>-loaded. Fall back to the master when a trip has no 4K copy.
         image_url = None
+        thumb_url = thumbs.thumb_url_for_scene(s)
         if s.get("isStaticImage"):
             for still, local in (
                     (static360.name_for(i),
@@ -1153,15 +1154,30 @@ def get_session(sid: str) -> dict:
                 if local is not None or images_r2.exists(_overlay_base(trip_id), still):
                     image_url = f"/overlays/{sid}/{still}"
                     break
+        elif thumb_url is None:
+            # VID scene whose stitched thumbnail doesn't resolve — e.g. gallery/legacy
+            # trips whose Vimeo ids aren't in the VideoIds JSON (thumbs.py yields null).
+            # Fall back to the per-scene 360 still that the content side uploads to
+            # review-overlays/<cid>/<i>.jpg, resolved and served exactly like a static
+            # scene's still. thumb_url still wins whenever it resolves, so this never
+            # overrides a real stitched thumbnail; it only fills the "no thumbnail" gap.
+            still = f"{i}.jpg"
+            local = _resolve_overlay_file(trip_id, mp3_dir, ogg_dir, still,
+                                          srow["folder_name"] or "")
+            if local is not None:
+                images_r2.ensure_uploaded(_overlay_base(trip_id), still, local)
+            if local is not None or images_r2.exists(_overlay_base(trip_id), still):
+                image_url = f"/overlays/{sid}/{still}"
         scenes_out.append({
             "index": i,
             "video_id": _vimeo_id(s.get("videoUrl")),
             "is_static_image": bool(s.get("isStaticImage")),
             "has_audio": bool(s.get("hasAudio")),
             "image_url": image_url,
-            # VID scenes get an R2 thumbnail; static/PIC scenes stay null (the
-            # frontend falls back to image_url).
-            "thumb_url": thumbs.thumb_url_for_scene(s),
+            # VID scenes get an R2 thumbnail; static/PIC scenes stay null (the frontend
+            # falls back to image_url). A VID scene with no resolvable thumbnail also
+            # falls back to image_url (the per-scene still), computed above.
+            "thumb_url": thumb_url,
             "overlays": overlays,
             "fields": by_scene.get(i, []),
         })
