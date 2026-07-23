@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-22T11:50:26+01:00",
+  "generated_at": "2026-07-23T15:14:25+01:00",
   "source": "trello 6,7",
   "trips": [
     {
@@ -2489,20 +2489,6 @@
       ],
       "card_url": "https://trello.com/c/5fy4E76e",
       "pos": 140737488388096
-    },
-    {
-      "trip_id": "Manchester_III_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Manchester_III",
-      "voice": "andrea",
-      "gender": "female",
-      "title": "Manchester_III_A12_EN",
-      "labels": [
-        "EN"
-      ],
-      "card_url": "https://trello.com/c/cMHhsA2T",
-      "pos": 140737488551936
     },
     {
       "trip_id": "Plymouth_A12_EN",
