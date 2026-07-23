@@ -275,6 +275,38 @@ a reviewer has ever corrected.
 CLAUDE.md, `REVIEW_QUEUE_HANDOFF.md` § 5 and BACKLOG 0f (now closed) all point at the
 script; the producer's deliverable is just a list of changed cids, one per line.
 
+## Checkpoint 7 — ES (P3) batch refresh
+
+Handoff: `Scripts/docs/plans/2026-07-23-review-app-seed-clear-es.md` — **13 changed cids**
+(not the 16 on the worklist; `Cadaques`, `Sevilla2`, `Zaragoza3` keep their deliberate
+surviving instance and got no write). 14 MCQ rewrites, 5 clips per changed scene, 70 clips.
+
+**Tool gained two things first** (the gap BACKLOG 0f left open):
+- `warm` — re-pulls the cache from R2 immediately instead of waiting for a lazy trip-list
+  load, so `verify` can run at once.
+- `verify --changed <file>` — takes the producer's `cid: 4,7` scene list and asserts the
+  claim that matters: each changed scene's quiz clip on R2 is NEWER than that trip's
+  narration, and the narration itself didn't move.
+
+**Done** (backup first: `_db-backups/review-…db`): audit → clear (13/13, 295 other caches
+untouched) → warm (13/13) → verify.
+- **All 13 trips: every cached mp3 matches R2** (MD5/ETag).
+- **All 14 changed scenes pass**: quiz clips 2026-07-23 **13:05 UTC**, narration still
+  **07-16/07-17**. Questions-only confirmed for the third batch running.
+
+**⚠ Stopped short of the re-seed, as the handoff instructed.** It said "no reviewer
+sessions expected … if `review.db` does show an ES session, stop and say so". Two do:
+
+    [RESEED] Ainsa_A12_ES   sess_f3013b23b6dc in_review idle 6.2d | edits 0 flags 0 coverage 43 | edited_by ['admin']
+    [RESEED] Besalu_A12_ES  sess_0c6ac6bd945f in_review idle 5.6d | edits 0 flags 0 coverage 76 | edited_by ['admin']
+
+These are **dave's own admin look-arounds**, which he described earlier in this session
+("I may have opened some Spanish trips as admin… no actual spanish translator has
+reviewed these"), and both hold **zero work product** — the `spanish` reviewer has still
+never edited a field or submitted anything anywhere. So the handoff's *premise* (no
+translator work to protect) holds; only its expectation of zero sessions was off. Re-seeding
+them is safe but it is dave's call and dave's command.
+
 ## Session close
 
 - Commits `a6c5ee7`, `ab3aa11`, `00cbd6d`, `6858b68` **pushed** to `origin/main`.
