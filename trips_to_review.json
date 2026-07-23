@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-23T16:43:54+01:00",
+  "generated_at": "2026-07-23T16:45:53+01:00",
   "source": "trello 6,7",
   "trips": [
     {
@@ -2457,6 +2457,96 @@
       "pos": 140737488355328
     },
     {
+      "trip_id": "Jedburgh1_TownAbbey_A12_EN",
+      "lane": "7",
+      "level": "A12",
+      "family": "Jedburgh1_TownAbbey",
+      "voice": "isla",
+      "gender": "female",
+      "title": "Jedburgh1_TownAbbey_A12_EN",
+      "labels": [
+        "EN",
+        "Trip"
+      ],
+      "card_url": "https://trello.com/c/pabZS5gO",
+      "pos": 140737488359424
+    },
+    {
+      "trip_id": "Jedburgh1_TownAbbey_B1_EN",
+      "lane": "7",
+      "level": "B1",
+      "family": "Jedburgh1_TownAbbey",
+      "voice": "isla",
+      "gender": "female",
+      "title": "Jedburgh1_TownAbbey_B1_EN",
+      "labels": [
+        "EN",
+        "Trip"
+      ],
+      "card_url": "https://trello.com/c/pabZS5gO",
+      "pos": 140737488359424
+    },
+    {
+      "trip_id": "Jedburgh1_TownAbbey_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Jedburgh1_TownAbbey",
+      "voice": "isla",
+      "gender": "female",
+      "title": "Jedburgh1_TownAbbey_EN",
+      "labels": [
+        "EN",
+        "Trip"
+      ],
+      "card_url": "https://trello.com/c/pabZS5gO",
+      "pos": 140737488359424
+    },
+    {
+      "trip_id": "Jedburgh2_CastleJail_A12_EN",
+      "lane": "7",
+      "level": "A12",
+      "family": "Jedburgh2_CastleJail",
+      "voice": "isla",
+      "gender": "female",
+      "title": "Jedburgh2_CastleJail_A12_EN",
+      "labels": [
+        "EN",
+        "Trip"
+      ],
+      "card_url": "https://trello.com/c/5TEAaTMo",
+      "pos": 140737488363520
+    },
+    {
+      "trip_id": "Jedburgh2_CastleJail_B1_EN",
+      "lane": "7",
+      "level": "B1",
+      "family": "Jedburgh2_CastleJail",
+      "voice": "isla",
+      "gender": "female",
+      "title": "Jedburgh2_CastleJail_B1_EN",
+      "labels": [
+        "EN",
+        "Trip"
+      ],
+      "card_url": "https://trello.com/c/5TEAaTMo",
+      "pos": 140737488363520
+    },
+    {
+      "trip_id": "Jedburgh2_CastleJail_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Jedburgh2_CastleJail",
+      "voice": "isla",
+      "gender": "female",
+      "title": "Jedburgh2_CastleJail_EN",
+      "labels": [
+        "EN",
+        "Trip"
+      ],
+      "card_url": "https://trello.com/c/5TEAaTMo",
+      "pos": 140737488363520
+    },
+    {
       "trip_id": "KaohsiungLotusPond_EN",
       "lane": "7",
       "level": "EN",
@@ -2489,6 +2579,141 @@
       ],
       "card_url": "https://trello.com/c/5fy4E76e",
       "pos": 140737488388096
+    },
+    {
+      "trip_id": "Melrose_A12_EN",
+      "lane": "7",
+      "level": "A12",
+      "family": "Melrose",
+      "voice": "isla",
+      "gender": "female",
+      "title": "Melrose_A12_EN",
+      "labels": [
+        "EN",
+        "Trip"
+      ],
+      "card_url": "https://trello.com/c/LvllBus3",
+      "pos": 140737488412672
+    },
+    {
+      "trip_id": "Melrose_B1_EN",
+      "lane": "7",
+      "level": "B1",
+      "family": "Melrose",
+      "voice": "isla",
+      "gender": "female",
+      "title": "Melrose_B1_EN",
+      "labels": [
+        "EN",
+        "Trip"
+      ],
+      "card_url": "https://trello.com/c/LvllBus3",
+      "pos": 140737488412672
+    },
+    {
+      "trip_id": "Melrose_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Melrose",
+      "voice": "isla",
+      "gender": "female",
+      "title": "Melrose_EN",
+      "labels": [
+        "EN",
+        "Trip"
+      ],
+      "card_url": "https://trello.com/c/LvllBus3",
+      "pos": 140737488412672
+    },
+    {
+      "trip_id": "HadriansWall_A12_EN",
+      "lane": "7",
+      "level": "A12",
+      "family": "HadriansWall",
+      "voice": "harry",
+      "gender": "male",
+      "title": "HadriansWall_A12_EN",
+      "labels": [
+        "EN",
+        "Trip"
+      ],
+      "card_url": "https://trello.com/c/UO7mXhXA",
+      "pos": 140737488416768
+    },
+    {
+      "trip_id": "HadriansWall_B1_EN",
+      "lane": "7",
+      "level": "B1",
+      "family": "HadriansWall",
+      "voice": "harry",
+      "gender": "male",
+      "title": "HadriansWall_B1_EN",
+      "labels": [
+        "EN",
+        "Trip"
+      ],
+      "card_url": "https://trello.com/c/UO7mXhXA",
+      "pos": 140737488416768
+    },
+    {
+      "trip_id": "HadriansWall_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "HadriansWall",
+      "voice": "harry",
+      "gender": "male",
+      "title": "HadriansWall_EN",
+      "labels": [
+        "EN",
+        "Trip"
+      ],
+      "card_url": "https://trello.com/c/UO7mXhXA",
+      "pos": 140737488416768
+    },
+    {
+      "trip_id": "Abbotsford_A12_EN",
+      "lane": "7",
+      "level": "A12",
+      "family": "Abbotsford",
+      "voice": "isla",
+      "gender": "female",
+      "title": "Abbotsford_A12_EN",
+      "labels": [
+        "EN",
+        "Trip"
+      ],
+      "card_url": "https://trello.com/c/EEI2pqnw",
+      "pos": 140737488429056
+    },
+    {
+      "trip_id": "Abbotsford_B1_EN",
+      "lane": "7",
+      "level": "B1",
+      "family": "Abbotsford",
+      "voice": "isla",
+      "gender": "female",
+      "title": "Abbotsford_B1_EN",
+      "labels": [
+        "EN",
+        "Trip"
+      ],
+      "card_url": "https://trello.com/c/EEI2pqnw",
+      "pos": 140737488429056
+    },
+    {
+      "trip_id": "Abbotsford_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Abbotsford",
+      "voice": "isla",
+      "gender": "female",
+      "title": "Abbotsford_EN",
+      "labels": [
+        "EN",
+        "Trip"
+      ],
+      "card_url": "https://trello.com/c/EEI2pqnw",
+      "pos": 140737488429056
     },
     {
       "trip_id": "Plymouth_A12_EN",
