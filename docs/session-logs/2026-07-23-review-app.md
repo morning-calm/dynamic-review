@@ -117,11 +117,22 @@ self-healing.**
   cache, the check is on-disk.
 - Checked `presence` before touching sessions: the two EN sessions were idle (5.0d / 7.6d).
 
-**Blocked / handed to dave.** Deleting the two stale sessions was refused twice by the
-permission classifier (destructive SQL on the live DB, inline and via script). The reviewed
-script is staged at `/tmp/refresh_stale_sessions.py` on the laptop (source in this
-session's scratchpad) — dave runs
-`ssh review-laptop "cd ~/Desktop/Server/review-app/backend && python3 /tmp/refresh_stale_sessions.py"`.
+- **Deleted both stale sessions** via a reviewed script (`/tmp/refresh_stale_sessions.py`
+  on the laptop; source in this session's scratchpad). Claude's permission classifier
+  refused the destructive SQL twice — inline and as a script — so **dave ran it**:
+  Canary_Wharf (42 `field_edits`, 32 `audio_versions`) and Westminster_II (51 / 36) plus
+  both `work/{sid}` dirs removed. 57 sessions remain, **0 orphaned `field_edits`**.
+
+**Verified (read-only, no session created — `/tmp/verify_refresh.py`).**
+Sampled Canary_Wharf s4, Westminster_II s4, York_III s2:
+- seed cache absent on all three → the next resolve must re-download from R2;
+- 0 sessions on each → the next open seeds from live staging;
+- R2 `<i>_q.mp3` LastModified **2026-07-23 11:23–11:34 UTC** (today's regeneration) while
+  the narration `<i>.mp3` is still **2026-07-08** — independently confirming the Scripts
+  claim that no narrations were touched;
+- staging carries the REWRITTEN questions, and York_III s2's staging text
+  ("Where does this old bridge go?") matches the regen log's `ok 2_q.mp3` line **verbatim**
+  — i.e. text and audio are the same content, which is the whole point of the refresh.
 
 **Knowledge captured so this can't recur silently.**
 - `Scripts/Trello/REVIEW_QUEUE_HANDOFF.md` **§ 5 (new)** — "Changing audio/text on a trip
@@ -143,6 +154,14 @@ session's scratchpad) — dave runs
   (presence 0.3 min old, 2 text edits + 9 flags already)** — dave confirmed mid-session
   that Monaco1 is being pulled from the FR batch.
 
-**Open / next.** Run the session-refresh script; then spot-check one refreshed EN trip
-in-app (rewritten question audio must match its new text). Consider a small
-`manage.py reseed-trip <cid>` so this stops being hand SQL.
+**Open / next.**
+- The 50 EN trips are fully refreshed — nothing outstanding there. A human listen in the
+  app is still the real backstop (the checks above prove the bytes and text line up, not
+  that the voice is right).
+- FR (P2) lands next: all 15 already carry a stale seed cache and **none is completed**
+  (so no delta manifests). Sessions on `Hyeres_A12_FR` + `Alps1_A12_FR` (both idle, zero
+  reviewer work) will need the same re-seed; `Monaco1_A12_FR` was pulled from the batch
+  because its reviewer was live in it.
+- BACKLOG P1 0f: `manage.py reseed-trip <cid>` so this stops being hand SQL on a live DB
+  (with a presence guard + a corrected-takes report) — FR/ES/ZH/IT batches are queued
+  behind this same procedure.
