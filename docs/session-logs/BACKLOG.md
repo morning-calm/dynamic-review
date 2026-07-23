@@ -51,22 +51,17 @@ predicted. See session-2 log.
 
 ## P1 — Do next (high value, self-contained, no product decision)
 
-### 0f. `manage.py reseed-trip <cid>` — make pipeline re-uploads a supported operation
-**What:** one command that (a) `rm -rf work/_r2_seed_cache/<cid>`, (b) refuses if `presence`
-shows a live reviewer on that trip, (c) reports any session on the trip with its corrected
-takes (`working` ≠ `orig`) and whether R2 already holds each, and (d) with `--reseed` deletes
-the session rows (`sessions` + `field_edits` + `audio_versions`) + `work/{sid}`.
-**Why:** when dynamic-content re-publishes a queued trip (remediation batches), the app keeps
-serving the OLD audio forever — the seed cache never re-downloads, and it's filled by the trip
-LISTING, so "never opened" doesn't mean "not cached". On 2026-07-23 this was 50 trips and had
-to be done by hand SQL on the live DB against a fresh backup. Producer side is now documented
-(`Scripts/Trello/REVIEW_QUEUE_HANDOFF.md` § 5, `docs/adding-trips-to-review.md` § 5b) but the
-app side is still improvised. Batches are recurring: FR/ES/ZH/IT remediation passes are queued.
-**Size:** small. The logic exists as the one-off `/tmp/refresh_stale_sessions.py` (2026-07-23).
-**Design note (learned on the FR batch, same day):** clearing the cache is NOT a durable
-state — the trip listing refills it within minutes. So the command must be **clear + verify
-the refilled bytes against R2** (sha1 per changed clip), and it must run AFTER the producer's
-upload lands, never before. `/tmp/fr_cache_content_check.py` on the laptop is that check.
+### 0f. ~~Make pipeline re-uploads a supported operation~~ — **DONE 2026-07-23 (`scripts/refresh_trips.py`)**
+`audit` (per-trip CLEAR / RESEED / HANDS OFF from sessions + presence + reviewer work +
+completed status) · `clear` (guarded: asserts no other trip's cache moved) · `verify`
+(cached bytes vs R2 by MD5/ETag, no downloads; treats a clip with an
+`review-audio/<cid>/originals/<name>` twin as an expected reviewer correction, not staleness)
+· `reseed` (deletes sessions only when the trip is in the named list, status is `in_review`,
+no presence in 15 min, and there are no edits/flags/corrected takes) · `run` (audit→clear).
+Exercised on the EN-50 and FR-12 batches. **⚠ Claude's permission classifier blocks the
+live-DB delete, so dave runs the `reseed` step by hand.** Remaining nice-to-have: fold it
+into `manage.py` and teach `verify` to take the producer's changed-scene list so it can
+check *only* the clips that were supposed to move.
 
 ### 0e. ~~`revert()` ignores `localization_json`~~ — **FIXED + LIVE 2026-07-13 (b3a0d36)**
 `revert()` now restores every text surface (`current_text`, `source_text`, the `_ZH` 4-script

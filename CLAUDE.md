@@ -232,9 +232,13 @@ Completed status is never reset. First real batch: 12 A12 quiz-variety manifests
   `work/_r2_seed_cache/<cid>` and returns it forever after — and it is filled by the trip
   **LISTING** (the `reviewable` probe), not just by opening a trip, so on the laptop nearly
   every queued trip is cached. When the pipeline re-uploads audio for a trip already in the
-  queue, `rm -rf work/_r2_seed_cache/<cid>` on the laptop (no restart) or reviewers get NEW
-  text over OLD audio; a session seeded before the change also froze `original_text` and must
-  be deleted to re-seed. Procedure: `docs/adding-trips-to-review.md` § 5b + its Scripts twin
+  queue, reviewers get NEW text over OLD audio until it's cleared; a session seeded before
+  the change also froze `original_text` and must be re-seeded. **Don't hand-roll this —
+  `scripts/refresh_trips.py {audit|clear|verify|reseed}` (per-trip CLEAR/RESEED/HANDS-OFF
+  verdict, guarded delete).** The clear is NOT durable (the listing refills the cache), so
+  the success condition is `verify`: cached bytes == R2, allowing for reviewer corrections
+  marked by `review-audio/<cid>/originals/<name>`. Run it AFTER the producer's upload lands.
+  Procedure: `docs/adding-trips-to-review.md` § 5b + its Scripts twin
   `Scripts/Trello/REVIEW_QUEUE_HANDOFF.md` § 5.
 - **review.db backup:** `scripts/backup_review_db.py` WAL-safe hot-backs the DB (the ONLY copy
   of review state — not in git) to `review-audio/_db-backups/` (timestamped + `review-latest.db`;

@@ -244,6 +244,37 @@ Dave asked whether admin/`spanish` logins on Spanish trips block the P3 batch
 **Verdict: clear to start P3.** Same procedure as FR: upload → hand over the changed cids →
 clear + verify bytes → re-seed the 2 sessions.
 
+## Checkpoint 6 — making the procedure survive a fresh context
+
+Dave asked whether memory/docs are good enough for a cold session. Audited them; found
+**four gaps** and closed all four:
+1. The proven tooling lived in `/tmp` on the laptop — **wiped on reboot**. Now committed as
+   **`scripts/refresh_trips.py`** (`audit|clear|verify|reseed|run`), consolidating the four
+   one-off scripts. `audit` gives a per-trip **CLEAR / RESEED / HANDS OFF** verdict from
+   sessions + presence + reviewer work + completed status; `reseed` deletes only when the
+   trip is in the named list, status is `in_review`, no presence in 15 min, and there are no
+   edits/flags/corrected takes. Verified on the live host: audit reproduced the ES findings
+   exactly (14/2/0), `reseed --dry-run` cleared Ainsa+Besalu, and pointing it at
+   `Monaco1_A12_FR` **aborted** with "has french LIVE in it; holds work (edits=7 flags=50
+   takes=4)".
+2. The memory file predated the FR batch — no refill/verify knowledge. Rewritten.
+3. The MEMORY.md index hook still said "for an already-opened trip", the exact wrong mental
+   model. Replaced.
+4. `docs/adding-trips-to-review.md` § 5b never mentioned the refill, the ordering rule, or
+   verification. Added, with the command sequence.
+
+**Bug found by the new tool, in the tool.** `verify` flagged 4 MISMATCHes on
+`Monaco1_A12_FR` — which turned out to be precisely the french reviewer's corrected takes
+(`6/8/9.mp3`, `10_a2.mp3`, written 12:11–12:18 UTC while they worked). R2 legitimately
+holds a *newer* take than the seed cache there. Confirmed the discriminator is the
+documented `review-audio/<cid>/originals/<name>` archive key: present on all 4 corrected
+clips, absent on uncorrected `7.mp3`. `verify` now checks that marker and reports such
+clips as expected. Without the fix the tool would cry "refresh did NOT take" on every trip
+a reviewer has ever corrected.
+
+CLAUDE.md, `REVIEW_QUEUE_HANDOFF.md` § 5 and BACKLOG 0f (now closed) all point at the
+script; the producer's deliverable is just a list of changed cids, one per line.
+
 ## Session close
 
 - Commits `a6c5ee7`, `ab3aa11`, `00cbd6d`, `6858b68` **pushed** to `origin/main`.

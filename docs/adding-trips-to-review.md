@@ -148,8 +148,28 @@ These are the only steps that happen **in this repo / on the laptop**:
 ### 5b. ⚠ When the producer CHANGES a trip that is already in the queue
 
 Not a new trip — a re-publish + re-upload of a queued one (e.g. a remediation batch).
-Adding audio to R2 and text to staging is **not** enough; two things must be refreshed by
-hand on the laptop:
+Adding audio to R2 and text to staging is **not** enough.
+
+**Use the committed tool** (on the laptop, from the review-app root, Scripts venv):
+
+```bash
+py -3.12 scripts/backup_review_db.py backup            # always first
+py -3.12 scripts/refresh_trips.py audit  --file cids.txt   # verdict per trip
+py -3.12 scripts/refresh_trips.py clear  --file cids.txt
+#   … load the trip list in the app so the caches refill, then:
+py -3.12 scripts/refresh_trips.py verify --file cids.txt   # cached bytes == R2?
+py -3.12 scripts/refresh_trips.py reseed --file cids.txt   # only if audit said RESEED
+```
+
+`audit` classifies each trip **CLEAR** (no session — the cache clear is all it needs),
+**RESEED** (a session with no work product) or **HANDS OFF** (live reviewer, reviewer work,
+a non-`in_review` status, or a completed trip that belongs on the delta path). `reseed`
+re-checks every guard and aborts rather than touching a trip it shouldn't.
+
+**Order matters:** run this AFTER the producer's uploads land. Clearing first just
+re-caches the old audio.
+
+What it is doing, and why it can't be skipped:
 
 - **The R2 seed cache.** `sessions.resolve_audio_dir` mirrors `review-audio/<cid>/` into
   `work/_r2_seed_cache/<cid>` and returns that folder on every later call — it **never
@@ -165,11 +185,22 @@ hand on the laptop:
   (`working` ≠ `orig`) before deleting: a correction is only safe to discard if R2 already
   holds it (combine-time mirror) or the text it voices no longer exists.
 
+**The clear is not durable — the cache refills.** The trip listing re-downloads it from R2
+within minutes of the clear, which is fine (R2 now holds the new audio) but means "the
+cache is gone" is NOT the success condition. **"The refilled cache matches R2
+byte-for-byte" is** — that's what `verify` checks (MD5 via ETag, no downloads).
+
+**A cache↔R2 difference is not always staleness.** If R2 also holds
+`review-audio/<cid>/originals/<name>`, that clip is a reviewer's CONFIRMED take — the app
+archives the as-delivered master there when a correction overwrites it, so R2 is *ahead* of
+the cache by design. `verify` checks that marker and reports such clips as expected rather
+than as a failed refresh.
+
 Approve-time safety, for reassurance: a stale session cannot blanket-clobber the producer's
 upload — only fields whose working take differs from the pristine seed are promoted and
 mirrored. The narrow risk is a *corrected* take whose text was rewritten upstream.
 
-Worked example: 2026-07-23, 50 EN trips (see that day's session log).
+Worked examples: 2026-07-23 — 50 EN trips, then 12 FR trips (see that day's session log).
 
 ---
 
