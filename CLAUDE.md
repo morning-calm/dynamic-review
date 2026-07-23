@@ -358,9 +358,11 @@ the tunnel — uvicorn-only means they're locked out.
    in-progress candidates (pre-combine) still come from the backend.
 
 ## Open items / TODO
-- **`Blaenavon_B1_EN` has no audio yet** — uploads when its 5c runs. (`Caerphilly_Castle_B1_EN`
-  + `York_I_B2_EN` retired 2026-07-10 as added-in-error — in the export `EXCLUDE` set;
-  `Lake_District2_B1_EN` retired earlier.)
+- **Retired B1/B2 rungs** live in the export `EXCLUDE` set (`export_review_trips.EXCLUDE`),
+  which keeps them off the review list even if a stale card + audio reappear:
+  `Lake_District2_B1_EN` + `Canterbury_B1_EN` (2026-07-08), `Caerphilly_Castle_B1_EN` +
+  `York_I_B2_EN` (2026-07-10, added-in-error), `Blaenavon_B1_EN` (2026-07-23 — B1 trip no
+  longer exists, its staging doc is gone; the `Blaenavon_A12_EN` rung stays).
 - **Voice/voice_settings** are a best-effort guess (per-trip `voice_overrides.json` >
   `staging_choices.json` > country default) — the human listen is the backstop.
 - Stale-on-resume: a long-paused session diffs against its seed snapshot (no "staging changed"

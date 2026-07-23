@@ -574,3 +574,27 @@ self-heals), and `backfill_videoids_filenames.py` falls back to the Vimeo *title
 future run could collide two genuinely different videos. `'unknown file name'` is already
 shared by 25 ids. Also `thumbs._vimeo_id` and `sessions._vimeo_id` are duplicate
 implementations in production code.
+
+## Checkpoint 12 — retire Blaenavon_B1_EN (trip no longer exists)
+
+Dave: `Blaenavon_B1_EN` should be deleted, the trip doesn't exist anymore. Verified
+read-only first: staging `Trips/Blaenavon_B1_EN` **gone**, native `Blaenavon_EN` **gone**,
+0 objects on R2 `review-audio/Blaenavon_B1_EN/`; only **`Blaenavon_A12_EN` still exists** in
+staging (it stays). So the B1 rung is genuinely retired, same shape as the other retired B1
+variants.
+
+It was **never in the manifest** (no audio ⇒ it never listed), so there was nothing to
+delete there. The real fixes were the two places that still referenced it as *pending*:
+- **`Scripts/Trello/export_review_trips.py` EXCLUDE** — added `"Blaenavon_B1_EN"` with a
+  retired comment, alongside Caerphilly/York/Lake_District2/Canterbury. This is the durable
+  guard: if a stale lane-6/7 card ever gains audio it still won't re-list. EXCLUDE now 6
+  entries (verified via AST); ruff clean.
+- **`CLAUDE.md` open-items** — the "Blaenavon has no audio yet, uploads when its 5c runs"
+  bullet was stale (the 5c will never run). Replaced with a single "retired B1/B2 rungs"
+  note listing the whole EXCLUDE set.
+
+**Did NOT re-run the export.** The manifest doesn't contain Blaenavon, so a re-run would
+make no Blaenavon change while reading the live Trello board and re-committing the manifest
+(entangling the other session's board state). The EXCLUDE edit takes effect at the next
+legitimate export. If dave wants the Trello card physically removed, that's a board action
+(his call) — EXCLUDE already keeps it off the list regardless.
