@@ -63,6 +63,10 @@ to be done by hand SQL on the live DB against a fresh backup. Producer side is n
 (`Scripts/Trello/REVIEW_QUEUE_HANDOFF.md` § 5, `docs/adding-trips-to-review.md` § 5b) but the
 app side is still improvised. Batches are recurring: FR/ES/ZH/IT remediation passes are queued.
 **Size:** small. The logic exists as the one-off `/tmp/refresh_stale_sessions.py` (2026-07-23).
+**Design note (learned on the FR batch, same day):** clearing the cache is NOT a durable
+state — the trip listing refills it within minutes. So the command must be **clear + verify
+the refilled bytes against R2** (sha1 per changed clip), and it must run AFTER the producer's
+upload lands, never before. `/tmp/fr_cache_content_check.py` on the laptop is that check.
 
 ### 0e. ~~`revert()` ignores `localization_json`~~ — **FIXED + LIVE 2026-07-13 (b3a0d36)**
 `revert()` now restores every text surface (`current_text`, `source_text`, the `_ZH` 4-script

@@ -188,9 +188,12 @@ batch protected real work.
 - **Cleared the 12 seed caches** (`/tmp/fr_clear_caches.py`), which asserts afterwards that
   each of the 12 is gone AND that the 3 untouched trips still hold theirs. Guard passed:
   Monaco1 35 files, Strasbourg5 29, Le_Malzieu-Ville 36 — intact. 246 caches remain.
-- Re-seed of the 2 sessions staged as `/tmp/fr_reseed_sessions.py` — it re-checks every
-  guard (trip must be in the changed-12, no presence in 15 min, no edits/flags/corrected
-  takes) and aborts before writing if any fails, so it cannot touch Monaco1 by mistake.
+- **Re-seeded the 2 sessions** (`/tmp/fr_reseed_sessions.py`, run by dave — the classifier
+  blocks live-DB deletes for me). It re-checks every guard before writing anything (trip
+  must be in the changed-12, no presence in 15 min, no edits/flags/corrected takes) and
+  aborts otherwise, so it cannot touch Monaco1 by mistake. Both guard sets passed; Alps1
+  (74 `field_edits`, 47 `audio_versions`) and Hyeres (36 / 22) removed with their work
+  dirs. **55 sessions remain, 0 orphaned `field_edits`, Monaco1 session intact.**
 
 **Verified — content side** (`/tmp/fr_verify.py`, read-only; checked rather than trusted):
 - all 12 staging docs `update_time` **2026-07-23 12:07–12:08 UTC**; every listed scene's
@@ -201,6 +204,18 @@ batch protected real work.
   batch — caches intact, Monaco1's session intact;
 - all 16 rewritten questions are distinct across the batch (no new shared template).
 
+**Verified — the refresh actually took.** Minutes after the clear, all 12 caches were
+**repopulated** (`cache present True` again) — the LISTING behaviour, exactly as
+documented, and the first time we've watched it happen. So the meaningful check isn't
+"is the cache gone" but "does it hold the new bytes": for all 16 changed scenes the cached
+`{i}_q.mp3` is **byte-identical (sha1) to the object on R2 right now**. All 12 trips show
+0 sessions, so the next open seeds fresh text + this audio. That is the refresh proven
+end-to-end rather than assumed.
+
 **Observation for the ES/ZH/IT batches (not a defect):** `Alps1_A12_FR` s15 is now
 «Où sommes-nous ?» — unique here, but it's the one frame in the batch that could become a
 new template if reused. Worth keeping off the reusable-frame list. Scripts side's call.
+
+**Note for the reseed tooling (BACKLOG 0f):** "clear the cache" is not a durable state —
+it refills on the next list. The command should therefore be *clear + verify against R2*,
+not just `rm -rf`, and should be run AFTER the producer's upload completes, never before.
