@@ -145,6 +145,32 @@ These are the only steps that happen **in this repo / on the laptop**:
 - **Verify:** open one trip from the queue in the app — it must load its staged text,
   play audio, and (if images were supplied) show scene thumbnails.
 
+### 5b. ⚠ When the producer CHANGES a trip that is already in the queue
+
+Not a new trip — a re-publish + re-upload of a queued one (e.g. a remediation batch).
+Adding audio to R2 and text to staging is **not** enough; two things must be refreshed by
+hand on the laptop:
+
+- **The R2 seed cache.** `sessions.resolve_audio_dir` mirrors `review-audio/<cid>/` into
+  `work/_r2_seed_cache/<cid>` and returns that folder on every later call — it **never
+  re-downloads**. It is filled by the trip **listing** (`sessions.py`, the `reviewable`
+  probe), not just by opening a trip, so on the laptop practically every queued trip is
+  already cached. Fix per changed cid:
+  `rm -rf backend/work/_r2_seed_cache/<cid>` — no restart needed (`review_audio` keeps no
+  listing cache). Skipping this serves the reviewer NEW text over OLD audio.
+- **Any session that predates the change.** Staging text is read live at **seed**, so a
+  trip with no session picks the new text up by itself; an open session froze
+  `original_text` and must be deleted to re-seed. Check `presence` first — never re-seed a
+  trip a reviewer is actively editing — and check `field_edits` for corrected takes
+  (`working` ≠ `orig`) before deleting: a correction is only safe to discard if R2 already
+  holds it (combine-time mirror) or the text it voices no longer exists.
+
+Approve-time safety, for reassurance: a stale session cannot blanket-clobber the producer's
+upload — only fields whose working take differs from the pristine seed are promoted and
+mirrored. The narrow risk is a *corrected* take whose text was rewritten upstream.
+
+Worked example: 2026-07-23, 50 EN trips (see that day's session log).
+
 ---
 
 ## 6. Scene images
