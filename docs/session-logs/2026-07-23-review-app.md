@@ -304,10 +304,21 @@ These are **dave's own admin look-arounds**, which he described earlier in this 
 ("I may have opened some Spanish trips as admin… no actual spanish translator has
 reviewed these"), and both hold **zero work product** — the `spanish` reviewer has still
 never edited a field or submitted anything anywhere. So the handoff's *premise* (no
-translator work to protect) holds; only its expectation of zero sessions was off. Re-seeding
-them is safe but it is dave's call and dave's command.
+translator work to protect) holds; only its expectation of zero sessions was off.
+
+**Dave then ran the re-seed** (guards re-passed): Ainsa (43 `field_edits`, 25
+`audio_versions`) and Besalu (76 / 49) deleted with their work dirs. **55 sessions remain,
+0 orphans.** Final state of the 13: **13 CLEAR · 0 reseed · 0 hands-off**, every cached mp3
+matching R2, all 14 changed scenes passing. **P3 complete.**
 
 ## Session close
+
+**Day's totals across three remediation batches:** 75 trips refreshed (50 EN · 12 FR ·
+13 ES), 6 stale sessions re-seeded (Canary_Wharf, Westminster_II, Alps1, Hyeres, Ainsa,
+Besalu), **zero reviewer work lost** — every corrected take was either already durable on
+R2 or voiced text the pipeline had rewritten. Monaco1_A12_FR was protected throughout at
+dave's call; its reviewer worked in it all day (5→7 text edits, 39→50 flags, 4 corrected
+takes) and never saw a disturbance.
 
 - Commits `a6c5ee7`, `ab3aa11`, `00cbd6d`, `6858b68` **pushed** to `origin/main`.
 - Scripts-repo edits left uncommitted for dave's GitHub Desktop:
