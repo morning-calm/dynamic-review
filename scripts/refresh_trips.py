@@ -11,9 +11,15 @@ was seeded before the change additionally froze `original_text` and must be re-s
 
     py -3.12 scripts/refresh_trips.py audit  --file cids.txt
     py -3.12 scripts/refresh_trips.py clear  --file cids.txt
-    py -3.12 scripts/refresh_trips.py verify --file cids.txt
+    py -3.12 scripts/refresh_trips.py warm   --file cids.txt      # re-pull now, not lazily
+    py -3.12 scripts/refresh_trips.py verify --file cids.txt [--changed changed.txt]
     py -3.12 scripts/refresh_trips.py reseed --file cids.txt [--dry-run]
-    py -3.12 scripts/refresh_trips.py run    --file cids.txt      # audit → clear → verify
+    py -3.12 scripts/refresh_trips.py run    --file cids.txt [--changed changed.txt]
+
+`--changed` takes the producer's changed-scene list, one `cid: 4,7` per line, and adds the
+assertion that actually matters: for each changed scene the quiz clips on R2 must be NEWER
+than that trip's narration (i.e. the regen really landed), and the narration itself must
+NOT have moved when the batch claimed to touch questions only.
 
 ORDER MATTERS. Run this AFTER the producer's uploads have landed, never before —
 clearing early just re-caches the OLD audio. And "cache is gone" is not the success
@@ -246,6 +252,62 @@ def cmd_verify(trips: list[str]) -> int:
     return bad
 
 
+def cmd_warm(trips: list[str]) -> None:
+    """Re-pull each trip's masters from R2 into the seed cache now.
+
+    Exactly what `resolve_audio_dir` does on a cache miss — doing it here means the next
+    reviewer doesn't pay the download, and `verify` can run immediately instead of waiting
+    for someone to load the trip list.
+    """
+    for cid in trips:
+        dest = CACHE_ROOT / cid
+        ok = review_audio.download_dir(cid, dest)
+        n = len(list(dest.glob("*.mp3"))) if dest.is_dir() else 0
+        print(f"   {'warmed ' if ok else 'FAILED '} {cid:<34} {n:>3} files")
+    print("\nnow run `verify` to compare the cache against R2.")
+
+
+def _load_changed(path: str) -> dict[str, list[int]]:
+    """Parse the producer's changed-scene list: one `cid: 4,7` per line."""
+    out: dict[str, list[int]] = {}
+    for ln in Path(path).read_text(encoding="utf-8").splitlines():
+        ln = ln.strip()
+        if not ln or ln.startswith("#"):
+            continue
+        cid, _, scenes = ln.rpartition(":")
+        if not cid:
+            sys.exit(f"bad --changed line (expected `cid: 4,7`): {ln!r}")
+        out[cid.strip()] = [int(s) for s in scenes.replace(" ", "").split(",") if s]
+    return out
+
+
+def cmd_check_changed(changed: dict[str, list[int]]) -> int:
+    """Assert the producer's claim: quiz clips moved, narration did not."""
+    s3 = review_audio._r2()
+    bad = 0
+    for cid, scenes in changed.items():
+        for i in scenes:
+            def when(name):
+                try:
+                    return s3.head_object(Bucket=config.REVIEW_AUDIO_BUCKET,
+                                          Key=f"{cid}/{name}")["LastModified"]
+                except Exception:                                # noqa: BLE001
+                    return None
+            q, narr = when(f"{i}_q.mp3"), when(f"{i}.mp3")
+            if q is None:
+                print(f"BAD  {cid} s{i}: {i}_q.mp3 is not on R2")
+                bad += 1
+                continue
+            note = ""
+            if narr is not None and q <= narr:
+                note = "  !! quiz clip is NOT newer than the narration — regen did not land"
+                bad += 1
+            print(f"{'BAD ' if note else 'OK  '} {cid:<30} s{i:<3} "
+                  f"q {q:%Y-%m-%d %H:%M} · narration "
+                  f"{narr.strftime('%Y-%m-%d %H:%M') if narr else '—'}{note}")
+    return bad
+
+
 def cmd_reseed(trips: list[str], dry_run: bool) -> None:
     con = _con(write=not dry_run)
     now = time.time()
@@ -293,20 +355,30 @@ def cmd_reseed(trips: list[str], dry_run: bool) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=("audit", "clear", "verify", "reseed", "run"))
+    ap.add_argument("command", choices=("audit", "clear", "warm", "verify", "reseed", "run"))
     ap.add_argument("--trips", action="append", help="contentIDs, comma-separated (repeatable)")
     ap.add_argument("--file", help="file with one contentID per line (use this for long lists "
                                    "— cids may contain spaces)")
+    ap.add_argument("--changed", help="producer's changed-scene list, one `cid: 4,7` per line")
     ap.add_argument("--dry-run", action="store_true", help="reseed: show the plan, write nothing")
     args = ap.parse_args()
     trips = load_trips(args)
+    changed = _load_changed(args.changed) if args.changed else {}
+    if changed and set(changed) - set(trips):
+        sys.exit(f"--changed names trips not in the list: {sorted(set(changed) - set(trips))}")
 
     if args.command == "audit":
         cmd_audit(trips)
     elif args.command == "clear":
         cmd_clear(trips)
+    elif args.command == "warm":
+        cmd_warm(trips)
     elif args.command == "verify":
-        sys.exit(1 if cmd_verify(trips) else 0)
+        bad = cmd_verify(trips)
+        if changed:
+            print("\n── producer's changed scenes ─────────────────────")
+            bad += cmd_check_changed(changed)
+        sys.exit(1 if bad else 0)
     elif args.command == "reseed":
         cmd_reseed(trips, args.dry_run)
     elif args.command == "run":
@@ -316,12 +388,17 @@ def main() -> None:
             sys.exit("\nstopping: resolve the HANDS OFF trips first")
         print("\n── clear ─────────────────────────────────────────")
         cmd_clear(trips)
+        print("\n── warm ──────────────────────────────────────────")
+        cmd_warm(trips)
         print("\n── verify ────────────────────────────────────────")
-        print("(the cache refills lazily — load the trip list in the app first, then:\n"
-              f"   py -3.12 scripts/refresh_trips.py verify --file <same list>)")
+        bad = cmd_verify(trips)
+        if changed:
+            print("\n── producer's changed scenes ─────────────────────")
+            bad += cmd_check_changed(changed)
         if any(x == "RESEED" for x in v.values()):
-            print("\nthen re-seed the stale sessions:\n"
+            print("\nSTILL TO DO — re-seed the stale sessions (dave runs this):\n"
                   "   py -3.12 scripts/refresh_trips.py reseed --file <same list>")
+        sys.exit(1 if bad else 0)
 
 
 if __name__ == "__main__":
