@@ -524,6 +524,50 @@ dave, not actioned):**
    snapshot that then **wins the glob**. Suggested: refuse when >N% of entries would
    disappear unless `--allow-shrink`. Threshold is a policy call.
 
+## Checkpoint 11 — the two hazards fixed, committed, deployed, verified live
+
+**Both red-team hazards closed** before committing:
+- **Epoch-aware snapshot selection** in all FOUR readers (review-app `config.py`,
+  `build_review_gdoc.py`, `jp_scene_thumbnails.py`, and the exporter's own
+  previous-snapshot lookup): `VideoIds-<digits>.json` matched exactly, ordered by the
+  epoch as a NUMBER. Tested against an adversarial `VRD/` holding the derived-copy
+  names this directory actually collects — the old string sort picks **`VideoIds-backup.json`**
+  (a stub); the new rule picks the real newest. Worse than the reviewer's own example.
+- **Shrink guard** (`MAX_SHRINK_PCT = 2.0`, `--allow-shrink` to override): a partial
+  stream writes a plausible SHORT file that would then win the newest-epoch rule
+  everywhere. Empty-read guard alone didn't cover it.
+
+**Commits.** dynamic-content `1ff11f4` (exporter + reader un-pins) and `f45422e`
+(snapshot tracked, June one retired, targeted hook exclusion); review-app `103316e`.
+Both pushed. Only my paths were staged — the other session's 214 modified files were left
+alone, and its `89b164e` landed between my two commits without incident.
+
+**Pre-commit friction, handled not bypassed.** The first attempt was rejected three ways:
+`check-added-large-files` (the 3.4 MB snapshot vs a 2048 KB cap), `ruff format` rewriting
+three files, and `end-of-file-fixer`. Per dave's call the hook got a **targeted exclusion**
+for `^VRD/VideoIds-\d+\.json$` — not a raised global limit, and never `--no-verify`. The
+rationale is in the config: the snapshot must be TRACKED rather than generated per host,
+because every host has to derive the identical stem from the identical file or the laptop
+computes R2 keys the workstation never uploaded. Exactly one snapshot is kept in the tree.
+`ruff format` reformatting `jp_scene_thumbnails.py` + `build_review_gdoc.py` wholesale is
+the repo's stated policy (staged files get formatted) — kept, and gates re-run after:
+ruff clean, **377 passed**, all four readers still resolving.
+
+**Deployed.** Both repos pulled on the laptop; `review-app.service` restarted 18:41:49
+(held until dave confirmed — presence showed `admin` live in `Melrose_EN` 2.2 min prior,
+and the service had been up since 00:36 so it was still holding the June snapshot in
+memory).
+
+**Verified live, on the laptop and through the tunnel:**
+- app + tunnel both `active`, local health 200, `https://review.dynamiclanguages.org/` 200;
+- snapshot loaded: `VideoIds-1784825322.json`, 9,174 entries;
+- **50/60 Scotland VID thumbnails resolvable from the laptop with 0 local JPG trees** —
+  pure R2-key resolution, which is the whole design (the 10 misses are the intro/outro
+  title cards, which have no capture);
+- **31/31 static-360 scenes** + all 26 flat overlays servable there;
+- real HTTP GETs return actual JPEG bytes for a stitched thumbnail, a 4K panorama and a
+  flat overlay.
+
 **Pre-existing, noted not actioned:** stem **collisions** are structural — two videoIds
 can share one R2 key, `_ensure_uploaded` never overwrites (first writer wins, never
 self-heals), and `backfill_videoids_filenames.py` falls back to the Vimeo *title*, so a
