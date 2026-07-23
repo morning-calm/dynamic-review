@@ -165,3 +165,42 @@ Sampled Canary_Wharf s4, Westminster_II s4, York_III s2:
 - BACKLOG P1 0f: `manage.py reseed-trip <cid>` so this stops being hand SQL on a live DB
   (with a presence guard + a corrected-takes report) — FR/ES/ZH/IT batches are queued
   behind this same procedure.
+
+## Checkpoint 4 — FR (P2) batch refresh
+
+**Scope correction from dave:** the batch changed **12** cids, not the 15 on the P2
+worklist. `Monaco1_A12_FR` was pulled (translator live in it) and `Strasbourg5_A12_FR` +
+`Le_Malzieu-Ville_A12_FR` were deliberate keep-ones — **no staging write, no audio**, so
+nothing to clear on their account. Changed scenes are questions only (`{i}_q`, `{i}_a`,
+`{i}_a1..a3`); no SceneDesc, narration, overlays or structure.
+
+**Pre-flight audit** (`/tmp/fr_audit.py`, read-only) — all 12 carried a stale seed cache
+(5.6–6.1 d old, i.e. pre-batch). Only 2 had sessions: `Alps1_A12_FR` (sess_ff83087a30cf,
+idle 5.0 d) and `Hyeres_A12_FR` (sess_83bc5803982b, idle 6.1 d), **both with 0 text edits,
+0 flags, 0 corrected takes**. Nobody was live in any of the 12. The only presence on the
+host was `french` in `Monaco1_A12_FR` (3.2 min old) — which holds **5 text edits, 39 flags
+and 4 corrected takes** (`6.mp3`, `8.mp3`, `9.mp3`, `10_a2.mp3`). Pulling Monaco1 from the
+batch protected real work.
+
+**Done.**
+- review.db backed up first: R2 `_db-backups/review-20260723-122522.db` +
+  `/tmp/review.db.pre_fr_refresh_0723`.
+- **Cleared the 12 seed caches** (`/tmp/fr_clear_caches.py`), which asserts afterwards that
+  each of the 12 is gone AND that the 3 untouched trips still hold theirs. Guard passed:
+  Monaco1 35 files, Strasbourg5 29, Le_Malzieu-Ville 36 — intact. 246 caches remain.
+- Re-seed of the 2 sessions staged as `/tmp/fr_reseed_sessions.py` — it re-checks every
+  guard (trip must be in the changed-12, no presence in 15 min, no edits/flags/corrected
+  takes) and aborts before writing if any fails, so it cannot touch Monaco1 by mistake.
+
+**Verified — content side** (`/tmp/fr_verify.py`, read-only; checked rather than trusted):
+- all 12 staging docs `update_time` **2026-07-23 12:07–12:08 UTC**; every listed scene's
+  `{i}_q`/`{i}_a1` on R2 **12:14–12:15 UTC today**;
+- every one of those scenes' **narration `{i}.mp3` still 07-17** — independently confirms
+  the questions-only claim;
+- the 3 untouched trips show staging `update_time` **07-16/07-17** — no write from this
+  batch — caches intact, Monaco1's session intact;
+- all 16 rewritten questions are distinct across the batch (no new shared template).
+
+**Observation for the ES/ZH/IT batches (not a defect):** `Alps1_A12_FR` s15 is now
+«Où sommes-nous ?» — unique here, but it's the one frame in the batch that could become a
+new template if reused. Worth keeping off the reusable-frame list. Scripts side's call.
