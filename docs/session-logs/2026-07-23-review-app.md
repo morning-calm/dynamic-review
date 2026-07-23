@@ -219,3 +219,36 @@ new template if reused. Worth keeping off the reusable-frame list. Scripts side'
 **Note for the reseed tooling (BACKLOG 0f):** "clear the cache" is not a durable state —
 it refills on the next list. The command should therefore be *clear + verify against R2*,
 not just `rm -rf`, and should be run AFTER the producer's upload completes, never before.
+
+**Reviewer-side confirmation.** Dave's spot-check opened a NEW Hyeres session
+(`sess_baba7e726312`) which seeded s1 «Où allons-nous après le château ?» and s5 «Où est
+cette église ?» with their options — the rewritten staging text, against the freshly-cached
+audio. The loop is proven from the app's side, not just from R2/Firestore.
+
+## Checkpoint 5 — P3 (Spanish) pre-flight: clear to proceed
+
+Dave asked whether admin/`spanish` logins on Spanish trips block the P3 batch
+(`/tmp/es_preflight.py`, read-only, 16 P3 cids):
+- **14/16 have no session.**
+- **2 have sessions** — `Ainsa_A12_ES` (sess_f3013b23b6dc) and `Besalu_A12_ES`
+  (sess_0c6ac6bd945f) — `edited_by` **admin only**, 0 text edits, 0 flags, 0 corrected
+  takes; coverage rows only (43 / 76 fields played). Opened and listened to, not worked on.
+- **The `spanish` reviewer has never edited a field** and has submitted/approved nothing
+  anywhere — checked globally, not just on these 16.
+- **None is in `completed_trips`** → no delta manifests (rule 6), plain full-review path.
+- All 16 are cached (17–61 files) → all need the clear after the ES upload; Ainsa + Besalu
+  also need the re-seed.
+- Live at the time: `french` in Monaco1 (0.3 min) and admin in Hyeres + Hyde_Park — none in
+  the P3 set.
+
+**Verdict: clear to start P3.** Same procedure as FR: upload → hand over the changed cids →
+clear + verify bytes → re-seed the 2 sessions.
+
+## Session close
+
+- Commits `a6c5ee7`, `ab3aa11`, `00cbd6d`, `6858b68` **pushed** to `origin/main`.
+- Scripts-repo edits left uncommitted for dave's GitHub Desktop:
+  `Trello/REVIEW_QUEUE_HANDOFF.md` § 5 (+ Footguns bullet),
+  `upload_review_audio_r2.py` docstring, tracker hard rules 7 & 8.
+- The `WORKING_*.py` cleanup reminder is dave's other session's call — deliberately not
+  actioned here.
