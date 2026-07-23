@@ -326,3 +326,207 @@ takes) and never saw a disturbance.
   `upload_review_audio_r2.py` docstring, tracker hard rules 7 & 8.
 - The `WORKING_*.py` cleanup reminder is dave's other session's call — deliberately not
   actioned here.
+
+## Checkpoint 8 — two Scripts-side handovers: Scotland CEFR images + N5 seed clear
+
+Dave handed over two docs from the dynamic-content session and asked me to confirm the
+image claims in the first:
+`Scripts/docs/plans/2026-07-23-scotland-cefr-review-app-handover.md` and
+`…-review-app-n5-seed-clear-prompt.md`.
+
+### Scotland CEFR (10 new leveled rungs, lane 7)
+
+- **`git pull` was already satisfied** — laptop at `c3e7585` = `origin/main`, manifest 311
+  rows, all **15** Scotland rows present (10 leveled + the 5 native `_EN`, also queued),
+  voices correct (`harry` on HadriansWall, `isla` on the other four).
+- **§4's VID claim verified true**: 60 unique VID scenes; **all 60 videoIds are absent
+  from `VRD/VideoIds-1782220834.json`** (23 Jun, predates the 2024 Scotland shoot), so
+  `thumbs.stem_for_video_id` dead-ends before any file lookup — 0/180 rung-scenes resolve.
+  `review-overlays/` held 0 objects for all five bases.
+- **§4's "static-360 scenes are covered" was NOT true on the live host.** The app only
+  mirrors an image to R2 from a host where the file resolves locally — this workstation.
+  The laptop has no `STATIC_4K_ROOT`, no `Audio Generation/ogg`, no RW data roots, and R2
+  was empty ⇒ reviewers on the tunnel would have seen **no images at all**, static tiles
+  included. Flat overlays (26 of them) were in the same state and the doc didn't mention
+  them at all — §5.3 asks the reviewer to judge overlay drops.
+- **§4's remediation key was wrong**: `_overlay_base` reduces `_A12_EN`/`_B1_EN` → `_EN`,
+  so the app reads `review-overlays/<family>_EN/<i>.jpg`. Per-cid uploads (the doc's
+  "~120 keys") would never be read; it is 60 keys under 5 folders, and the same copy
+  serves the native rung.
+- Minor: the native `_EN` rungs get **no 4K panorama even here** — the 4K leaf folders are
+  named `<fam>_A12_EN`/`_B1_EN` only, which `static360.candidate_names` can't reach from
+  `<fam>_EN`, so it would serve the 7680×7680 master. Mirroring under the shared base
+  fixes that on every host.
+
+**Done** — ran `scripts/upload_review_images_r2.py --apply` over **all 15 rungs** (not just
+A12: B1 keeps overlays A12 drops, so the union needs every rung). **88 objects** on R2:
+all 31 static-360 scenes with both `{i}-4k.jpg` and the `{i}.jpg` master, plus 26 flat
+overlays. Verified by listing the bucket afterwards. No restart needed — the laptop serves
+these through the existing `overlay_r2_url` fallback.
+
+**VID gap is closable from the tree dave pointed at** (`D:\Final stitch\Backed Up\Scotland
+VID-PIC Thumbnails`, already in `THUMB_ROOTS` — the JPGs were never the problem).
+`sceneId` carries the capture timestamp (`s20240818-173912`) = the leading 14 digits of
+those filenames. Matching on it: **50/60 VID scenes matched, zero ambiguity** (503 JPGs
+indexed, no scene had a competing file); the 10 misses are exactly the intro/outro flat
+cards (scene 0 + last scene of each trip, no audio). Scene order/ids/static-flags are
+**identical across A12/B1/native** in all five families, so one upload per family is
+index-safe for all three rungs. Offered dave two options — upload the 50 as
+`review-overlays/<fam>_EN/<i>.jpg`, and/or refresh `VideoIds-*.json` on the Scripts side
+(the real fix, which supersedes the fallback automatically). **Awaiting his call.**
+
+### N5 (`_Beg_JP`) seed clear — 10 cids, complete
+
+`audit` → **10 CLEAR, 0 reseed, 0 hands-off** (no sessions on any of them; caches 15.2 d
+old = the 07-08 audio, exactly the staleness the handover describes). Dave ran `clear`
+(classifier blocks live-host deletes for me): 10/10 cleared, 298 other caches untouched,
+no empty-dir left behind. I ran `warm` + `verify`.
+
+⚠ **`python3` on the laptop is not the service interpreter** — no boto3, and without
+`REVIEW_APP_SCRIPTS_ROOT` the config falls back to the Windows default and finds no
+`.env`, so R2 creds are missing and `warm` reports `FAILED 0 files` (harmlessly). The
+working invocation from a non-interactive ssh shell is:
+
+    ssh review-laptop 'cd ~/Desktop/Server/review-app && \
+      REVIEW_APP_SCRIPTS_ROOT=/home/dynamic-languages/Desktop/Server/Scripts \
+      ~/Desktop/Server/Scripts/.venv/bin/python scripts/refresh_trips.py <cmd> --file …'
+
+**Verified.** All 10 warmed and **every cached mp3 matches R2**. Then the check the
+handover actually asked for (`/tmp/…/n5_stamp_check.py` in scratchpad, run against R2 from
+the workstation): **exactly 49 objects stamped 2026-07-23** — the narration of every listed
+changed scene plus the 5 keyword `_q` clips (`Takayama#21`, `Tokyo_08#14`, `Tokyo_09#12`,
+`Tokyo_09#20`, `Tokyo_10#7`) — **no extras, none missing, per trip**. Everything else still
+**2026-07-08**: 599 across the 10 touched trips (the handover's number) + 42 on the
+untouched `Tokyo_06_HieShrine_Beg_JP` = 641. Upload was surgical.
+
+**`verify --changed` cried wolf here — worth knowing.** It printed 43 BADs. That assertion
+("the scene's `_q` clip must be NEWER than the trip's narration") was written for the
+*quiz-only* EN/FR/ES batches; this batch is the inverse (narration variety, 44 scenes; only
+5 keyword swaps). Its output is still informative read backwards: the only scenes whose
+`_q` is stamped 07-23 are precisely the 5 keyword swaps. Worth teaching the tool the
+narration-batch shape rather than leaving a check that reports failure on a healthy batch.
+
+**Not mine / still open:** the blank `voice`/`gender` on all 11 `_Beg_JP` manifest rows is
+a Scripts-side fix (Trello `[review]` blocks → re-export), per the handover's own
+instruction to fix at source.
+
+## Checkpoint 9 — VideoIds snapshot refresh (dave chose the real fix over the fallback)
+
+Dave picked option 2: refresh `VRD/VideoIds-*.json` so the 60 Scotland ids are in the
+snapshot, rather than uploading per-scene fallback stills.
+
+**Root cause confirmed first.** All 60 ids are in staging Firestore `VideoIds/` **with
+`filename` values that match the JPGs exactly** (`Vid 20240818 173912 20240907232236-1`).
+The export was simply 30 days old — a Firefoo dump (`meta.app`) from 2026-06-23. So the
+failure was never missing data or missing JPGs; the snapshot is a hand-made artefact that
+nobody re-ran, and it fails **silently** — the videoId lookup dead-ends before any file
+search, so a whole trip renders blank tiles with no error anywhere.
+
+**Built** `Scripts/export_videoids_snapshot.py` (dynamic-content) — replaces the manual
+Firefoo step: streams staging `VideoIds/`, prints the +added/-removed/changed delta,
+writes `VRD/VideoIds-<epoch>.json` atomically, refuses to write an empty snapshot,
+dry-run by default. It emits Firefoo's `__collections__: {}` placeholder: without it every
+one of the 8,773 existing entries read as "changed" and a real change was invisible.
+
+**Ran it** — 9,174 docs, **+401 added, 0 removed, 3,959 changed**. The changes are the last
+month of legitimate pipeline work catching up: `newVideoId` remaps (3,504), the 2026-07-18
+`filename` backfill (1,907), refreshed Vimeo links (223). Wrote
+`VRD/VideoIds-1784825322.json` (3.5 MB).
+
+**Un-pinned the two hardcoded readers** — `backend/app/config.py` and Scripts
+`build_review_gdoc.py` now take the NEWEST `VideoIds-*.json` (review-app also honours
+`REVIEW_APP_VIDEOIDS_JSON`), the same newest-by-glob rule `jp_scene_thumbnails.py` already
+used. That's what stops this recurring.
+
+**Scotland result:** 60/60 videoIds now resolve to a stem; 50 have a local JPG and are
+uploaded and serving. The 10 without one are exactly the intro/outro title cards
+(`filename` "Hadrian's Wall In" etc., no capture) — independently the same 10 the `sceneId`
+mapping missed. Verified end-to-end with a real HTTP GET.
+
+**⚠ The refresh nearly caused a regression — caught and fixed.** The stem IS the R2 key,
+so the 1,907 `filename` backfills re-key those scenes. Audited all 311 queued trips /
+4,711 VID scenes: **1,929 stems moved**, of which 790 had no object at the new key — i.e.
+thumbnails that render today would have gone blank on the laptop (which has no JPG trees
+and serves keys only). Fixed both ways: 751 re-uploaded from local JPGs, and the remaining
+24 unique keys (Spain — no Spanish tree in `THUMB_ROOTS`, so the bytes only exist in the
+bucket) **server-side `CopyObject` old key → new key**. Re-audit: **1,929/1,929 present,
+0 would-go-blank.**
+
+*(39 scene-instances collapsed to 24 keys — the same video appears on several rungs.)*
+
+**Gotcha worth remembering:** probing `thumbs.dynamiclanguages.org` with default urllib
+returns **403 from Cloudflare**, including keys that have served reviewers for weeks. Send
+a browser User-Agent before concluding an object is missing. Captured in memory
+`videoids-snapshot-staleness`, CLAUDE.md's R2 Thumbnails bullet, and the script docstring.
+
+**Left for dave / not done here.**
+- Commit in **dynamic-content** (GitHub Desktop): `export_videoids_snapshot.py`, the new
+  `VRD/VideoIds-1784825322.json`, and the `build_review_gdoc.py` un-pin. The laptop needs
+  the JSON — it builds the same key from it; only the JPG bytes are workstation-only.
+- review-app `backend/app/config.py` un-pin is **uncommitted** — commit/push, pull on the
+  laptop (Scripts too), then restart uvicorn: both the snapshot and `_R2_KEYS` are
+  process-cached, so thumbnails won't change on the live host until the restart.
+- The old `VRD/VideoIds-1782220834.json` is now inert (both readers take the newest). Safe
+  to delete whenever dave wants one snapshot in the repo rather than two.
+
+## Checkpoint 10 — /red-opus pass on checkpoint 9's code
+
+Cold-context Opus reviewer over the four in-scope edits (config.py un-pin,
+`export_videoids_snapshot.py`, `build_review_gdoc.py` un-pin, the CLAUDE.md bullet) plus
+an audit of the two scratchpad one-offs whose logic drove production R2 writes.
+
+**One real bug found and fixed — `export_videoids_snapshot.py` would crash on a stock
+Windows console before writing anything.** 13 of the 9,174 entries have filenames outside
+cp1252 (`5 Tōnosawa Ichinoyu Honkan_000`, a `🇫🇷` emoji in a Strasbourg title). The delta
+listing prints `added[:10]`, so a refresh where a Japanese trip lands in the first ten
+added ids dies with `UnicodeEncodeError` — and because that print runs BEFORE the write,
+`--apply` aborts the whole refresh. The 07-23 run survived by luck. Fixed with the
+repo-standard `sys.stdout.reconfigure(encoding="utf-8")`. **Verified independently**: my
+own probe crashed with the identical `'charmap' codec can't encode character 'Ō'`.
+
+Other edits accepted: the unreachable empty-glob fallback in BOTH un-pins (it named
+`VideoIds-1782220834.json`, which by definition would have matched the glob — so the
+branch could only ever return a nonexistent path while sending an operator hunting for a
+file that was never the problem) now returns the pattern; a misplaced comment restored
+above `THUMB_ROOTS`; `RawDescriptionHelpFormatter` so `--help` doesn't mangle the usage
+lines; and the CLAUDE.md numbers corrected — "1,929" are VID **scene-instances** not
+distinct ids, "751 re-uploaded" was a count of `_ensure_uploaded` **calls** (an upper
+bound on real PUTs), and it named a re-upload tool that doesn't exist.
+
+**Gates re-run by me, not taken on trust**: backend imports clean · ruff "All checks
+passed!" · 377 passed, 25 deselected. Scope containment verified — exactly the four files.
+
+**Verdict on the scratchpad audit scripts (they drove 751 uploads + 24 R2 copies): sound.**
+The re-implemented `stem_from()` is faithful to `thumbs.stem_for_video_id()` line for line,
+so the audit measured the right thing. Copies moved `old_key → new_key` for the SAME
+videoId, and the reviewer confirmed against both snapshots that of 1,648 ids whose stem
+moved, **1,124 keep an identical 28-digit capture signature and 0 cross to a different
+capture** — the churn is `backfill_videoids_filenames.py` renaming, not re-pointing. It
+also checked the 1,094 NEW stem collisions the refresh created: **0 pairs point at two
+different captures.** My own re-check closed its one open doubt: the audit silently
+`continue`d on a failed `get_trip`, so "0 would-go-blank" only covered trips that
+fetched — **311/311 fetched, 0 failures**, and the 4712-vs-4711 scene gap is one scene
+with no `videoUrl` at all.
+
+**Two hazards reported, deliberately NOT fixed (both need a coordinated call — flagged to
+dave, not actioned):**
+1. **`sorted(...)[-1]` picks "newest" by string sort.** Anything sorting above a digit
+   after `VideoIds-` wins. Given the naming habit in that exact directory
+   (`prod-VoiceRecData-…-MERGED.pre-digits.json`), a derived same-epoch copy
+   `VideoIds-<epoch>.pre-digits.json` **beats** the real `VideoIds-<epoch>.json`
+   (`'p'>'j'`), while `-MERGED.json` loses (`'-'<'.'`). A stray derived file silently
+   becomes the app's snapshot — the exact silent-blank class this session set out to kill.
+   Fix is ~2 lines (`re.fullmatch(r"VideoIds-(\d+)\.json", …)` + `max(key=int)`) but must
+   land in all **three** readers together (config.py, build_review_gdoc.py,
+   jp_scene_thumbnails.py). The `.tmp` write does NOT collide — verified.
+2. **No shrink guard on the export.** The empty-snapshot guard is all-or-nothing;
+   `removed` is printed but never blocks, so a partially-streamed run writes a truncated
+   snapshot that then **wins the glob**. Suggested: refuse when >N% of entries would
+   disappear unless `--allow-shrink`. Threshold is a policy call.
+
+**Pre-existing, noted not actioned:** stem **collisions** are structural — two videoIds
+can share one R2 key, `_ensure_uploaded` never overwrites (first writer wins, never
+self-heals), and `backfill_videoids_filenames.py` falls back to the Vimeo *title*, so a
+future run could collide two genuinely different videos. `'unknown file name'` is already
+shared by 25 ids. Also `thumbs._vimeo_id` and `sessions._vimeo_id` are duplicate
+implementations in production code.

@@ -11,6 +11,7 @@ reused modules. app.main imports it first.
 from __future__ import annotations
 
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -59,12 +60,43 @@ MANIFEST_PATH = REVIEW_APP_ROOT / "trips_to_review.json"
 AUDIO_GENERATION_ROOT = SCRIPTS_ROOT / "Audio Generation"
 
 # --- Scene thumbnails (videoId → local VID/PIC JPG → Cloudflare R2) ----------
+def _newest_videoids_json() -> Path:
+    """The NEWEST `VRD/VideoIds-*.json` export, not a pinned filename.
+
+    A scene whose videoId is absent from this snapshot gets no thumbnail at all,
+    however many JPGs sit on disk — so pinning one export means every trip shot after
+    it renders blank tiles, silently (all 60 Scotland CEFR scenes, 2026-07-23).
+    Refresh the export with `Scripts/export_videoids_snapshot.py --apply`; this picks
+    it up with no code change. Same newest-by-glob rule `jp_scene_thumbnails.py` uses.
+    Override with REVIEW_APP_VIDEOIDS_JSON."""
+    env = os.environ.get("REVIEW_APP_VIDEOIDS_JSON")
+    if env:
+        return Path(env)
+    vrd = SCRIPTS_ROOT / "VRD"
+    # Match `VideoIds-<epoch>.json` EXACTLY and order by the epoch as a number — never
+    # by filename string sort. VRD/ collects hand-derived copies (`prod-…-MERGED.json`,
+    # `….pre-digits.json`), and under a string sort `VideoIds-<epoch>.pre-digits.json`
+    # BEATS the real `VideoIds-<epoch>.json` ('p' > 'j'), silently making a partial file
+    # the app's snapshot — the same silent-blank failure the newest-by-glob rule exists
+    # to prevent. A derived copy simply doesn't match the pattern now.
+    found = [(int(m.group(1)), p) for p in vrd.glob("VideoIds-*.json")
+             if (m := re.fullmatch(r"VideoIds-(\d+)\.json", p.name))]
+    if found:
+        return max(found)[1]
+    # Empty = no export at all (a Scripts checkout with no VRD/). Every real snapshot
+    # would have matched, so naming one here would only send the reader hunting for a
+    # file that was never the problem. Return the pattern and let thumbs.py's load
+    # error say what is actually missing.
+    return vrd / "VideoIds-*.json"
+
+
+VIDEOIDS_JSON = _newest_videoids_json()
+
 # These source trees are the UPLOAD side only: a host that has them mirrors each JPG
 # to R2 on first use. A host without them (the Ubuntu server) indexes 0 files and
 # serves whatever is already in the bucket (thumbs._remote_keys). Overridable
 # via REVIEW_APP_THUMB_ROOTS (comma-separated) for hosts that DO have local
 # copies at different paths.
-VIDEOIDS_JSON = SCRIPTS_ROOT / "VRD" / "VideoIds-1782220834.json"
 _thumb_roots_env = os.environ.get("REVIEW_APP_THUMB_ROOTS")
 if _thumb_roots_env:
     THUMB_ROOTS = [Path(p.strip()) for p in _thumb_roots_env.split(",") if p.strip()]

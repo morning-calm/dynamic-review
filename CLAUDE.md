@@ -208,6 +208,19 @@ Completed status is never reset. First real batch: 12 A12 quiz-variety manifests
   entry's `url`) → regional `…VID-PIC Thumbnails\**\Vid ….jpg` → bucket
   `dynamic-languages-thumbs` key `scene-thumbs/<stem>.jpg`, served at
   `https://thumbs.dynamiclanguages.org/`.
+  ⚠ **That snapshot is a local export of staging `VideoIds/` and it goes stale silently.**
+  A scene whose videoId is missing from it gets NO thumbnail however many JPGs are on
+  disk — the lookup dead-ends before any file search (all 60 Scotland CEFR scenes,
+  2026-07-23: ids in Firestore, absent from the 23-Jun export). `config.VIDEOIDS_JSON`
+  now takes the **newest** `VideoIds-*.json` (env `REVIEW_APP_VIDEOIDS_JSON`), so
+  refreshing is: `py -3.12 Scripts/export_videoids_snapshot.py --apply` (streams staging,
+  reports the delta, writes `VRD/VideoIds-<epoch>.json`) → commit it in dynamic-content →
+  pull on the laptop → restart. **The stem IS the R2 key**, so a refresh that changes a
+  `filename` re-keys that scene — and a thumbnail that worked goes blank on hosts without
+  the JPG trees (they serve keys only). After every refresh, audit the queued trips FROM
+  THE WORKSTATION and publish the moved keys: upload the local JPG where one resolves,
+  server-side-copy old key → new key where only the bucket has the bytes (07-23: 1,929
+  VID scene-instances re-keyed, 790 with no object at the new key — all closed).
 - **Flat overlays + static-360 stills** (served locally at `/overlays/{sid}/{fn}`, cookie-auth):
   `sessions._resolve_overlay_file` searches per **BASE trip id** (`_image_base_ids`:
   `X_HSK3_ZH`→`X_EN`; `X_Beg_N4_JP`→`X_Beg_JP`,`X_EN`; `X_A12/B1/B2_EN`→`X_EN`) across
