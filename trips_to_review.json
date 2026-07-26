@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-26T13:20:48+01:00",
+  "generated_at": "2026-07-26T13:32:01+01:00",
   "source": "trello 6,7",
   "trips": [
     {
@@ -4185,6 +4185,18 @@
       "labels": [],
       "card_url": "https://trello.com/c/9qOT6oHK",
       "pos": 140737490567168
+    },
+    {
+      "trip_id": "Jerez_CascoAntiguo_B1_ES",
+      "lane": "7",
+      "level": "ES-B1",
+      "family": "Jerez_CascoAntiguo_B1_ES",
+      "voice": "Sara",
+      "gender": "female",
+      "title": "Jerez_CascoAntiguo_B1_ES",
+      "labels": [],
+      "card_url": "https://trello.com/c/jhHSMkAP",
+      "pos": 140737490681856
     }
   ]
 }

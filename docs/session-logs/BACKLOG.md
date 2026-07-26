@@ -12,6 +12,19 @@ code changes need a `systemctl restart review-app.service` in an idle window, FE
 
 ## P0 — Waiting on dave (added 2026-07-13)
 
+### 0. CEFR partial-audio laptop refresh (added 2026-07-26)
+Seven staging-only trips have new review-audio masters on R2:
+`Strasbourg3_A12_FR`, `Strasbourg5_A12_FR`, `Girona_A12_ES`,
+`Florence3_A12_IT`, `Abbotsford_B1_EN`, `Melrose_B1_EN` and
+`Jerez_CascoAntiguo_B1_ES`. Jerez B1 was a full first-time 10-scene Sara set
+because no prior local or R2 master existed. The manifest has been refreshed.
+
+**Next:** on the Ubuntu laptop, pull the review-app commit and follow
+`docs/reviews/2026-07-26-cefr-partial-audio-refresh.md`: run
+`scripts/refresh_trips.py audit`, obey CLEAR/RESEED/HANDS-OFF, then `verify`.
+Never clear/reseed a trip with reviewer work or current presence. Abbotsford and
+Melrose stay at human review until re-approved.
+
 ### 0a. Ted's 8 open bug reports: ElevenLabs voices 2nd tone as 3rd tone
 **What:** reports #7–#14, filed 2026-07-09, ALL still `open`, zero replies. Same defect each
 time: 楼 / 球 / 人 / 城市 — rising-tone syllables rendered as dipping tone. Some say the whole word
