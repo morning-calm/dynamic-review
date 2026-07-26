@@ -17,13 +17,19 @@ Seven staging-only trips have new review-audio masters on R2:
 `Strasbourg3_A12_FR`, `Strasbourg5_A12_FR`, `Girona_A12_ES`,
 `Florence3_A12_IT`, `Abbotsford_B1_EN`, `Melrose_B1_EN` and
 `Jerez_CascoAntiguo_B1_ES`. Jerez B1 was a full first-time 10-scene Sara set
-because no prior local or R2 master existed. The manifest has been refreshed.
+because no prior local or R2 master existed. It was then rewritten in all ten
+scenes to B1 Mid, 2.653, and the complete Sara set was regenerated and uploaded
+again. The manifest has been refreshed and remains valid.
 
 **Next:** on the Ubuntu laptop, pull the review-app commit and follow
 `docs/reviews/2026-07-26-cefr-partial-audio-refresh.md`: run
 `scripts/refresh_trips.py audit`, obey CLEAR/RESEED/HANDS-OFF, then `verify`.
 Never clear/reseed a trip with reviewer work or current presence. Abbotsford and
 Melrose stay at human review until re-approved.
+
+If the original seven-trip refresh already ran, repeat the guarded audit,
+clear/reseed and verify steps for Jerez alone because all ten of its R2 objects
+changed again.
 
 ### 0a. Ted's 8 open bug reports: ElevenLabs voices 2nd tone as 3rd tone
 **What:** reports #7–#14, filed 2026-07-09, ALL still `open`, zero replies. Same defect each

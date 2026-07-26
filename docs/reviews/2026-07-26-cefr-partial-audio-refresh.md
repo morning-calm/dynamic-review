@@ -6,11 +6,12 @@ The corrected CEFR Phase D pass changed narration in seven staging-only trips.
 The producer regenerated the affected audio through the standard Gemini and
 ElevenLabs pipeline and uploaded the new MP3 masters to R2 `review-audio`.
 
-`Jerez_CascoAntiguo_B1_ES` required a **full 10-scene initial generation**. This
-was not because its two text edits required unrelated scenes to be re-voiced:
-preflight found that the B1 trip had **no local master directory and no R2
-objects at all**. A complete Sara 0.85× set was therefore necessary to make the
-B1 rung reviewable for the first time.
+`Jerez_CascoAntiguo_B1_ES` first required a **full 10-scene initial
+generation** because preflight found no local master directory or R2 objects.
+The producer then rejected the too-light two-scene text edit and rewrote all ten
+narration scenes to B1 Mid. As a result, the complete Sara 0.85× set was
+regenerated and uploaded again. The final staging script measures B1 Mid, 2.653,
+up from B1 Low, 2.244.
 
 No production, S3 or subtitle write was made.
 
@@ -24,11 +25,12 @@ No production, S3 or subtitle write was made.
 | `Florence3_A12_IT` | narration scenes 8, 9, 13, 14 |
 | `Abbotsford_B1_EN` | narration scenes 1, 8, 12, 16, 22, 23 |
 | `Melrose_B1_EN` | narration scenes 3, 8, 11, 12, 15, 16 |
-| `Jerez_CascoAntiguo_B1_ES` | full initial narration set, scenes 0–9, Sara 0.85× |
+| `Jerez_CascoAntiguo_B1_ES` | full replacement narration set, scenes 0–9, Sara 0.85× |
 
 Verification completed on the producer:
 
-- all 41 local MP3 sizes match their R2 objects;
+- all ten final Jerez MP3s match their R2 ETags byte-for-byte;
+- the other 31 local MP3 sizes still match their R2 objects;
 - all 31 surgical MP3/OGG pairs exist locally;
 - the 19 A12 clips carry the required 3-second trailing pad;
 - no generation temp files remain;
@@ -65,6 +67,10 @@ Expected manifest check:
 - voice is `Sara`, gender is `female`;
 - its card URL is the `Jerez_Trip` family card.
 
+The all-scene follow-up does not change any manifest field, so commit `503da9a`
+remains the correct manifest. No second manifest export is required solely for
+this audio replacement.
+
 ## Live laptop refresh
 
 The live app is on the Ubuntu laptop. Pull the manifest there, then use the
@@ -89,6 +95,14 @@ source ~/Desktop/Server/Scripts/.venv/bin/activate
 python scripts/refresh_trips.py audit --file /tmp/cefr-partial-audio-cids.txt
 ```
 
+If the earlier seven-trip refresh has already been completed, repeat the guarded
+procedure for Jerez alone because all ten R2 objects have changed again:
+
+```bash
+printf '%s\n' Jerez_CascoAntiguo_B1_ES > /tmp/jerez-b1-refresh.txt
+python scripts/refresh_trips.py audit --file /tmp/jerez-b1-refresh.txt
+```
+
 Follow each audit verdict:
 
 - `CLEAR`: run guarded `clear` for that trip;
@@ -102,6 +116,10 @@ After the list endpoint has refilled eligible caches:
 python scripts/refresh_trips.py verify --file /tmp/cefr-partial-audio-cids.txt
 ```
 
+For the Jerez-only repeat, use `/tmp/jerez-b1-refresh.txt` in the verification
+command.
+
 Success is cached bytes matching R2, allowing for any reviewer correction with
-an `originals/<name>` marker. Abbotsford and Melrose remain at the human-review
-boundary; subtitles and Stage 9/S3 work wait until that renewed review passes.
+an `originals/<name>` marker. Jerez now requires a complete B1 script/audio
+review. Abbotsford and Melrose remain at the human-review boundary; subtitles
+and Stage 9/S3 work wait until that renewed review passes.

@@ -37,3 +37,32 @@
 
 - Follow `docs/reviews/2026-07-26-cefr-partial-audio-refresh.md` on the live
   laptop in an idle/reviewer-safe window.
+
+## Jerez all-scene follow-up
+
+### Goal(s)
+
+- Correct the operator handoff after the producer rewrote all ten Jerez B1
+  scenes and replaced the entire R2 audio set again.
+
+### What I did
+
+- Updated the CEFR refresh note to identify scenes 0–9 as a full replacement,
+  record B1 Mid, 2.653, and give a Jerez-only guarded refresh path.
+- Clarified that manifest commit `503da9a` remains valid because the lane,
+  language, voice, gender and card URL did not change.
+
+### Verified
+
+- Producer verification matched all ten final Jerez local MP3s byte-for-byte
+  against their R2 ETags and found no reviewer `originals/` markers.
+- The manifest still contains one lane-6 Jerez B1 row with Sara, female.
+
+### Open / low-urgency TODOs
+
+- Refresh/reseed Jerez again on the Ubuntu laptop when the audit confirms it is
+  safe, then verify the cache and review the complete B1 script/audio.
+
+### Next steps
+
+- Follow the updated handoff note; do not mutate a live reviewer session.
