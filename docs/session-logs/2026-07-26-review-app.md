@@ -15,11 +15,14 @@
 - Recorded the laptop pull/cache verification as an open operational follow-up.
 - Regenerated `trips_to_review.json` from live Trello lanes 6 and 7 after the
   Jerez B1 review row was added.
+- The first export exposed a legacy-family classification gap: Jerez B1 appeared
+  in lane 7. Added/verified the producer's `source_en_id: Jerez_Trip` mapping and
+  re-exported so the final manifest row is lane 6.
 
 ### Verified
 
 - Producer verification matched all 41 generated MP3s to their R2 objects.
-- The manifest contains `Jerez_CascoAntiguo_B1_ES` once in lane 6 with Sara,
+- The final manifest contains `Jerez_CascoAntiguo_B1_ES` once in lane 6 with Sara,
   female, on the Jerez family card.
 - Only the note, session log, backlog and generated manifest were staged.
 
@@ -34,4 +37,3 @@
 
 - Follow `docs/reviews/2026-07-26-cefr-partial-audio-refresh.md` on the live
   laptop in an idle/reviewer-safe window.
-

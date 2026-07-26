@@ -45,6 +45,12 @@ Jerez_CascoAntiguo_B1_ES  lane=6 voice=Sara gender=female
 [/review]
 ```
 
+The producer also carries the canonical strict-root family mapping:
+`Research and Writing/data/Jerez_CascoAntiguo_B1_ES/source.json` with
+`{"source_en_id": "Jerez_Trip"}`. This is load-bearing: without it the exporter
+mistakes the legacy B1 rung for its own native family and forces it from
+translator lane 6 to KP lane 7.
+
 Run the normal exporter from the Scripts checkout to regenerate, commit and push
 `trips_to_review.json`:
 
@@ -99,4 +105,3 @@ python scripts/refresh_trips.py verify --file /tmp/cefr-partial-audio-cids.txt
 Success is cached bytes matching R2, allowing for any reviewer correction with
 an `originals/<name>` marker. Abbotsford and Melrose remain at the human-review
 boundary; subtitles and Stage 9/S3 work wait until that renewed review passes.
-
