@@ -31,6 +31,40 @@ If the original seven-trip refresh already ran, repeat the guarded audit,
 clear/reseed and verify steps for Jerez alone because all ten of its R2 objects
 changed again.
 
+**2026-07-26 live check:** the read-only audit returned `CLEAR` for all seven;
+none has a session and no reseed is needed. The mutation was postponed because
+`french` was actively reviewing `Monaco1_FR` (fresh heartbeat on two checks).
+In the next globally idle window, rerun the audit, then `clear`, `warm`, and
+`verify` all seven.
+
+**2026-07-26 14:18 BST monitor check:** still deferred: `french` had a fresh
+editing heartbeat for `sess_7e2ef0014e33`. No audit or cache mutation was run.
+
+**DONE 2026-07-26 14:24 BST:** the live host was globally idle; all seven audits
+were `CLEAR`, then their seed caches were cleared, warmed, and verified. `verify`
+exited 0 with all 291 cached MP3s matching R2. No service restart was performed.
+Do not repeat this completed refresh unless a later producer upload supplies a new
+explicit handoff and a fresh guarded audit permits it.
+
+**2026-07-26 14:32 BST monitor check:** presence remained globally idle (zero
+heartbeats in 15 minutes), but the completed refresh was deliberately not repeated.
+The desktop automation disable handler was unavailable; treat further monitor runs as
+read-only until it can be disabled.
+
+**2026-07-26 14:37 BST monitor check:** the completed 14:24 BST verification remains
+authoritative and no refresh was repeated. The read-only SSH presence-query attempt connected
+but could not run because the laptop lacks `sqlite3` and its fallback command was not accepted;
+no live mutation occurred. Keep this automation read-only until it can be disabled.
+
+**2026-07-26 14:42 BST monitor check:** `french` was again active in
+`sess_7e2ef0014e33` within the 15-minute global presence window. No audit or cache operation
+ran. The refresh remains complete and any future trigger stays read-only unless a new explicit
+producer handoff authorizes it.
+
+**2026-07-26 14:42 BST completion:** the one-shot Codex automation was permanently paused
+after the active-reviewer check. No recurring action remains; a later producer upload needs a
+new explicitly authorized, guarded refresh task.
+
 ### 0a. Ted's 8 open bug reports: ElevenLabs voices 2nd tone as 3rd tone
 **What:** reports #7–#14, filed 2026-07-09, ALL still `open`, zero replies. Same defect each
 time: 楼 / 球 / 人 / 城市 — rising-tone syllables rendered as dipping tone. Some say the whole word
@@ -223,6 +257,7 @@ Scripts note via GitHub Desktop.
 ---
 
 ## Done
+- **2026-07-26** — CEFR partial-audio cache refresh for Strasbourg3_A12_FR, Strasbourg5_A12_FR, Girona_A12_ES, Florence3_A12_IT, Abbotsford_B1_EN, Melrose_B1_EN, and Jerez_CascoAntiguo_B1_ES. Guarded run completed at 14:24 BST: audit was CLEAR for all seven; clear + warm completed; verify exited 0 with 291 cached MP3s matching R2. Do not rerun clear/warm without a new producer handoff.
 - **2026-07-16** — **Finalised-bus consumer** (f9fad71, LIVE on the laptop). The app now reads
   Stage 9's `review-audio/_bus/finalised_trips.json` (read-only, best-effort) and marks completed
   trips **Published** (shipped, greyed, sunk to bottom of Completed) or **Re-finalise pending**
