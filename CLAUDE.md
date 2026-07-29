@@ -283,7 +283,17 @@ editing the guide .md files updates the app with no rebuild).
 ## Auto-review (two gates) — `docs/auto-review-proposal.md`
 - **Gate 1 (deterministic, in `sessions.validate`)** — `auto_checks.py`: zh script-consistency
   (Hant↔Hans, zhuyin alignment via `hsk_lib`), stale-sibling, format. Hard at APPROVE, demoted
-  to warnings at SUBMIT. **Plus the HSK level check** (`zh_level.py`, added 2026-07-13): flags
+  to warnings at SUBMIT.
+  - ⚠️ **Gate 1 fails SILENT on a missing dep.** `jieba`/`pypinyin`/`opencc` are all imported
+    lazily in a try/except, so an absent one degrades the affected check to nothing rather than
+    erroring. Bitten twice on the laptop: jieba (2026-07-08) and **opencc (2026-07-29 — the
+    Hant↔Hans + script-purity checks had never run in production)**. All three live in the
+    Scripts pyproject's `nlp` extra; after any venv rebuild run
+    `python -c "import jieba, pypinyin, opencc"` on the host. See `backend/requirements.txt`.
+  - Hant↔Hans compares **forward** (`to_traditional(hans) == hant`) with the reverse as a
+    fallback for a reviewer's own variant. Do NOT "simplify" it back to reverse-only: OpenCC
+    doesn't round-trip the durative 着 (s2tw writes 著, which is also valid Simplified), so
+    reverse-only hard-blocks correct text — `auto_checks._hant_correspondence` has the story. **Plus the HSK level check** (`zh_level.py`, added 2026-07-13): flags
   vocabulary the edit **introduced** that's above the trip's band (diffed orig→cur, so the
   draft's own i+1 words aren't the reviewer's problem). **WARN, never blocks.**
   - ⚠️ `zh_level` MIRRORS the pipeline's `Scripts\…\HSK Mandarin\stages\level_check.py` (POS

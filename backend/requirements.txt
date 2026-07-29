@@ -2,6 +2,14 @@
 # carries faster-whisper 1.2.1, firebase-admin 7.1, numpy, requests, google-genai.
 # (Those heavy/GPU deps are intentionally NOT pinned here — we reuse the existing
 # Scripts environment rather than rebuild it.)
+#
+# ⚠️ Gate 1 (app/auto_checks.py + zh_level.py) needs THREE packages from the Scripts
+# pyproject's `nlp` extra: jieba, pypinyin AND opencc-python-reimplemented. Every one of
+# them is imported lazily inside a try/except, so a missing one does NOT crash — the
+# affected check just goes SILENT. That has now bitten twice on the live laptop: jieba
+# (2026-07-08, stripped pinyin) and opencc (2026-07-29 — the Hant↔Hans and script-purity
+# checks had never once run in production). When building/refreshing a host venv, verify
+# with:  python -c "import jieba, pypinyin, opencc; print('gate1 deps ok')"
 fastapi==0.138.2
 uvicorn[standard]==0.49.0
 python-multipart==0.0.32

@@ -293,3 +293,32 @@ told a good fix is broken and the one-click apply is refused.
 **Next:** install `opencc` in the service venv to activate the two dormant checks —
 awaiting dave's go-ahead (it turns on a hard-at-approve block that has never fired;
 audit above says the live cost is one true-positive flag on one un-submitted session).
+
+### opencc installed on the live host — the two dormant checks are now ACTIVE
+- **Root cause of the dormancy:** `opencc-python-reimplemented` IS declared in the Scripts
+  `pyproject.toml`, but in the **`nlp` optional-extras** group — and the laptop venv only ever
+  got a partial install of that group. Audit of all 11 `nlp` packages on the laptop:
+  present = `jieba`, `pypinyin`; missing = `spacy`, `sudachipy`, `sudachidict-core`,
+  `kiwipiepy`, `lemminflect`, `opencc-python-reimplemented`, `pyspellchecker`, `wordninja`,
+  `text2num`. Of those, **only opencc is reachable from the review-app** (via `hsk_lib`); the
+  rest are pipeline-side morphology/drafting deps and were correctly left out.
+- Installed **targeted, version-matched**: `opencc-python-reimplemented==0.1.7` (same as the
+  workstation, so live behaviour matches what was tested). Deliberately NOT a full `uv sync` —
+  that would have pulled spacy/kiwipiepy/etc. and could have upgraded packages under a live
+  service. Restarted; both services active, no errors, public endpoint HTTP 200.
+- **Verified on the laptop, post-install** — same 5-case table as the workstation, identical
+  results: durative `block`→`ok`, variant `ok`, stale `bad`, punct `punct`, clean `ok`.
+- **Live Gate-1 output** on the one real hit (`sess_67d43aae2c03` / `Taipei101_HSK12_ZH`,
+  `in_review`): hard=4 soft=11, of which the Hant↔Hans block fires **exactly once**, on the
+  genuine mismatch (sc6 questionOption[1], `这颗球是白色的` vs `球是白色的`). The other 3 hard
+  items are pre-existing zhuyin-alignment blocks, unrelated to opencc. Blast radius was exactly
+  what the audit predicted: +1 true positive, 0 spurious. Session is `in_review`, so nothing is
+  wedged — it surfaces as a warning at submit, hard only at approve.
+- **Made durable** so this can't silently regress: a ⚠️ block in `backend/requirements.txt`
+  naming the three Gate-1 deps from the Scripts `nlp` extra (jieba/pypinyin/opencc) with the
+  one-line host verification, plus a CLAUDE.md note under Gate 1 covering both the
+  fail-silent class and the "don't revert to reverse-only" warning on the Hant comparison.
+
+**Carried forward:** `Taipei101_HSK12_ZH` sc6 questionOption[1] has a genuine Hant/Hans
+mismatch (the 这颗 measure phrase is missing from the Traditional). It is that session's
+reviewer's to fix through the normal flow — flagged here so it isn't lost.
