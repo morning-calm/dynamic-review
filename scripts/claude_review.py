@@ -19,9 +19,10 @@ SUBMITTING REVIEWER must answer (resolve / reject-with-reason / defer-to-admin),
 session bounces from 'submitted' back to 'ai_review' until they do — see
 backend/app/auto_review_ingest.py. Reports still never edit text or touch staging.
 
-Suggested fixes for _ZH fields are POST-VERIFIED with hsk_lib (to_simplified(Hant)==Hans,
-zhuyin_to_pinyin full-confirm) and carry verified:true/false — an unverified suggestion is
-shown but flagged. Nothing is ever auto-applied.
+Suggested fixes for _ZH fields are POST-VERIFIED with hsk_lib (Hant↔Hans via Gate 1's
+`auto_checks._hant_correspondence`, zhuyin_to_pinyin full-confirm) and carry
+verified:true/false — an unverified suggestion is shown but flagged. Nothing is ever
+auto-applied.
 
 Runs from cron on the live host (*/5, like the notifier). Uses the `claude` CLI headless
 (`claude -p --output-format json`) — no API key in this repo.
@@ -45,7 +46,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "backend"))
-from app import auto_review_ingest  # noqa: E402  (shared with the API — see its docstring)
+from app import auto_checks, auto_review_ingest  # noqa: E402  (shared with the API — see their docstrings)
 
 DB_PATH = REPO / "backend" / "review.db"
 STATE_PATH = REPO / "backend" / "autoreview_state.json"
@@ -192,7 +193,13 @@ def verify_fixes(report: dict, diff: dict, is_zh: bool) -> None:
         zhuyin = fix.get("zhuyin", cur.get("zhuyin") or "")
         ok = True
         try:
-            if hant and hsk.to_simplified(hant) != hsk.to_simplified(hans):
+            # Shares Gate 1's comparison rather than re-rolling it: comparing only via
+            # to_simplified false-positives on the durative 着 (s2tw writes it 著, which is
+            # also valid Simplified), which would brand a CORRECT suggestion "failed machine
+            # check" and make apply_suggested_fix 409. See auto_checks._hant_correspondence.
+            # Anything but a clean 'ok' still fails CLOSED, exactly as before — a badge that
+            # merely withholds "verified" is the safe side, unlike Gate 1's hard block.
+            if hant and auto_checks._hant_correspondence(hsk, hans, hant) != "ok":
                 ok = False
             if zhuyin and hans:
                 _, warns = hsk.zhuyin_to_pinyin(zhuyin, hsk.to_simplified(hans))

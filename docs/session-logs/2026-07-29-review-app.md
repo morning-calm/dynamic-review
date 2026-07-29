@@ -185,3 +185,81 @@ journal, local `/api/trips` answers 401 (auth middleware) as expected. The
   Backlogged.
 - Verified at wrap: uvicorn + cloudflared both active; live bundle index-ef4_H2sm.js
   (toast fix) serving through the backend.
+
+## Evening: Hant↔Hans false positive (reported from the Scripts repo)
+**Goal:** the Scripts repo flagged that its own Hant↔Hans check false-positived when
+compared via `to_simplified`, and warned that `auto_checks.py` looked to have the same
+bug. Verify and fix.
+
+**Confirmed — the review app had it too.** `_zh_field_issues` compared
+`to_simplified(Hant)` vs `to_simplified(Hans)`. OpenCC `s2tw` correctly writes the
+durative 着 as 著 for Taiwan, but 著 is *also* valid Simplified (著名), so `t2s` leaves it
+alone and the two sides never meet. Result: a **hard `block`** ("Traditional text doesn't
+correspond to the Simplified text") on correct, pipeline-derived text, with nothing the
+reviewer could change to clear it. Per `sessions.validate`'s mode split that is hard at
+**approve** (the trip wedges with the admin) and a loud `[will block approval]` warning at
+**submit**. 6 of 13 ordinary test sentences tripped it (看着/坐着/沿着/跟着/吃着/显着).
+
+**What I did** — `backend/app/auto_checks.py`:
+- New `_hant_correspondence(hsk, hans, hant)` → `ok` | `punct` | `bad` | `unknown`.
+  Compares **forward** first (`to_traditional(hans) == hant`, exactly how the pipeline
+  derives Hant, so a fresh pair matches char-for-char), with the **reverse** kept as a
+  fallback so a reviewer's own legitimate variant still passes (裏面 for 裡面, 臺北 for
+  台北). Blocks only when *both* fail; `unknown` (no opencc) says nothing rather than
+  blocking on a check it couldn't run. **Red-team follow-up:** `unknown` now triggers
+  whenever the *reverse* comparison is unavailable, not only when both are — with the
+  variant-forgiving half missing, a forward mismatch alone can't tell a stale Hant from
+  a legitimate 裏面/臺北, and the old code was silent on that path.
+- The punctuation-only → `warn` demotion now applies to whichever comparison ran (the old
+  code hard-blocked a punctuation nit whenever a 着 was also present).
+
+**Verified**
+- 14-case table (durative 着 ×6, 著名, reviewer variants, punct-only, 3 genuinely stale
+  Hant): 14/14 as expected — every 着 case flips `bad`→`ok`, every stale case still
+  blocks. End-to-end through `run_checks` with pipeline-derived Hant+zhuyin: hard=0 soft=0.
+- The change is **provably more permissive** (pass if either direction matches; `punct`
+  strictly demotes) so it cannot newly block anything that passed before.
+- Live-DB scan (read-only, laptop): 2 of 458 four-script rows carry the pattern —
+  `KaohsiungLotusPond_HSK12_ZH` sc.6 (穿着/穿著) and `_HSK3_ZH` sc.15 (连着/連著). Both
+  verified `BLOCK`→`ok` under the fix. They only escaped because those rows were
+  unedited (`cur == orig`, so `run_checks` skips them) — **one reviewer edit anywhere in
+  those blocks would have wedged the trip.** Both trips are already `approved`, so nobody
+  is stuck right now.
+- Also checked: no frontend or other **backend** copy of this comparison; the zhuyin aligner
+  handles the durative fine (neutral tone is leading `˙ㄓㄜ`, `hsk_lib._lead_neutral_zhuyin`).
+  There IS one more copy in this repo though — `scripts/claude_review.py:195` (Gate-2's
+  post-verification of a suggested fix), found by the red-team pass. **Fixed too** (below);
+  it is NOT cosmetic, as first assessed.
+
+**Second instance — `scripts/claude_review.py` (fixed in the same pass)**
+`verify_fixes` re-rolled the identical reverse-only comparison, so a *correct* Gate-2
+suggestion containing a durative 着 got `suggested_fix_verified: false`. That is not
+cosmetic — tracing the consumers: `AutoReviewPanel.tsx:140` shows a red **"failed machine
+check — don't paste as-is"** badge, `canApply` (line 110) hides the Apply button, and
+`sessions.apply_suggested_fix` (line 1647) **409s `fix_unverified`**. So the reviewer is
+told a good fix is broken and the one-click apply is refused.
+- Now calls `auto_checks._hant_correspondence` (added `auto_checks` to the existing
+  `from app import …`; the script already imports from `backend/app`).
+- Kept **fail-CLOSED**: anything but a clean `ok` still fails, matching the old
+  `except → ok = False`. Only the 着 case changes. (`!= "ok"`, not `== "bad"` — the latter
+  would also have quietly started passing punct-only and no-opencc cases. Withholding a
+  badge is the safe side; unlike Gate 1 it never blocks, so there's no reason to loosen it.)
+- Verified 5-case table: durative `FAIL`→`PASS`; variant/punct-only/stale/clean all
+  preserved. `py -3.12 scripts/claude_review.py --help` exercises the new import chain.
+
+**Not done / next**
+- **Not deployed to the laptop and not committed** — awaiting dave's go-ahead.
+- Known remaining gap (pre-existing, not touched): a durative typed as 著 *in the Hans
+  box* is not flagged, because 著 is legitimately Simplified in 著名. Can't be caught by
+  character purity alone; left to Gate 2 / the human read.
+- Remaining gap the fix does NOT cover: a reviewer variant AND a durative in the same
+  field still blocks — e.g. Hans `里面坐着人` / Hant `裏面坐著人`. Forward gives 裡面 (not
+  裏面) so it misses; reverse still trips on 着/著. Rarer than either alone; a fix would
+  mean normalising variants before comparing (a real design call, not a patch).
+- Red-team pass (`/red-opus`, clean-context Opus) found **one real correctness hole** in
+  the first cut of `_hant_correspondence` and closed it (the asymmetric-opencc `unknown`
+  guard, above) — independently re-traced here with a stub across the 2×2 converter-failure
+  matrix: `t2s broken` now emits nothing on all five probe pairs, `s2tw broken` degrades
+  exactly to old behaviour. It also caught the two log inaccuracies (submit-vs-approve
+  severity; the `claude_review.py` copy). Its "cosmetic" call on that second copy was the
+  one judgment I overrode — see above.

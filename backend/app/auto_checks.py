@@ -50,6 +50,51 @@ def _strip_punct(text: str) -> str:
                    if unicodedata.category(c)[0] not in ("P", "Z", "C"))
 
 
+def _hant_correspondence(hsk, hans: str, hant: str) -> str:
+    """Does `hant` say the same thing as `hans`?  'ok' | 'punct' | 'bad' | 'unknown'.
+
+    FORWARD first — `to_traditional(hans) == hant`. That is exactly how the pipeline
+    derives Hant, so a freshly-derived pair matches character-for-character.
+
+    REVERSE (`to_simplified` of both sides) is kept as a FALLBACK so a reviewer's own
+    legitimate variant still passes: 裏面 for 裡面, 臺北 for 台北 — both collapse to the
+    same Simplified even though neither is what s2tw emits.
+
+    ⚠️ Reverse ALONE is what this check used to do, and it FALSE-POSITIVES on the
+    durative 着 (2026-07-29, caught by the Scripts-side smoke test on its own copy of
+    this comparison). s2tw correctly writes 看着 as 看著 for Taiwan, but 著 is also valid
+    Simplified (著名), so t2s leaves it alone and the two sides never meet — a hard
+    'Traditional doesn't correspond' block on correct text the reviewer can't fix.
+    Six of thirteen ordinary sentences tripped it in testing (看着/坐着/沿着/跟着/吃着/显着).
+
+    'unknown' when the REVERSE comparison couldn't run (no opencc) — the caller then
+    says nothing rather than blocking on a check it couldn't perform. The reverse is
+    the half that forgives a reviewer's variant, so without it a forward mismatch on
+    its own can't tell a stale Hant from a legitimate 裏面/臺北 — and Gate 1 must never
+    hard-block on a check it could only half-perform.
+    """
+    try:
+        forward = hsk.to_traditional(hans)
+    except Exception:  # noqa: BLE001
+        forward = None
+    if forward is not None and forward == hant:
+        return "ok"
+    try:
+        simp_hant, simp_hans = hsk.to_simplified(hant), hsk.to_simplified(hans)
+    except Exception:  # noqa: BLE001
+        simp_hant = simp_hans = None
+    if simp_hant is not None and simp_hant == simp_hans:
+        return "ok"
+    if simp_hant is None:
+        return "unknown"   # see docstring: forward alone may not hard-block
+    # Neither form matched — is what's left a punctuation-only difference?
+    if forward is not None and _strip_punct(forward) == _strip_punct(hant):
+        return "punct"
+    if simp_hant is not None and _strip_punct(simp_hant) == _strip_punct(simp_hans):
+        return "punct"
+    return "bad"
+
+
 def _srow_get(row, key):
     try:
         return row[key]
@@ -125,24 +170,22 @@ def _zh_field_issues(f, loc: dict, hsk) -> list[dict]:
                                 f"({'/'.join(hsk.to_simplified(c) for c in bad)})",
                        "severity": "block"})
 
-    # -- Hant must be the traditional form of Hans (compare via to_simplified: stable).
+    # -- Hant must be the traditional form of Hans — forward comparison with the reverse
+    #    kept as a fallback for a reviewer's own variant (see _hant_correspondence; the
+    #    reverse alone hard-blocked correct text containing a durative 着).
     #    Punctuation-only differences are a WARN, not a block (dave, 2026-07-08). --
     if hant:
-        try:
-            simp_of_hant = hsk.to_simplified(hant)
-        except Exception:  # noqa: BLE001
-            simp_of_hant = None
-        if simp_of_hant is not None and simp_of_hant != simp_of_hans:
-            if _strip_punct(simp_of_hant) == _strip_punct(simp_of_hans):
-                issues.append({"scene_index": si, "field_path": fp,
-                               "issue": "Traditional and Simplified differ only in "
-                                        "punctuation — align them when convenient",
-                               "severity": "warn"})
-            else:
-                issues.append({"scene_index": si, "field_path": fp,
-                               "issue": "Traditional text doesn't correspond to the "
-                                        "Simplified text — they must say the same thing",
-                               "severity": "block"})
+        verdict = _hant_correspondence(hsk, hans, hant)
+        if verdict == "punct":
+            issues.append({"scene_index": si, "field_path": fp,
+                           "issue": "Traditional and Simplified differ only in "
+                                    "punctuation — align them when convenient",
+                           "severity": "warn"})
+        elif verdict == "bad":
+            issues.append({"scene_index": si, "field_path": fp,
+                           "issue": "Traditional text doesn't correspond to the "
+                                    "Simplified text — they must say the same thing",
+                           "severity": "block"})
 
     # -- zhuyin must align syllable-by-syllable with the (simplified) spoken text --
     if cur.get("zhuyin") is not None and fp != "tripgroup_description":
