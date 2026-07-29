@@ -104,6 +104,21 @@ predicted. See session-2 log.
 
 ## P1 — Do next (high value, self-contained, no product decision)
 
+### 0g. Zhuyin auto-space normalizer on save (added 2026-07-29, deferred by dave)
+Kaohsiung HSK12's approve was blocked by 6 Gate-1 `__align__` failures that were all
+mechanical typing style: hand-edited zhuyin without inter-syllable spaces (one field fully
+unspaced) and dot-AFTER neutral tone (`ㄉㄜ˙` vs `˙ㄉㄜ`). The aligner
+(`hsk_lib.zhuyin_to_pinyin`) needs one space-separated syllable per hanzi. A normalizer at
+zhuyin save time (split on bopomofo-syllable boundaries, re-anchor `˙` before its syllable)
+would kill this whole class before it reaches validation. Deferred 2026-07-29 ("not yet,
+we're going to change reviewer" — Mandarin moving Ted → John); revisit if John's first
+trips hit the same block. One-off repair pattern lives in the 07-29 session log.
+
+### 0h. Set John's email (added 2026-07-29)
+Reviewer `john` (Mandarin, replaces Ted) was created without an email —
+`manage.py set-email --username john --email …` once known, else the activity notifier
+and ai_review findings emails silently skip him.
+
 ### 0f. ~~Make pipeline re-uploads a supported operation~~ — **DONE 2026-07-23 (`scripts/refresh_trips.py`)**
 `audit` (per-trip CLEAR / RESEED / HANDS OFF from sessions + presence + reviewer work +
 completed status) · `clear` (guarded: asserts no other trip's cache moved) · `verify`
