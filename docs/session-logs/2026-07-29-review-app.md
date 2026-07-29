@@ -111,6 +111,16 @@ a behaviour change outside this session's scope.
 - Waveform zoom could later re-fetch a windowed, higher-density envelope for very
   long clips; not needed at current clip lengths.
 
-**Next steps** — dave to review, run red-team if wanted, deploy to the laptop, and
-reply to the French reviewer that highlight-after-editing now works (plus: if you get
-the new 409 message, "Generate from edit" first).
+## Deployed (2026-07-29 ~10:15 BST)
+
+Red-team verified (gates re-run independently; reviewer's one behavior edit — the
+WaveformEditor orphaned-pointer self-heal — hand-traced and confirmed). Committed as
+`d540ef3`, pushed. On the laptop: `git pull` (ff), `npm run build` in frontend/,
+`sudo -n /usr/bin/systemctl restart review-app.service`. Presence checked read-only
+first — no reviewer active (latest heartbeat >15 min old, admin's own). After restart:
+`review-app.service` AND `review-tunnel.service` both active, clean uvicorn startup in
+journal, local `/api/trips` answers 401 (auth middleware) as expected. The
+`hasTextChange`-vs-`original_text` finding went to BACKLOG § 3b.
+
+**Next steps** — reply to the French reviewer that highlight-after-editing now works
+(plus: if you get the new 409 message, "Generate from edit" first).
