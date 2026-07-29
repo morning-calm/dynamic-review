@@ -106,7 +106,10 @@ const RegenerateControls = ({
       const updated = await api.regenerate(sid, field.fid, mode, range, alt);
       afterRegen(updated);
     } catch (e: unknown) {
-      toast.error(`Regenerate failed: ${e instanceof ApiError ? e.detail : 'network error'}`);
+      // 409 = the server refused with directions (e.g. un-voiced edits outside the
+      // highlight) — guidance, not a failure.
+      if (e instanceof ApiError && e.status === 409) toast.warn(e.detail);
+      else toast.error(`Regenerate failed: ${e instanceof ApiError ? e.detail : 'network error'}`);
     } finally {
       setBusy(false);
     }

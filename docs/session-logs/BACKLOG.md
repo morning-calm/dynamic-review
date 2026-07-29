@@ -169,6 +169,16 @@ makes it exact and retires that bug class.
 **Where:** `backend/app/db.py:41-63` (`field_edits` has no `user_id`; `auth_sessions.user_id`
 exists at `db.py:106` as the source). Touches the edit write path + a migration. Needs a restart.
 
+### 3b. English `hasTextChange` compares against `original_text` (added 2026-07-29)
+**What:** `SceneCard.tsx:271` lights "Generate from edit" when `descLive !== sceneDesc.original_text`,
+so after ANY accepted edit the button stays lit forever; clicking it now deterministically returns
+"No text change detected" and flags the field `edit_required` + appends a comment (before the
+2026-07-29 highlight fixes, Gemini clean-drift sometimes manufactured a phantom splice instead —
+strictly worse — but the button state is still misleading).
+**Fix:** compare against `working_text ?? original_text`, exactly as the JP branch already does
+(`spokenLine(...)` a few lines below). One-line FE change + rebuild; found by the 2026-07-29
+red-team pass.
+
 ### 4. Prune inert Mandarin A/B leftovers
 **What:** delete the dead V2/V3 A/B audition code (retired 2026-07-02, V3-only).
 **Where (all confirmed zero real callers):** route `GET /audio/{sid}/{fid}/ab/{ver}`

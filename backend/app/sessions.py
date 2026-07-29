@@ -1304,12 +1304,18 @@ def get_session(sid: str) -> dict:
 # --------------------------------------------------------------------------- #
 # Lazy caches (Whisper + cleaned original)
 # --------------------------------------------------------------------------- #
+def _working_base_raw(frow) -> str:
+    """RAW text of the CURRENT working audio (URL lines stripped) — what _cleaned_orig
+    cleans, and what a pending text edit is diffed against."""
+    base = frow["working_text"] if frow["working_text"] else (frow["original_text"] or "")
+    return audio_core.strip_url_lines(base)
+
+
 def _cleaned_orig(srow, frow) -> tuple[str, bool]:
     """Cleaned text of the CURRENT working audio — the base a segment/highlight splice
     diffs against, so successive edits accumulate on the combined take. Re-cleans
     whenever the working text changes (cache keyed on its hash)."""
-    base = frow["working_text"] if frow["working_text"] else (frow["original_text"] or "")
-    base = audio_core.strip_url_lines(base)
+    base = _working_base_raw(frow)
     h = hashlib.sha1(base.encode("utf-8")).hexdigest()[:12]
     cache = json.loads(srow["cleaned_orig_json"] or "{}")
     key = str(frow["id"])
@@ -2182,9 +2188,18 @@ def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
                 cur, srow["trip_id"], frow["scene_index"])
             plan = audio_splice.plan_whole(cleaned, fb, voice_id, voice_settings, model_id)
     else:
-        cleaned_new, fb_new = audio_core.validate_and_clean(
-            cur, srow["trip_id"], frow["scene_index"])
+        working_raw = _working_base_raw(frow)
         cleaned_orig, fb_orig = _cleaned_orig(srow, frow)
+        if cur == working_raw:
+            # Text unchanged since the take was voiced (the pure fix-pronunciation /
+            # highlight flow): reuse the cached clean VERBATIM. Two independent Gemini
+            # cleans of the SAME text can drift (the cleaner is not deterministic), and
+            # any drift becomes a phantom diff op that made an untouched highlight fail
+            # as "not locatable in the take's audio".
+            cleaned_new, fb_new = cleaned_orig, fb_orig
+        else:
+            cleaned_new, fb_new = audio_core.validate_and_clean(
+                cur, srow["trip_id"], frow["scene_index"])
         if fb_orig:
             plan = audio_splice.RegenPlan(
                 edit_required=True,
@@ -2199,6 +2214,21 @@ def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
             else:
                 hl_span = None
                 if mode in ("highlight", "alt") and rng:
+                    # Un-voiced edits OUTSIDE the highlight: combining just the
+                    # highlight would re-baseline working_text to the whole current
+                    # text and silently stamp those edits as spoken (after which
+                    # 'Generate from edit' sees nothing to voice). Refuse with
+                    # directions instead. Edits the highlight covers are fine —
+                    # plan_segment voices them.
+                    if audio_splice.pending_edit_outside_highlight(
+                            working_raw, cur,
+                            int(rng["start"]), int(rng["end"])):
+                        raise HTTPException(409, detail={
+                            "error": "unvoiced_edits_outside_highlight",
+                            "detail": "You've edited words elsewhere in this field that "
+                                      "aren't in the audio yet — use Generate from edit "
+                                      "first (it voices every change), or include those "
+                                      "words in the highlight."})
                     hl_span = audio_splice.highlight_span_in_cleaned(
                         cur, cleaned_new, int(rng["start"]), int(rng["end"]))
                 base_samples = audio_io.mp3_to_samples(dirs["working"] / frow["mp3_name"])

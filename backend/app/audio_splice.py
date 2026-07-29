@@ -120,13 +120,6 @@ def _span_segment(orig_toks: list[str], new_toks: list[str]):
     return blo, bhi, ops
 
 
-def _map_new_to_orig(ops, new_idx: int) -> int | None:
-    for tag, i1, i2, j1, j2 in ops:
-        if tag == "equal" and j1 <= new_idx < j2:
-            return i1 + (new_idx - j1)
-    return None
-
-
 def _eligible_anchor(tok: str, doc_id: str, overrides: set[str]) -> bool:
     if audio_core.is_numberish(tok) or audio_core.has_non_latin(tok):
         return False
@@ -318,11 +311,57 @@ def plan_segment(doc_id: str, cleaned_orig: str, cleaned_new: str,
         bhi = max(blo, min(bhi, len(new_toks)))
         if bhi <= blo:
             return RegenPlan(edit_required=True, reason="Empty highlight selection.")
-        oaO, obO = _map_new_to_orig(ops, blo), _map_new_to_orig(ops, bhi - 1)
-        if oaO is None or obO is None:
+        # Map the highlight into ORIG token space THROUGH the diff. Matched words map
+        # 1:1; highlighted words inside a pending edit (replace/insert — e.g. the
+        # reviewer just retyped the first few words and highlighted them to fix the
+        # voicing) fall back to the op's ORIG range — the audio span those words
+        # replace — widening the highlight to the op's full extent so both seams sit
+        # in text the take actually contains. (Until 2026-07-29 this mapped only
+        # through 'equal' ops, so highlighting any word the reviewer had edited — or
+        # any word a fresh Gemini re-clean happened to drift — failed as "not
+        # locatable".)
+        oa = ob = None
+        xlo, xhi = blo, bhi
+        for tag, i1, i2, j1, j2 in ops:
+            if tag == "equal":
+                lo, hi = max(j1, blo), min(j2, bhi)
+                if lo >= hi:
+                    continue
+                o_lo, o_hi = i1 + (lo - j1), i1 + (hi - j1)
+            elif j1 == j2:
+                # Delete: no NEW tokens survive, so there is nothing to widen — but when
+                # the deletion point sits inside the highlight (or at either edge of it)
+                # the removed words' audio has to go too, so contribute their orig range
+                # and let the cut swallow it.
+                if not (blo <= j1 <= bhi):
+                    continue
+                o_lo, o_hi = i1, i2
+            else:                        # replace/insert overlapping the highlight
+                if j2 <= blo or j1 >= bhi:
+                    continue
+                o_lo, o_hi = i1, i2
+                xlo, xhi = min(xlo, j1), max(xhi, j2)
+            oa = o_lo if oa is None else min(oa, o_lo)
+            ob = o_hi if ob is None else max(ob, o_hi)
+        if oa is None:
+            # Defensive only: the ops partition NEW token space, so a non-empty highlight
+            # always overlaps at least one op that carries an orig range.
             return RegenPlan(edit_required=True,
                              reason="Highlighted words not locatable in the take's audio.")
-        oa, ob = oaO, obO + 1
+        # Alt text replaces STRICTLY the highlighted words. A PARTIAL overlap with an
+        # edit widened the span above, so the alt would swallow un-highlighted words —
+        # refuse with directions rather than mis-voice.
+        if alt_text is not None and alt_text.strip() and (xlo, xhi) != (blo, bhi):
+            return RegenPlan(
+                edit_required=True,
+                reason="The highlight partially covers words you've edited — extend the "
+                       "highlight to the whole edited phrase so the replacement lands "
+                       "exactly where you meant.")
+        # (oa, xlo) and (ob, xhi) are always MATCHED orig/new positions — non-equal ops
+        # are separated by equal runs, so the widened edges land on an op boundary, and
+        # a clipped equal op maps its edge 1:1. The new_blo/new_bhi expansion below
+        # relies on exactly that. Don't narrow the widening without re-checking it.
+        blo, bhi = xlo, xhi
     else:
         if seg_blo is None:
             return RegenPlan(edit_required=True,
@@ -410,18 +449,28 @@ def plan_segment(doc_id: str, cleaned_orig: str, cleaned_new: str,
     return RegenPlan(candidate_mp3=mp3, meta=meta)
 
 
+def _raw_token_span(raw_toks: list[re.Match], start: int,
+                    end: int) -> tuple[int, int] | None:
+    """Raw-token index range [lo, hi) covering every token that OVERLAPS the textarea
+    char selection [start, end) — None when the selection touches no token at all (it
+    landed on whitespace only)."""
+    lo, hi = None, None
+    for idx, m in enumerate(raw_toks):
+        if m.end() > start and m.start() < end:
+            lo = idx if lo is None else lo
+            hi = idx + 1
+    return None if lo is None else (lo, hi)
+
+
 def highlight_span_in_cleaned(current_text: str, cleaned_new: str,
                               start: int, end: int) -> tuple[int, int]:
     """Map a textarea char range in the RAW current_text to a token span in
     cleaned_new (best effort, via raw-token ↔ cleaned-token alignment)."""
     raw_toks = list(_TOKEN_RE.finditer(current_text or ""))
-    rlo, rhi = None, None
-    for idx, m in enumerate(raw_toks):
-        if m.end() > start and m.start() < end:      # token overlaps the selection
-            rlo = idx if rlo is None else rlo
-            rhi = idx + 1
-    if rlo is None:
+    span = _raw_token_span(raw_toks, start, end)
+    if span is None:
         return (0, len(tokens(cleaned_new)))          # whole field fallback
+    rlo, rhi = span
     new_toks = tokens(cleaned_new)
     sm = difflib.SequenceMatcher(
         a=[_norm(m.group()) for m in raw_toks],
@@ -435,6 +484,38 @@ def highlight_span_in_cleaned(current_text: str, cleaned_new: str,
     if blo is None:
         return (0, len(new_toks))
     return (blo, bhi)
+
+
+def pending_edit_outside_highlight(working_raw: str, current_raw: str,
+                                   start: int, end: int) -> bool:
+    """True when the RAW field text differs from the working take's text OUTSIDE the
+    highlighted char range — i.e. the reviewer holds un-voiced edits elsewhere in the
+    field. Combining a highlight re-baselines working_text to the WHOLE current text,
+    so voicing just the highlight would silently stamp those other edits as spoken
+    (and the next 'Generate from edit' would see no change to voice). The caller
+    refuses instead. Edits the highlight overlaps are fine — plan_segment widens the
+    span over them, so they DO get voiced."""
+    if (working_raw or "") == (current_raw or ""):
+        return False
+    cur_m = list(_TOKEN_RE.finditer(current_raw or ""))
+    # No token under the selection (whitespace only) → an empty range at the start, so
+    # ANY pending edit reads as "outside" and is refused. That mirrors what such a
+    # selection would do downstream anyway: highlight_span_in_cleaned falls back to the
+    # WHOLE field, which is a job for "Generate from edit", not a highlight.
+    span = _raw_token_span(cur_m, start, end)
+    rlo, rhi = span if span is not None else (0, 0)
+    sm = difflib.SequenceMatcher(
+        a=[_norm(t) for t in tokens(working_raw)],
+        b=[_norm(m.group()) for m in cur_m], autojunk=False)
+    for tag, _i1, _i2, j1, j2 in sm.get_opcodes():
+        if tag == "equal":
+            continue
+        if j1 == j2:                          # delete: a point between NEW tokens
+            if not (rlo <= j1 <= rhi):
+                return True
+        elif j2 <= rlo or j1 >= rhi:          # replace/insert wholly outside
+            return True
+    return False
 
 
 # --------------------------------------------------------------------------- #

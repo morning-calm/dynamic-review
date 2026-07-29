@@ -46,10 +46,47 @@ const WaveformEditor = ({ field, sid, onFieldUpdate }: WaveformEditorProps) => {
   // A span that has been "cut" and is waiting for the reviewer to click where it goes.
   // Nothing has happened to the audio yet — the move is one server op, applied on drop.
   const [pending, setPending] = useState<{ start: number; end: number } | null>(null);
+  // The visible time window (zoom): null = the whole clip. Refined edits — especially
+  // on a phone, where the full clip is ~350 px wide — need to magnify the region
+  // being worked on; all pointer/edit coordinates go through this window.
+  const [view, setView] = useState<{ t0: number; t1: number } | null>(null);
   const dragging = useRef(false);
   const dragFrom = useRef(0);
+  // Active pointers (for two-finger pinch zoom) and, while pinching, the audio time
+  // anchored under each finger — the window is solved so those times stay put.
+  const pointers = useRef<Map<number, number>>(new Map());
+  const pinchTimes = useRef<Map<number, number> | null>(null);
 
   const workingUrl = field.audio.working;
+
+  const dur = wave?.duration || 1;
+  const v0 = view?.t0 ?? 0;
+  const v1 = view?.t1 ?? dur;
+  // Keep ≥ ~10 envelope buckets on screen — beyond that there is no more data to show.
+  const minWin = Math.max(0.1, (10 * dur) / (wave?.buckets || 1600));
+
+  const clampView = useCallback(
+    (t0: number, t1: number): { t0: number; t1: number } | null => {
+      const w = Math.max(minWin, t1 - t0);
+      if (w >= dur) return null; // zoomed all the way out
+      const a = Math.max(0, Math.min(t0, dur - w));
+      return { t0: a, t1: a + w };
+    },
+    [dur, minWin],
+  );
+
+  const zoomBy = (factor: number) => {
+    if (!wave) return;
+    const w = (v1 - v0) / factor;
+    const centre = sel ? (sel.a + sel.b) / 2 : cursor > 0 ? cursor : (v0 + v1) / 2;
+    setView(clampView(centre - w / 2, centre + w / 2));
+  };
+
+  const panBy = (frac: number) => {
+    if (!view) return;
+    const shift = (v1 - v0) * frac;
+    setView(clampView(v0 + shift, v1 + shift));
+  };
 
   const load = useCallback(async () => {
     try {
@@ -57,6 +94,9 @@ const WaveformEditor = ({ field, sid, onFieldUpdate }: WaveformEditorProps) => {
     } catch {
       setWave(null);
     }
+    // An edit can change the clip's length — snap back to the whole clip so the
+    // window is never out of range (and the result of the edit is visible).
+    setView(null);
   }, [sid, field.fid]);
 
   // Re-fetch whenever the working take changes (the URL carries its content hash), so
@@ -78,8 +118,10 @@ const WaveformEditor = ({ field, sid, onFieldUpdate }: WaveformEditorProps) => {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, cssW, HEIGHT);
 
-    const dur = wave.duration || 1;
-    const x = (t: number) => (t / dur) * cssW;
+    // Draw through the SAME window the pointer maths uses (v0/v1) — one source of truth,
+    // or a zoomed click lands somewhere other than where it was drawn.
+    const win = Math.max(0.001, v1 - v0);
+    const x = (t: number) => ((t - v0) / win) * cssW;
     const mid = HEIGHT / 2;
 
     ctx.fillStyle = '#0b1220';
@@ -90,19 +132,22 @@ const WaveformEditor = ({ field, sid, onFieldUpdate }: WaveformEditorProps) => {
       ctx.fillRect(x(sel.a), 0, Math.max(1, x(sel.b) - x(sel.a)), HEIGHT);
     }
 
-    // The envelope: one vertical line per bucket, min..max.
-    ctx.strokeStyle = pending ? '#64748b' : '#94a3b8';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
+    // The envelope: one min..max bar per bucket, drawn over the bucket's time span so
+    // it stays solid when zoomed in (a bucket can be wider than one pixel).
+    ctx.fillStyle = pending ? '#64748b' : '#94a3b8';
     const n = wave.buckets;
-    for (let i = 0; i < n; i += 1) {
+    const bDur = dur / n;
+    const i0 = Math.max(0, Math.floor(v0 / bDur));
+    const i1 = Math.min(n, Math.ceil(v1 / bDur));
+    for (let i = i0; i < i1; i += 1) {
       const lo = wave.peaks[i * 2] / 127;
       const hi = wave.peaks[i * 2 + 1] / 127;
-      const px = Math.floor((i / n) * cssW) + 0.5;
-      ctx.moveTo(px, mid - hi * mid * 0.95);
-      ctx.lineTo(px, mid - lo * mid * 0.95);
+      const px0 = x(i * bDur);
+      const px1 = x((i + 1) * bDur);
+      const y0 = mid - hi * mid * 0.95;
+      const y1 = mid - lo * mid * 0.95;
+      ctx.fillRect(px0, y0, Math.max(1, px1 - px0), Math.max(1, y1 - y0));
     }
-    ctx.stroke();
 
     ctx.strokeStyle = '#334155'; // zero line
     ctx.beginPath();
@@ -120,29 +165,72 @@ const WaveformEditor = ({ field, sid, onFieldUpdate }: WaveformEditorProps) => {
     };
     if (playhead > 0) tick(playhead, '#22c55e', 1); // where the audio is playing
     tick(cursor, pending ? '#f59e0b' : '#e2e8f0'); // where the next edit lands
-  }, [wave, sel, cursor, playhead, pending]);
+  }, [wave, sel, cursor, playhead, pending, dur, v0, v1]);
 
   // --- pointer ------------------------------------------------------------------
-  const timeAt = (clientX: number): number => {
+  const fracAt = (clientX: number): number => {
     const cv = canvasRef.current;
-    if (!cv || !wave) return 0;
+    if (!cv) return 0;
     const r = cv.getBoundingClientRect();
-    const frac = Math.min(1, Math.max(0, (clientX - r.left) / r.width));
-    return frac * wave.duration;
+    return Math.min(1, Math.max(0, (clientX - r.left) / r.width));
   };
 
+  const timeAt = (clientX: number): number => v0 + fracAt(clientX) * (v1 - v0);
+
   const onDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    // A PRIMARY pointer down starts a fresh gesture with no other finger already down,
+    // so anything still in the map is stale — a pointerup we never received because the
+    // canvas was unmounted mid-gesture (a failed waveform fetch swaps it for the
+    // "Loading…" box). Left behind, that ghost id makes the very next single touch look
+    // like a second finger and starts a bogus pinch, permanently.
+    if (e.isPrimary) {
+      pointers.current.clear();
+      pinchTimes.current = null;
+    }
     if (busy || !wave) return;
+    pointers.current.set(e.pointerId, e.clientX);
+    e.currentTarget.setPointerCapture(e.pointerId);
+    if (pointers.current.size === 2) {
+      // Second finger down → pinch zoom. Anchor the audio time under each finger and
+      // abandon any selection drag the first finger started.
+      pinchTimes.current = new Map(
+        [...pointers.current.entries()].map(([id, cx]) => [id, timeAt(cx)]),
+      );
+      dragging.current = false;
+      setSel(null);
+      return;
+    }
+    if (pinchTimes.current) return; // 3rd+ finger — ignore
     const t = timeAt(e.clientX);
     dragging.current = true;
     dragFrom.current = t;
     setCursor(t);
     setSel(null);
-    e.currentTarget.setPointerCapture(e.pointerId);
   };
 
   const onMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!dragging.current || !wave) return;
+    if (!wave) return;
+    if (pointers.current.has(e.pointerId)) pointers.current.set(e.pointerId, e.clientX);
+    const anchors = pinchTimes.current;
+    if (anchors) {
+      // Solve the window so both anchored times stay under their fingers:
+      // t = t0 + frac·w for each finger → w and t0.
+      const pts = [...pointers.current.entries()]
+        .filter(([id]) => anchors.has(id))
+        .slice(0, 2);
+      if (pts.length < 2) return;
+      const [[idA, xA], [idB, xB]] = pts;
+      const fA = fracAt(xA);
+      const fB = fracAt(xB);
+      if (Math.abs(fB - fA) < 0.02) return; // fingers (nearly) together — unstable
+      const tA = anchors.get(idA) as number;
+      const tB = anchors.get(idB) as number;
+      const w = (tB - tA) / (fB - fA);
+      if (!Number.isFinite(w) || w <= 0) return;
+      setView(clampView(tA - fA * w, tA - fA * w + w));
+      return;
+    }
+    if (!dragging.current) return;
     const t = timeAt(e.clientX);
     const a = Math.min(dragFrom.current, t);
     const b = Math.max(dragFrom.current, t);
@@ -150,7 +238,9 @@ const WaveformEditor = ({ field, sid, onFieldUpdate }: WaveformEditorProps) => {
     setCursor(t);
   };
 
-  const onUp = () => {
+  const onUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    pointers.current.delete(e.pointerId);
+    if (pointers.current.size < 2) pinchTimes.current = null;
     dragging.current = false;
   };
 
@@ -213,6 +303,9 @@ const WaveformEditor = ({ field, sid, onFieldUpdate }: WaveformEditorProps) => {
 
   const btn =
     'rounded border px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40 enabled:hover:bg-gray-700';
+  // Zoom cluster: same look, slightly tighter — it lives inside the info row.
+  const zbtn =
+    'rounded border px-1.5 py-0.5 text-xs disabled:cursor-not-allowed disabled:opacity-40 enabled:hover:bg-gray-700';
 
   if (!wave) {
     return <div className="rounded border border-gray-700 bg-gray-900/40 p-3 text-xs text-gray-500">Loading waveform…</div>;
@@ -255,7 +348,62 @@ const WaveformEditor = ({ field, sid, onFieldUpdate }: WaveformEditorProps) => {
             Cut {(pending.end - pending.start).toFixed(2)}s — click where it goes, then “Drop here”
           </span>
         )}
-        <span className="ml-auto font-mono text-gray-500">{fmt(wave.duration)}</span>
+        <span className="ml-auto flex items-center gap-1">
+          {view && (
+            <span className="mr-1 hidden font-mono text-sky-400 sm:inline">
+              {fmt(v0)}–{fmt(v1)}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => zoomBy(2)}
+            aria-label="Zoom in"
+            title="Zoom in around the selection (or cursor) for finer edits — or pinch on the waveform"
+            className={`${zbtn} border-gray-600 text-gray-200`}
+          >
+            🔍+
+          </button>
+          <button
+            type="button"
+            disabled={!view}
+            onClick={() => zoomBy(0.5)}
+            aria-label="Zoom out"
+            title="Zoom out"
+            className={`${zbtn} border-gray-600 text-gray-200`}
+          >
+            🔍−
+          </button>
+          <button
+            type="button"
+            disabled={!view}
+            onClick={() => panBy(-0.4)}
+            aria-label="Scroll the view earlier"
+            title="Scroll the view earlier"
+            className={`${zbtn} border-gray-600 text-gray-200`}
+          >
+            ◀
+          </button>
+          <button
+            type="button"
+            disabled={!view}
+            onClick={() => panBy(0.4)}
+            aria-label="Scroll the view later"
+            title="Scroll the view later"
+            className={`${zbtn} border-gray-600 text-gray-200`}
+          >
+            ▶
+          </button>
+          <button
+            type="button"
+            disabled={!view}
+            onClick={() => setView(null)}
+            title="Show the whole clip"
+            className={`${zbtn} border-gray-600 text-gray-200`}
+          >
+            Fit
+          </button>
+          <span className="font-mono text-gray-500">{fmt(wave.duration)}</span>
+        </span>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -339,8 +487,9 @@ const WaveformEditor = ({ field, sid, onFieldUpdate }: WaveformEditorProps) => {
       </div>
 
       <p className="text-xs text-gray-500">
-        Click to place the cursor, drag to select. These edits go exactly where you put them — they can cut through a
-        word, so listen back. Undo steps back through every change.
+        Click to place the cursor, drag to select. Pinch (or 🔍+) to zoom in for fine placement. These edits go
+        exactly where you put them — they can cut through a word, so listen back. Undo steps back through every
+        change.
       </p>
     </div>
   );
