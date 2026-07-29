@@ -269,7 +269,7 @@ const ChangesSummaryPage = () => {
       .then((r) => {
         setResult({ kind: 'approve', data: r });
         if (r.ok) toast.success('Approved — written to staging.');
-        else toast.warn('Approved with validation issues — see the list.');
+        else toast.error('NOT approved — blocked by validation, nothing written. See the list.');
         return load();
       })
       .catch((e: unknown) => {

@@ -124,3 +124,52 @@ journal, local `/api/trips` answers 401 (auth middleware) as expected. The
 
 **Next steps** — reply to the French reviewer that highlight-after-editing now works
 (plus: if you get the new 409 message, "Generate from edit" first).
+
+## Kaohsiung HSK12 approve block + Taiwan approval verification (afternoon)
+
+**Goals**
+1. Explain why `KaohsiungLotusPond_HSK12_ZH` won't approve ("Approved with validation
+   issues" toast).
+2. Verify today's Taiwan approvals (Taipei101/Taichung `_HSK3_ZH`) copied correctly to
+   the Trips doc AND `TripLocalizations` (incl. pinyin/Hant), and confirm pinyin is
+   regenerated from zhuyin at approve.
+
+**Findings**
+- The toast is MISLEADING: `ok:false` from approve means it was **NOT** approved —
+  status reverts to `submitted`, nothing written. (FE fix candidate: the toast should
+  say "Approve blocked by validation".)
+- `sess_4243b6da1f26` is blocked by 6 hard Gate-1 issues: reviewer's hand-edited zhuyin
+  on scenes 2/5/10/16/24 is missing inter-syllable spaces (scene 10 fully unspaced) and
+  uses dot-AFTER neutral tone (`ㄉㄜ˙` instead of `˙ㄉㄜ`); scene 5 Hans also contains a
+  traditional `隻`. The aligner (`hsk_lib.zhuyin_to_pinyin`) needs one space-separated
+  syllable per hanzi.
+- Remedy staged: `/tmp/fix_kaohsiung_zhuyin.py` on the laptop — mechanical re-space of
+  the 6 fields + `隻→只` (homophone, audio untouched), each fix pre-verified against the
+  aligner (dry run 6/6 OK). **Dave to run with `--apply`** (classifier blocks live-DB
+  writes from Claude), then re-approve in the UI.
+- Taiwan approvals verified field-by-field against live Firebase (read-only script,
+  19/19 changed fields OK): TripLocalizations `target.{Hans,Hant,zhuyin,pinyin}` +
+  `home.en` all match the reviewed text, Trip `quickTrips` lines are exact
+  `"Hans\npinyin"`, `status: reviewed`, staged pinyin == fresh regen from the confirmed
+  zhuyin. **Yes — pinyin is regenerated from zhuyin at approve** (`_zh_regen_pinyin` in
+  `zh_writeback`; never authored, hard 409 if regen comes back empty).
+
+**Open / carried forward**
+- ⚠️ Content nit found while verifying: Taichung scenes 14 & 18 staged zhuyin/pinyin
+  read 长 as `ㄓㄤˇ/zhǎng` in 有很长的历史 — should be `ㄔㄤˊ/cháng`. Faithful copy of the
+  reviewer's confirmed zhuyin (aligner accepts either reading of the polyphone), display
+  scripts only. Needs a small staging touch-up.
+- FE toast wording on `ok:false` approve ("Approved with validation issues") implies
+  success — reword.
+
+## Follow-up (same afternoon): Kaohsiung approved + Taichung 长 fix + toast bug
+- Kaohsiung zhuyin fix applied on the laptop (6/6, post-fix validate hard=0) — dave
+  approved KaohsiungLotusPond_HSK12_ZH in the UI.
+- Taichung_HSK3_ZH scenes 14 & 18: staging corrected ㄓㄤˇ/zhǎng → ㄔㄤˊ/cháng in
+  TripLocalizations target.zhuyin, pinyin regenerated from the corrected zhuyin, Trip
+  quickTrips line-2 pinyin replaced with the regen (guarded one-off, dry-run first,
+  verified by read-back on both docs).
+- FE toast bug fixed (ChangesSummaryPage.approve): ok:false used to toast "Approved
+  with validation issues" although NOTHING is approved/written (status reverts to
+  submitted). Now toast.error "NOT approved — blocked by validation, nothing written."
+  (The ResultPanel wording was already correct.)
