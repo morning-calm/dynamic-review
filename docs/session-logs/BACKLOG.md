@@ -82,6 +82,17 @@ them correctly. If yes → revert the six lines and all 8 reports die at once. I
 the additions, we have to chase the TTS. **Then close the 8 reports.**
 (Voice sanity-check still valid: `annasu` is female; `yu`/`jason` male.)
 
+**🔗 Independent corroboration (2026-07-29):** activating Gate 1's Hant↔Hans check on the live
+host (opencc install, see 07-29 log) flagged `sess_67d43aae2c03` sc6 questionOption[1] — Hans
+`这颗球是白色的` vs Hant `球是白色的`. That is the **same 这颗 Ted typed into the Simplified box**:
+he added it there and never updated the Traditional. So the "added word" diagnosis above is now
+confirmed from a second, mechanical direction, and it is Ted's edit — not the draft — that
+introduced it. **Reverting the six lines therefore closes the 8 bug reports AND clears a real
+Gate-1 approve-blocker at the same time**, which strengthens the case for the revert option.
+If he keeps the additions, the Traditional (and zhuyin) must be updated to match or the trip
+cannot be approved. Mandarin review is moving Ted → John (see 0h), so this needs a decision
+either way before John inherits the trip.
+
 ### 0b. ~~The 3 already-submitted trips will NOT bounce to Ted~~ — **DONE 2026-07-13**
 Re-reviewed all three (`claude_review.py --sid`); all now `ai_review` with findings for Ted:
 Taichung_HSK3 (1), Taipei101_HSK3 (1), KaohsiungLotusPond_HSK12 (3). Level noise gone as
@@ -114,6 +125,30 @@ would kill this whole class before it reaches validation. Deferred 2026-07-29 ("
 we're going to change reviewer" — Mandarin moving Ted → John); revisit if John's first
 trips hit the same block. One-off repair pattern lives in the 07-29 session log.
 
+### 0i. Hant↔Hans blocks on variant + durative in the SAME field (added 2026-07-29)
+**What:** `auto_checks._hant_correspondence` passes a field if EITHER the forward comparison
+(`to_traditional(hans) == hant`) or the reverse (`to_simplified` of both) matches. A field
+containing **both** a reviewer's own variant AND a durative 着 satisfies neither and still hard-
+blocks at approve — e.g. Hans `里面坐着人` / Hant `裏面坐著人`. Forward emits 裡面 (not 裏面) so it
+misses; reverse trips on 着/著.
+**Why it's parked:** pre-existing (the old reverse-only check blocked this too, plus every
+durative), rarer than either alone, and zero live instances in the 2026-07-29 audit of all 56
+edited 4-script rows. A real fix means normalising variants (裡/裏, 台/臺, …) before comparing —
+a policy call about which Traditional variants are acceptable, shared with the pipeline, not a
+patch. Revisit if a reviewer actually hits it.
+**Related, also unflagged:** a durative typed as 著 *in the Hans box* is not caught, because 著
+is legitimately Simplified in 著名. Character purity can't distinguish them; left to Gate 2 /
+the human read.
+
+### 0j. Don't `uv sync` the laptop's Scripts venv (added 2026-07-29)
+8 of the 11 packages in the Scripts pyproject's `nlp` extra are absent from the live venv
+(`spacy`, `sudachipy`, `sudachidict-core`, `kiwipiepy`, `lemminflect`, `pyspellchecker`,
+`wordninja`, `text2num`). That is **correct** — only `jieba`, `pypinyin` and `opencc` are
+reachable from the review-app; the rest are pipeline-side morphology. A full `uv sync` on the
+live host would pull all of them and could upgrade packages under a running service. If a
+Scripts dep is ever needed there, install it **targeted and version-matched to the workstation**,
+as opencc was on 2026-07-29.
+
 ### 0h. Set John's email (added 2026-07-29)
 Reviewer `john` (Mandarin, replaces Ted) was created without an email —
 `manage.py set-email --username john --email …` once known, else the activity notifier
@@ -137,7 +172,15 @@ block + `working_hans`) and re-mirrors the take to R2. Checking JP/EN found `sou
 never reset in ANY language. Verified on the live host against Ted's real Taipei101 scene-1
 field. See the session-3 log.
 
-### 1. "Apply suggested fix" button on the Auto-review panel
+### 1. ~~"Apply suggested fix" button on the Auto-review panel~~ — **DONE + LIVE (confirmed 2026-07-29)**
+The "no apply endpoint exists" note below was stale. Verified in the code on 2026-07-29 while
+tracing the Gate-2 fix: `POST /sessions/{sid}/auto-review/apply` at `routes_sessions.py:268`
+→ `sessions.apply_suggested_fix` (`sessions.py:1612`), with all three designed guards in place
+(_ZH only; 409 `fix_unverified` when `suggested_fix_verified is False`; Gate-1 re-run after
+applying). FE: `AutoReviewPanel.tsx:110` gates the button on `suggested_fix_verified === true`
+and `:140` renders the failed-check badge. The 2026-07-08 branch was evidently merged and
+deployed. Original description kept below for context.
+
 **What:** a button next to each machine-verified suggested fix that writes the fix through the
 normal localization update path, instead of the reviewer retyping it.
 **Why:** Gate-2 already produces suggested fixes and post-verifies zh ones with `hsk_lib`
@@ -194,7 +237,11 @@ strictly worse — but the button state is still misleading).
 (`spokenLine(...)` a few lines below). One-line FE change + rebuild; found by the 2026-07-29
 red-team pass.
 
-### 4. Prune inert Mandarin A/B leftovers
+### 4. ~~Prune inert Mandarin A/B leftovers~~ — **DONE (confirmed 2026-07-29)**
+Verified by grep on 2026-07-29: `ab_audio_path`, `_copy_audio_set` and the `/ab/` route have
+**zero occurrences** anywhere in `backend/app/`. Matches CLAUDE.md's note that they were pruned
+2026-07-08. Original description kept below for context.
+
 **What:** delete the dead V2/V3 A/B audition code (retired 2026-07-02, V3-only).
 **Where (all confirmed zero real callers):** route `GET /audio/{sid}/{fid}/ab/{ver}`
 (`backend/app/routes_audio.py:81-84`) → `sessions.ab_audio_path` (`sessions.py:3275-3283`) →
@@ -282,6 +329,18 @@ Scripts note via GitHub Desktop.
 ---
 
 ## Done
+- **2026-07-29** — **Hant↔Hans false positive on the durative 着** (`82067f0`, LIVE). OpenCC
+  doesn't round-trip 着: `s2tw` correctly writes it 著 for Taiwan, but 著 is also valid
+  Simplified (著名), so the reverse-only comparison hard-blocked correct text at approve.
+  Reported from the dynamic-content side, which hit it in its own copy first. Fixed in both
+  copies here (`auto_checks._hant_correspondence`, forward-with-reverse-fallback; and
+  `claude_review.verify_fixes`, kept fail-closed). Red-teamed — the pass found a real hole in
+  the first cut (a broken `t2s` with a working `s2tw` would have blocked where the old code was
+  silent) and it was closed. **Also discovered during deploy:** `opencc` was missing from the
+  live venv, so this check and the script-purity check had **never run in production**;
+  installed `opencc-python-reimplemented==0.1.7` (see 0j) and both are now active, costing
+  exactly one true-positive flag. Fail-silent dep class documented in `backend/requirements.txt`
+  + CLAUDE.md. Full detail in the 07-29 session log.
 - **2026-07-26** — CEFR partial-audio cache refresh for Strasbourg3_A12_FR, Strasbourg5_A12_FR, Girona_A12_ES, Florence3_A12_IT, Abbotsford_B1_EN, Melrose_B1_EN, and Jerez_CascoAntiguo_B1_ES. Guarded run completed at 14:24 BST: audit was CLEAR for all seven; clear + warm completed; verify exited 0 with 291 cached MP3s matching R2. Do not rerun clear/warm without a new producer handoff.
 - **2026-07-16** — **Finalised-bus consumer** (f9fad71, LIVE on the laptop). The app now reads
   Stage 9's `review-audio/_bus/finalised_trips.json` (read-only, best-effort) and marks completed

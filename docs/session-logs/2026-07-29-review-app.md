@@ -322,3 +322,43 @@ audit above says the live cost is one true-positive flag on one un-submitted ses
 **Carried forward:** `Taipei101_HSK12_ZH` sc6 questionOption[1] has a genuine Hant/Hans
 mismatch (the 这颗 measure phrase is missing from the Traditional). It is that session's
 reviewer's to fix through the normal flow — flagged here so it isn't lost.
+
+## Session wrap-up (evening)
+
+**Goal:** act on a report from the Scripts repo that `auto_checks.py` shared a Hant↔Hans
+false positive it had just fixed on its own side.
+
+**What I did** — confirmed the bug, fixed it in both copies, red-teamed, deployed, and
+found (while deploying) that the check had never run in production at all.
+- `82067f0` — `auto_checks._hant_correspondence` (forward comparison, reverse as variant
+  fallback) + the same fix in `scripts/claude_review.py:verify_fixes`.
+- `9bf6c1c`, `4bfc32b` — session log, plus the durable guard for the fail-silent dep class
+  (`backend/requirements.txt` ⚠️ block + CLAUDE.md Gate-1 note).
+- Installed `opencc-python-reimplemented==0.1.7` on the live host, activating the Hant↔Hans
+  and script-purity checks for the first time.
+
+**Verified**
+- 14-case table, 2×2 converter-failure matrix, 3,714-pair brute-force sweep: 0 regressions.
+- Red-team (`/red-opus`) found **one real hole** in my first cut (the asymmetric-opencc
+  `unknown` guard) — closed, and independently re-traced here before accepting.
+- Deployed and verified live: laptop at `4bfc32b`, `review-app.service` + `review-tunnel.service`
+  both active, no errors, `https://review.dynamiclanguages.org/` HTTP 200, `gate1 deps ok`.
+- Live Gate-1 post-activation: the Hant block fires exactly once, on a genuine mismatch. The
+  predicted blast radius (+1 true positive, 0 spurious) held exactly.
+
+**Two corrections to my own earlier claims in this log** (both caught by the red-team, both
+verified against the code before accepting): Gate-1 blockers are hard at **approve** only —
+`sessions.validate` demotes them to `[will block approval]` warnings at submit; and the
+"no other copy of this comparison" claim was wrong — my grep was scoped to `backend/` and
+missed `scripts/claude_review.py`. A third correction came from the deploy itself: the 着
+false positive was never reachable in production, because the whole check was inert.
+
+**Open / carried forward** — all filed in `BACKLOG.md`:
+- `Taipei101_HSK12_ZH` sc6 questionOption[1]: genuine Hant/Hans mismatch, now Gate-1-visible.
+  **Same root cause as backlog 0a** (Ted's 8 bug reports) — see the note added there.
+- Hant check still blocks when a reviewer variant AND a durative appear in the same field.
+- 8 other `nlp`-extra packages remain absent from the laptop venv — deliberately.
+
+**Next steps:** nothing outstanding from this session's work; it is shipped and verified.
+The Gate-1 activation is the thing to watch — if John's first Mandarin trips throw
+unexpected Hant↔Hans blocks, `auto_checks._hant_correspondence` is where to look.
