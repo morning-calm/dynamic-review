@@ -263,3 +263,33 @@ told a good fix is broken and the one-click apply is refused.
   exactly to old behaviour. It also caught the two log inaccuracies (submit-vs-approve
   severity; the `claude_review.py` copy). Its "cosmetic" call on that second copy was the
   one judgment I overrode — see above.
+
+### Deployed (evening) — and a dormant-check discovery
+- Committed `82067f0`, pushed to `main`; laptop pulled to `82067f0`;
+  `sudo -n /usr/bin/systemctl restart review-app.service`. **Both services verified up**
+  (`review-app.service` + `review-tunnel.service` active, clean uvicorn startup, no errors);
+  `https://review.dynamiclanguages.org/` → **HTTP 200**. `claude_review.py` is a cron script —
+  picked up on its next `*/5` run, no restart needed.
+- ⚠️ **`opencc` is NOT installed in the live service venv** (`~/Desktop/Server/Scripts/.venv`
+  has jieba 0.42.1 + pypinyin 0.55.0, no opencc). `hsk_lib.to_simplified`/`to_traditional`
+  both `import opencc` lazily, so on the LIVE host they raise → **the Hant↔Hans
+  correspondence check and the script-purity check have never actually run in production.**
+  (zhuyin alignment does run — it needs jieba/pypinyin only, which is why today's Kaohsiung
+  zhuyin blocks fired.) Same class as the 2026-07-08 laptop-env pinyin incident.
+- **Correction to the note above:** "one reviewer edit would have wedged the trip" was true
+  on the workstation, NOT on the live host — the 着 false positive was unreachable in prod
+  because the whole check was inert. The bug was real but latent; it would have bitten the
+  moment opencc was installed. The fix is still the right fix, just not a live-incident fix.
+- **Blast radius of installing opencc** — audited read-only (pulled the 56 edited 4-script
+  rows off the live DB, evaluated on the workstation where opencc exists):
+  `ok 48 / punct 1 / bad 7`. Of the 7 hard-blocks, **6 are in `sess_5bc56203b40a`**, the
+  protected ZH demo session (never re-approved). The **1 real one** is
+  `sess_67d43aae2c03 / Taipei101_HSK12_ZH` sc6 questionOption — Hans `这颗球是白色的` vs Hant
+  `球是白色的` (measure phrase 这颗 dropped). A **true positive**, on an `in_review` session
+  that hasn't been submitted yet. Also 1 genuine script-purity hit (demo session, sc17: 走進
+  with traditional 進 in the Simplified box).
+  The 6 demo-session hits are real drift too (又古老又漂亮→又老又漂亮, 走進→走過, 湖上面→水裡).
+
+**Next:** install `opencc` in the service venv to activate the two dormant checks —
+awaiting dave's go-ahead (it turns on a hard-at-approve block that has never fired;
+audit above says the live cost is one true-positive flag on one un-submitted session).
