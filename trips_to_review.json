@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-30T10:19:36+01:00",
+  "generated_at": "2026-07-30T10:27:08+01:00",
   "source": "trello 6,7",
   "trips": [
     {
@@ -228,6 +228,23 @@
       "voice": "annasu",
       "gender": "female",
       "title": "LunarNewYear_HSK3_ZH",
+      "labels": [
+        "EN",
+        "Trip",
+        "ZH-HSK3",
+        "ZH-HSK1-2"
+      ],
+      "card_url": "https://trello.com/c/wNOzg1YI",
+      "pos": 140737488437248
+    },
+    {
+      "trip_id": "LunarNewYear_HSK4_ZH",
+      "lane": "6",
+      "level": "HSK4",
+      "family": "LunarNewYear",
+      "voice": "annasu",
+      "gender": "female",
+      "title": "LunarNewYear_HSK4_ZH",
       "labels": [
         "EN",
         "Trip",
