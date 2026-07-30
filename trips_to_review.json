@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-30T10:29:06+01:00",
+  "generated_at": "2026-07-30T10:33:16+01:00",
   "source": "trello 6,7",
   "trips": [
     {
@@ -279,6 +279,23 @@
       "voice": "jason",
       "gender": "male",
       "title": "SunYatSen_HSK3_ZH",
+      "labels": [
+        "EN",
+        "Trip",
+        "ZH-HSK3",
+        "ZH-HSK1-2"
+      ],
+      "card_url": "https://trello.com/c/8p14NP8M",
+      "pos": 140737488453632
+    },
+    {
+      "trip_id": "SunYatSen_HSK4_ZH",
+      "lane": "6",
+      "level": "HSK4",
+      "family": "SunYatSen",
+      "voice": "yu",
+      "gender": "male",
+      "title": "SunYatSen_HSK4_ZH",
       "labels": [
         "EN",
         "Trip",
