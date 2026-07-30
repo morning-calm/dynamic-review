@@ -152,3 +152,34 @@
 
 **Next steps**
 - Commit/push and follow the guarded laptop deployment/smoke-test sequence above.
+
+## Commit and Ubuntu deployment
+
+**Goal**
+- Commit, deploy, and restart the live Ubuntu-hosted app after the clean-agent review.
+
+**What I did**
+- Committed all scoped implementation/test/docs changes as `a06c02f`
+  (`Normalize Zhuyin formatting on save`) and pushed `main`.
+- Checked the live presence table first: no reviewer or admin heartbeat in the 15-minute
+  safety window.
+- On `review-laptop`: fast-forward pulled `ad3fb3c → a06c02f`, built the production frontend,
+  and restarted `review-app.service`. The laptop's pre-existing untracked
+  `backend/review.db.bak-resync-1784471971` was observed and left untouched.
+- Moved backlog item 0g to Done after live verification.
+
+**Verified**
+- Ubuntu checkout is `a06c02f`; frontend build passed (126 modules).
+- `review-app.service` and `review-tunnel.service` are both `active`.
+- Clean shutdown/startup in journal; uvicorn reports application startup complete with no
+  errors.
+- Local `/` HTTP 200; unauthenticated `/api/trips` HTTP 401 as expected; public
+  `https://review.dynamiclanguages.org/` HTTP 200.
+- The deployed normalizer produced the exact canonical outputs for both Taipei regressions
+  using the laptop's real syllable map.
+
+**Open / low-urgency TODOs**
+- None.
+
+**Next steps**
+- No further restart is needed for the documentation-only deployment record.

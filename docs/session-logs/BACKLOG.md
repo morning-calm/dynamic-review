@@ -115,31 +115,6 @@ predicted. See session-2 log.
 
 ## P1 — Do next (high value, self-contained, no product decision)
 
-### 0g. Zhuyin auto-space normalizer on save — **IMPLEMENTED 2026-07-30, pending deploy**
-Kaohsiung HSK12's approve was blocked by 6 Gate-1 `__align__` failures that were all
-mechanical typing style: hand-edited zhuyin without inter-syllable spaces (one field fully
-unspaced) and dot-AFTER neutral tone (`ㄉㄜ˙` vs `˙ㄉㄜ`). The aligner
-(`hsk_lib.zhuyin_to_pinyin`) needs one space-separated syllable per hanzi. A normalizer at
-zhuyin save time (split on bopomofo-syllable boundaries, re-anchor `˙` before its syllable)
-would kill this whole class before it reaches validation. Deferred 2026-07-29 ("not yet,
-we're going to change reviewer" — Mandarin moving Ted → John); revisit if John's first
-trips hit the same block. One-off repair pattern lives in the 07-29 session log.
-
-**Recurred 2026-07-30:** `Taipei101_HSK12_ZH` was approval-blocked by the same class:
-`ㄎㄜㄑㄧㄡˊ`, `ㄧㄡˇㄧˊ`, and a longer concatenated run with a misplaced neutral-tone dot.
-Dave's manual retry still left two hard blocks, requiring a guarded live repair. This is now
-two separate trips and was sufficient evidence to implement the normalizer.
-
-**Implemented locally:** `backend/app/zhuyin_normalize.py` reads the same committed
-`zhuyin_pinyin_map.json` as `hsk_lib`, accepts trailing-dot neutral-tone input, and parses the
-whole field against its Hans character count. It writes only when exactly one valid parse has
-one syllable per hanzi; invalid/ambiguous input stays untouched for Gate 1.
-`sessions.update_localization` applies it on zhuyin saves. `LocalizationEditor` safely adopts
-the server-normalized value without overwriting newer in-flight typing. Nine backend tests
-(fixture + real 1,674-spelling map), compileall, Ruff and the production Vite build pass.
-**Next:** commit/push, laptop pull, frontend build, idle-window backend restart, then verify
-both services and one editable `_ZH` autosave before moving this item to Done.
-
 ### 0i. Hant↔Hans blocks on variant + durative in the SAME field (added 2026-07-29)
 **What:** `auto_checks._hant_correspondence` passes a field if EITHER the forward comparison
 (`to_traditional(hans) == hant`) or the reverse (`to_simplified` of both) matches. A field
@@ -344,6 +319,15 @@ Scripts note via GitHub Desktop.
 ---
 
 ## Done
+- **2026-07-30** — **Zhuyin autosave normalizer** (`a06c02f`, LIVE). After Kaohsiung
+  and Taipei101 were approval-blocked by joined syllables / trailing neutral-tone dots,
+  `zhuyin_normalize.py` now canonicalizes only a unique whole-field parse with exactly
+  one valid syllable per Hans character; ambiguous, invalid, dependency-missing, and
+  recursion-limit inputs fail closed for Gate 1. Autosave safely adopts the normalized
+  server value without clobbering newer typing. Clean-context red-team found and fixed
+  the overlong-run `RecursionError` edge case. Verified 9/9 tests against the real
+  1,674-spelling map, Ruff/compile/build green, and deployed to the Ubuntu laptop:
+  app+tunnel active, public HTTP 200, both Taipei regressions normalized live.
 - **2026-07-29** — **Hant↔Hans false positive on the durative 着** (`82067f0`, LIVE). OpenCC
   doesn't round-trip 着: `s2tw` correctly writes it 著 for Taiwan, but 著 is also valid
   Simplified (著名), so the reverse-only comparison hard-blocked correct text at approve.
