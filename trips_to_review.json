@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-30T10:12:09+01:00",
+  "generated_at": "2026-07-30T10:15:37+01:00",
   "source": "trello 6,7",
   "trips": [
     {
@@ -49,6 +49,176 @@
       "labels": [],
       "card_url": "https://trello.com/c/1hzuxQE0",
       "pos": 140737488338944
+    },
+    {
+      "trip_id": "Taichung_HSK12_ZH",
+      "lane": "6",
+      "level": "HSK1-2",
+      "family": "Taichung",
+      "voice": "yu",
+      "gender": "male",
+      "title": "Taichung_HSK12_ZH",
+      "labels": [
+        "Trip",
+        "EN",
+        "ZH-HSK3",
+        "ZH-HSK1-2"
+      ],
+      "card_url": "https://trello.com/c/Iu0gKxqs",
+      "pos": 140737488363520
+    },
+    {
+      "trip_id": "Taichung_HSK3_ZH",
+      "lane": "6",
+      "level": "HSK3",
+      "family": "Taichung",
+      "voice": "yu",
+      "gender": "male",
+      "title": "Taichung_HSK3_ZH",
+      "labels": [
+        "Trip",
+        "EN",
+        "ZH-HSK3",
+        "ZH-HSK1-2"
+      ],
+      "card_url": "https://trello.com/c/Iu0gKxqs",
+      "pos": 140737488363520
+    },
+    {
+      "trip_id": "Taichung_HSK4_ZH",
+      "lane": "6",
+      "level": "HSK4",
+      "family": "Taichung",
+      "voice": "yu",
+      "gender": "male",
+      "title": "Taichung_HSK4_ZH",
+      "labels": [
+        "Trip",
+        "EN",
+        "ZH-HSK3",
+        "ZH-HSK1-2"
+      ],
+      "card_url": "https://trello.com/c/Iu0gKxqs",
+      "pos": 140737488363520
+    },
+    {
+      "trip_id": "KaohsiungLotusPond_HSK12_ZH",
+      "lane": "6",
+      "level": "HSK1-2",
+      "family": "KaohsiungLotusPond",
+      "voice": "annasu",
+      "gender": "female",
+      "title": "KaohsiungLotusPond_HSK12_ZH",
+      "labels": [
+        "Trip",
+        "EN",
+        "ZH-HSK3",
+        "ZH-HSK1-2"
+      ],
+      "card_url": "https://trello.com/c/oMq4bChv",
+      "pos": 140737488379904
+    },
+    {
+      "trip_id": "KaohsiungLotusPond_HSK3_ZH",
+      "lane": "6",
+      "level": "HSK3",
+      "family": "KaohsiungLotusPond",
+      "voice": "annasu",
+      "gender": "female",
+      "title": "KaohsiungLotusPond_HSK3_ZH",
+      "labels": [
+        "Trip",
+        "EN",
+        "ZH-HSK3",
+        "ZH-HSK1-2"
+      ],
+      "card_url": "https://trello.com/c/oMq4bChv",
+      "pos": 140737488379904
+    },
+    {
+      "trip_id": "KaohsiungLotusPond_HSK4_ZH",
+      "lane": "6",
+      "level": "HSK4",
+      "family": "KaohsiungLotusPond",
+      "voice": "annasu",
+      "gender": "female",
+      "title": "KaohsiungLotusPond_HSK4_ZH",
+      "labels": [
+        "Trip",
+        "EN",
+        "ZH-HSK3",
+        "ZH-HSK1-2"
+      ],
+      "card_url": "https://trello.com/c/oMq4bChv",
+      "pos": 140737488379904
+    },
+    {
+      "trip_id": "Taipei101_HSK12_ZH",
+      "lane": "6",
+      "level": "HSK1-2",
+      "family": "Taipei101",
+      "voice": "jason",
+      "gender": "male",
+      "title": "Taipei101_HSK12_ZH",
+      "labels": [
+        "EN",
+        "Trip",
+        "ZH-HSK3",
+        "ZH-HSK1-2"
+      ],
+      "card_url": "https://trello.com/c/5fy4E76e",
+      "pos": 140737488388096
+    },
+    {
+      "trip_id": "Taipei101_HSK3_ZH",
+      "lane": "6",
+      "level": "HSK3",
+      "family": "Taipei101",
+      "voice": "jason",
+      "gender": "male",
+      "title": "Taipei101_HSK3_ZH",
+      "labels": [
+        "EN",
+        "Trip",
+        "ZH-HSK3",
+        "ZH-HSK1-2"
+      ],
+      "card_url": "https://trello.com/c/5fy4E76e",
+      "pos": 140737488388096
+    },
+    {
+      "trip_id": "Taipei101_HSK4_ZH",
+      "lane": "6",
+      "level": "HSK4",
+      "family": "Taipei101",
+      "voice": "yu",
+      "gender": "male",
+      "title": "Taipei101_HSK4_ZH",
+      "labels": [
+        "EN",
+        "Trip",
+        "ZH-HSK3",
+        "ZH-HSK1-2"
+      ],
+      "card_url": "https://trello.com/c/5fy4E76e",
+      "pos": 140737488388096
+    },
+    {
+      "trip_id": "LunarNewYear_HSK12_ZH",
+      "lane": "6",
+      "level": "HSK1-2",
+      "family": "LunarNewYear",
+      "voice": "annasu",
+      "gender": "female",
+      "title": "LunarNewYear_HSK12_ZH",
+      "labels": [
+        "EN",
+        "Trip",
+        "ZH-HSK3",
+        "ZH-HSK1-2"
+      ],
+      "card_url": "https://trello.com/c/wNOzg1YI",
+      "pos": 140737488437248
     },
     {
       "trip_id": "SunYatSen_HSK12_ZH",
@@ -2474,57 +2644,6 @@
       "pos": 140737488363520
     },
     {
-      "trip_id": "Taichung_HSK12_ZH",
-      "lane": "7",
-      "level": "HSK1-2",
-      "family": "Taichung",
-      "voice": "yu",
-      "gender": "male",
-      "title": "Taichung_HSK12_ZH",
-      "labels": [
-        "Trip",
-        "EN",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/Iu0gKxqs",
-      "pos": 140737488363520
-    },
-    {
-      "trip_id": "Taichung_HSK3_ZH",
-      "lane": "7",
-      "level": "HSK3",
-      "family": "Taichung",
-      "voice": "yu",
-      "gender": "male",
-      "title": "Taichung_HSK3_ZH",
-      "labels": [
-        "Trip",
-        "EN",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/Iu0gKxqs",
-      "pos": 140737488363520
-    },
-    {
-      "trip_id": "Taichung_HSK4_ZH",
-      "lane": "7",
-      "level": "HSK4",
-      "family": "Taichung",
-      "voice": "yu",
-      "gender": "male",
-      "title": "Taichung_HSK4_ZH",
-      "labels": [
-        "Trip",
-        "EN",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/Iu0gKxqs",
-      "pos": 140737488363520
-    },
-    {
       "trip_id": "KaohsiungLotusPond_EN",
       "lane": "7",
       "level": "EN",
@@ -2542,57 +2661,6 @@
       "pos": 140737488379904
     },
     {
-      "trip_id": "KaohsiungLotusPond_HSK12_ZH",
-      "lane": "7",
-      "level": "HSK1-2",
-      "family": "KaohsiungLotusPond",
-      "voice": "annasu",
-      "gender": "female",
-      "title": "KaohsiungLotusPond_HSK12_ZH",
-      "labels": [
-        "Trip",
-        "EN",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/oMq4bChv",
-      "pos": 140737488379904
-    },
-    {
-      "trip_id": "KaohsiungLotusPond_HSK3_ZH",
-      "lane": "7",
-      "level": "HSK3",
-      "family": "KaohsiungLotusPond",
-      "voice": "annasu",
-      "gender": "female",
-      "title": "KaohsiungLotusPond_HSK3_ZH",
-      "labels": [
-        "Trip",
-        "EN",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/oMq4bChv",
-      "pos": 140737488379904
-    },
-    {
-      "trip_id": "KaohsiungLotusPond_HSK4_ZH",
-      "lane": "7",
-      "level": "HSK4",
-      "family": "KaohsiungLotusPond",
-      "voice": "annasu",
-      "gender": "female",
-      "title": "KaohsiungLotusPond_HSK4_ZH",
-      "labels": [
-        "Trip",
-        "EN",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/oMq4bChv",
-      "pos": 140737488379904
-    },
-    {
       "trip_id": "Taipei101_EN",
       "lane": "7",
       "level": "EN",
@@ -2600,57 +2668,6 @@
       "voice": "andrea",
       "gender": "female",
       "title": "Taipei101_EN",
-      "labels": [
-        "EN",
-        "Trip",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/5fy4E76e",
-      "pos": 140737488388096
-    },
-    {
-      "trip_id": "Taipei101_HSK12_ZH",
-      "lane": "7",
-      "level": "HSK1-2",
-      "family": "Taipei101",
-      "voice": "jason",
-      "gender": "male",
-      "title": "Taipei101_HSK12_ZH",
-      "labels": [
-        "EN",
-        "Trip",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/5fy4E76e",
-      "pos": 140737488388096
-    },
-    {
-      "trip_id": "Taipei101_HSK3_ZH",
-      "lane": "7",
-      "level": "HSK3",
-      "family": "Taipei101",
-      "voice": "jason",
-      "gender": "male",
-      "title": "Taipei101_HSK3_ZH",
-      "labels": [
-        "EN",
-        "Trip",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/5fy4E76e",
-      "pos": 140737488388096
-    },
-    {
-      "trip_id": "Taipei101_HSK4_ZH",
-      "lane": "7",
-      "level": "HSK4",
-      "family": "Taipei101",
-      "voice": "yu",
-      "gender": "male",
-      "title": "Taipei101_HSK4_ZH",
       "labels": [
         "EN",
         "Trip",
@@ -2710,8 +2727,8 @@
       "lane": "7",
       "level": "EN",
       "family": "LunarNewYear",
-      "voice": "",
-      "gender": "",
+      "voice": "andrea",
+      "gender": "female",
       "title": "LunarNewYear_EN",
       "labels": [
         "EN",
