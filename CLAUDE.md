@@ -263,6 +263,11 @@ Completed status is never reset. First real batch: 12 A12 quiz-variety manifests
 ## Pipeline scripts (live in `D:\Dynamic Languages\Scripts`, repo `dynamic-content`)
 - `Trello\export_review_trips.py` — Trello 6/7 → this repo's `trips_to_review.json` (+commit/push).
 - `upload_review_audio_r2.py` — bulk-upload a trip's mp3s to `review-audio/<contentID>/`; importable by stage 5c.
+- `refresh_review_app.py` — ONE command for "we changed audio/text on a trip the app already
+  has": freshness-gates R2, then over `ssh review-laptop` backs up review.db + runs the
+  `refresh_trips.py` audit/clear/warm/verify (+ guarded `--reseed`); completed trips are
+  routed to a `_delta/<cid>.json` manifest automatically. Replaces the hand-written
+  reseed-prompt handoff (first used: Jedburgh pronunciation batch, 2026-07-30).
 - `Research and Writing\CEFR English\stages\run_levels.py` — the CEFR English audio stage; its
   post-audio step calls `upload_trip_review_audio` (the 5c hook).
 - These are **separate from this repo**; commit them in `dynamic-content` (the user uses GitHub Desktop).

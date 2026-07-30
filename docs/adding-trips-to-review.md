@@ -150,7 +150,16 @@ These are the only steps that happen **in this repo / on the laptop**:
 Not a new trip — a re-publish + re-upload of a queued one (e.g. a remediation batch).
 Adding audio to R2 and text to staging is **not** enough.
 
-**Use the committed tool** (on the laptop, from the review-app root, Scripts venv):
+**Preferred since 2026-07-30: the Scripts repo drives this itself.**
+`Scripts/refresh_review_app.py --clips clips.txt` (workstation) runs the whole procedure
+below over `ssh review-laptop` — freshness-gates the R2 uploads first, backs up
+review.db, audits, routes **completed trips to a delta manifest** automatically, then
+clear + `warm` (the R2 re-pull the trip listing would otherwise do lazily) + verify;
+`--reseed` runs the guarded reseed. See
+`Scripts/Trello/REVIEW_QUEUE_HANDOFF.md` § 5. The manual laptop-side path below still
+works and is what the driver calls under the hood.
+
+**The committed laptop-side tool** (on the laptop, from the review-app root, Scripts venv):
 
 ```bash
 py -3.12 scripts/backup_review_db.py backup            # always first

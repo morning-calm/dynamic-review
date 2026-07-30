@@ -12,6 +12,25 @@ code changes need a `systemctl restart review-app.service` in an idle window, FE
 
 ## P0 — Waiting on dave (added 2026-07-13)
 
+### 0l. refresh_review_app.py deferred hardening (added 2026-07-30, from the red-opus pass)
+Four judgment calls the red-team reported but did not change, all fail-safe today:
+(a) `stage9.completed.load_completed()` falls back to the stale workstation
+`completed_trips.json` if R2 is unreachable — consider requiring `source() == "r2"`;
+(b) bus-says-completed + audit-HANDS-OFF-for-another-reason still uploads a delta
+manifest the app ignores until the trip is (re-)completed — warned, dangling object;
+(c) a manifest whose stems are all non-reviewable (e.g. `<i>_a`) uploads with a loud
+warning instead of being skipped; (d) the fixed 600 s ssh timeout could abort a very
+large `warm`. Context: `docs/session-logs/2026-07-30-review-app.md` 23:55 addendum.
+
+### 0k. Jedburgh1_TownAbbey_EN scene 12 staging text carries a literal `REMOVED` marker (added 2026-07-30)
+The SceneDesc ends the real outro at "See you then." then continues with `REMOVED` and two
+orphaned paragraphs (Jethart Hand Ba'; Romanesque arches) that belong to other scenes and
+exist NOWHERE else in the family — deleting them loses the only copy, so it's a writer's
+call. The 2026-07-30 pronunciation-fix clip correctly stops at "See you then.", so the
+reviewer sees junk text under audio that doesn't say it (intended: puts the defect in
+front of a human). Also: `ValidateTripSceneDesc.py` (Scripts repo) reports the trip CLEAN —
+add a rule for `REMOVED`-style editorial markers.
+
 ### 0. CEFR partial-audio laptop refresh (added 2026-07-26)
 Seven staging-only trips have new review-audio masters on R2:
 `Strasbourg3_A12_FR`, `Strasbourg5_A12_FR`, `Girona_A12_ES`,

@@ -183,3 +183,96 @@
 
 **Next steps**
 - No further restart is needed for the documentation-only deployment record.
+
+---
+
+## 23:15 — Jedburgh pronunciation reseed + Scripts-driven refresh WOW
+
+**Goal**
+- Execute the 8-trip Jedburgh/Melrose seed-cache refresh (audio-only pronunciation fix,
+  25 clips re-uploaded to R2 earlier today by the Scripts side).
+- Answer "can the Scripts repo drive this directly next time?" — build and document that
+  way of working.
+
+**What I did**
+- On the laptop (over ssh): backed up review.db to R2, then `refresh_trips.py`
+  audit → clear → warm → verify on 7 of the 8 cids. All 245 refilled cached mp3s
+  byte-match R2. Reseeded `sess_49e374536b68` (`Jedburgh1_TownAbbey_EN`, zero
+  edits/flags/takes — all guards passed; 70 sessions remain, 0 orphans).
+- `Melrose_EN` audited **HANDS OFF — completed trip**, so it was excluded from the
+  clear/reseed and routed through the delta-review flow instead: uploaded
+  `review-audio/_delta/Melrose_EN.json` (scene 7, clip `7`, reason "Jedburgh
+  pronunciation fix"). The delta approve will bump `completed_at`, which is exactly the
+  Stage-9 re-finalise signal this already-published trip needs.
+- Gotchas hit: non-interactive ssh shells need `REVIEW_APP_SCRIPTS_ROOT` exported or the
+  backup aborts on missing R2 creds; `refresh_trips.py verify --changed` asserts
+  quiz-newer-than-narration (quiz-variety semantics) and false-alarms on a narration
+  batch — relied on the byte-match verify + R2 LastModified instead.
+- **New WOW: `Scripts/refresh_review_app.py`** (dynamic-content repo) — one command from
+  the workstation runs the whole § 5 procedure: freshness-gates every changed clip on R2
+  (48 h default), backs up review.db, audits over ssh, auto-generates + uploads
+  `_delta/<cid>.json` for completed trips, clear+warm+verifies the rest, and runs the
+  guarded reseed only with `--reseed`. Replaces the hand-written reseed-prompt handoff.
+- Docs updated: `Scripts/Trello/REVIEW_QUEUE_HANDOFF.md` § 5 (driver is now the primary
+  path; manual laptop steps kept as a fallback detail), Scripts `CLAUDE.md` pointer,
+  this repo's `docs/adding-trips-to-review.md` § 5b and `CLAUDE.md` (Pipeline scripts).
+
+**Verified**
+- `verify`: 7/7 trips, every cached file matches R2 (ETag MD5); all 25 changed clips
+  show R2 LastModified 2026-07-30 21:43–21:44.
+- End-to-end test of the new driver on `Jedburgh1_TownAbbey_A12_EN` + `Melrose_EN`:
+  correct routing (refresh vs delta), clean verify.
+- reseed dry-run before the real run; guards all green.
+
+**Open / low-urgency TODOs**
+- `Jedburgh1_TownAbbey_EN` scene 12 staging text still carries the literal `REMOVED`
+  marker + two orphaned paragraphs (only copy of that prose — writer's call, Dave). The
+  new clip correctly stops at "See you then."; the reviewer will see junk text under
+  audio that doesn't say it — intended.
+- `ValidateTripSceneDesc.py` (Scripts) doesn't catch a `REMOVED` editorial marker —
+  worth a rule.
+- dynamic-content changes (refresh_review_app.py, HANDOFF § 5, CLAUDE.md) are
+  uncommitted — Dave commits that repo via GitHub Desktop. review-app doc changes also
+  left uncommitted.
+
+**Next steps**
+- Reviewer re-confirms the Jedburgh trips normally; Melrose_EN shows a "1 changed clip"
+  delta card.
+
+### 23:55 addendum — bus cross-check + red-opus pass on refresh_review_app.py
+
+- Added the independent completed-trip check Dave asked for: the driver now
+  cross-references `stage9.completed.load_completed()` (R2 `_bus/completed_trips.json`)
+  against the audit verdict; disagreement warns loudly and the trip is blocked, never
+  cleared/reseeded on conflicting evidence. Re-tested live: Melrose_EN routes to delta
+  with both signals agreeing.
+- **red-opus found one real bug** (confirmed by hand-trace): the driver's verify gate
+  matched only the string "MISMATCH", but `refresh_trips.cmd_verify` also fails via the
+  "not on R2" branch (and `check=False` swallowed ssh rc 255) — a failed refresh could
+  have marched on to `--reseed`. Fixed by gating on verify's exit code via a new
+  `ssh_rc()`; corrections/multipart are excluded from `bad` so no false aborts.
+- Its other edits (all verified): UTF-8 decode with errors=replace on ssh output;
+  `parse_audit` handles cids with spaces; `scene_index` rejects malformed stems with a
+  message; dropped a duplicate `head_object` loop (freshness gate already proves the
+  stems exist); warning when a delta stem names no reviewable field (e.g. `<i>_a`);
+  doc/docstring accuracy fixes incl. § 5b "warm" wording.
+- Verified: ruff clean; Scripts fast suite green (827 passed — 19 new tests are a
+  parallel HSK/Korea session's, unrelated); backend import ok; read-only live test of
+  ssh_rc/parse_audit/verify-rc against the laptop (a third full driver run was blocked
+  by the permission classifier — mutating steps were already proven live twice).
+- Deferred reviewer findings (judgment calls, not defects): stale local
+  completed_trips.json fallback if R2 is down (fails safe — refusal + warn); a
+  bus/audit disagreement can upload a delta manifest the app ignores until the trip is
+  (re-)completed (warned, harmless dangling object); zero-reviewable-stem manifests
+  upload with a warning; fixed 600 s ssh timeout could abort a very large `warm`.
+
+### Close-out (23:45)
+
+- Belt-and-braces full live run of the red-teamed `refresh_review_app.py` on the test
+  pair (Jedburgh1_TownAbbey_A12_EN + Melrose_EN): green end-to-end — freshness gate,
+  backup, audit + bus agreement, delta manifest (idempotent re-upload), clear/warm,
+  verify rc=0.
+- Committed this repo's doc changes (CLAUDE.md, adding-trips-to-review.md § 5b,
+  session log, BACKLOG 0k/0l) and pushed main.
+- dynamic-content changes (refresh_review_app.py + REVIEW_QUEUE_HANDOFF.md § 5 +
+  CLAUDE.md pointer) remain for Dave to commit via GitHub Desktop.
