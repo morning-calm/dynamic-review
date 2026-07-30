@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-26T13:34:26+01:00",
+  "generated_at": "2026-07-30T09:52:12+01:00",
   "source": "trello 6,7",
   "trips": [
     {
@@ -49,108 +49,6 @@
       "labels": [],
       "card_url": "https://trello.com/c/1hzuxQE0",
       "pos": 140737488338944
-    },
-    {
-      "trip_id": "Taichung_HSK12_ZH",
-      "lane": "6",
-      "level": "HSK1-2",
-      "family": "Taichung",
-      "voice": "yu",
-      "gender": "male",
-      "title": "Taichung_HSK12_ZH",
-      "labels": [
-        "Trip",
-        "EN",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/Iu0gKxqs",
-      "pos": 140737488355328
-    },
-    {
-      "trip_id": "Taichung_HSK3_ZH",
-      "lane": "6",
-      "level": "HSK3",
-      "family": "Taichung",
-      "voice": "yu",
-      "gender": "male",
-      "title": "Taichung_HSK3_ZH",
-      "labels": [
-        "Trip",
-        "EN",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/Iu0gKxqs",
-      "pos": 140737488355328
-    },
-    {
-      "trip_id": "KaohsiungLotusPond_HSK12_ZH",
-      "lane": "6",
-      "level": "HSK1-2",
-      "family": "KaohsiungLotusPond",
-      "voice": "annasu",
-      "gender": "female",
-      "title": "KaohsiungLotusPond_HSK12_ZH",
-      "labels": [
-        "Trip",
-        "EN",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/oMq4bChv",
-      "pos": 140737488371712
-    },
-    {
-      "trip_id": "KaohsiungLotusPond_HSK3_ZH",
-      "lane": "6",
-      "level": "HSK3",
-      "family": "KaohsiungLotusPond",
-      "voice": "annasu",
-      "gender": "female",
-      "title": "KaohsiungLotusPond_HSK3_ZH",
-      "labels": [
-        "Trip",
-        "EN",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/oMq4bChv",
-      "pos": 140737488371712
-    },
-    {
-      "trip_id": "Taipei101_HSK12_ZH",
-      "lane": "6",
-      "level": "HSK1-2",
-      "family": "Taipei101",
-      "voice": "jason",
-      "gender": "male",
-      "title": "Taipei101_HSK12_ZH",
-      "labels": [
-        "EN",
-        "Trip",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/5fy4E76e",
-      "pos": 140737488388096
-    },
-    {
-      "trip_id": "Taipei101_HSK3_ZH",
-      "lane": "6",
-      "level": "HSK3",
-      "family": "Taipei101",
-      "voice": "jason",
-      "gender": "male",
-      "title": "Taipei101_HSK3_ZH",
-      "labels": [
-        "EN",
-        "Trip",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/5fy4E76e",
-      "pos": 140737488388096
     },
     {
       "trip_id": "Tokyo_03_Beg_N4_JP",
@@ -2452,23 +2350,6 @@
       "pos": 140737488322560
     },
     {
-      "trip_id": "Taichung_EN",
-      "lane": "7",
-      "level": "EN",
-      "family": "Taichung",
-      "voice": "harry",
-      "gender": "male",
-      "title": "Taichung_EN",
-      "labels": [
-        "Trip",
-        "EN",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/Iu0gKxqs",
-      "pos": 140737488355328
-    },
-    {
       "trip_id": "Jedburgh1_TownAbbey_A12_EN",
       "lane": "7",
       "level": "A12",
@@ -2559,40 +2440,6 @@
       "pos": 140737488363520
     },
     {
-      "trip_id": "KaohsiungLotusPond_EN",
-      "lane": "7",
-      "level": "EN",
-      "family": "KaohsiungLotusPond",
-      "voice": "andrea",
-      "gender": "female",
-      "title": "KaohsiungLotusPond_EN",
-      "labels": [
-        "Trip",
-        "EN",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/oMq4bChv",
-      "pos": 140737488371712
-    },
-    {
-      "trip_id": "Taipei101_EN",
-      "lane": "7",
-      "level": "EN",
-      "family": "Taipei101",
-      "voice": "andrea",
-      "gender": "female",
-      "title": "Taipei101_EN",
-      "labels": [
-        "EN",
-        "Trip",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/5fy4E76e",
-      "pos": 140737488388096
-    },
-    {
       "trip_id": "Melrose_A12_EN",
       "lane": "7",
       "level": "A12",
@@ -2636,96 +2483,6 @@
       ],
       "card_url": "https://trello.com/c/LvllBus3",
       "pos": 140737488412672
-    },
-    {
-      "trip_id": "HadriansWall_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "HadriansWall",
-      "voice": "harry",
-      "gender": "male",
-      "title": "HadriansWall_A12_EN",
-      "labels": [
-        "EN",
-        "Trip"
-      ],
-      "card_url": "https://trello.com/c/UO7mXhXA",
-      "pos": 140737488416768
-    },
-    {
-      "trip_id": "HadriansWall_B1_EN",
-      "lane": "7",
-      "level": "B1",
-      "family": "HadriansWall",
-      "voice": "harry",
-      "gender": "male",
-      "title": "HadriansWall_B1_EN",
-      "labels": [
-        "EN",
-        "Trip"
-      ],
-      "card_url": "https://trello.com/c/UO7mXhXA",
-      "pos": 140737488416768
-    },
-    {
-      "trip_id": "HadriansWall_EN",
-      "lane": "7",
-      "level": "EN",
-      "family": "HadriansWall",
-      "voice": "harry",
-      "gender": "male",
-      "title": "HadriansWall_EN",
-      "labels": [
-        "EN",
-        "Trip"
-      ],
-      "card_url": "https://trello.com/c/UO7mXhXA",
-      "pos": 140737488416768
-    },
-    {
-      "trip_id": "Abbotsford_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Abbotsford",
-      "voice": "isla",
-      "gender": "female",
-      "title": "Abbotsford_A12_EN",
-      "labels": [
-        "EN",
-        "Trip"
-      ],
-      "card_url": "https://trello.com/c/EEI2pqnw",
-      "pos": 140737488429056
-    },
-    {
-      "trip_id": "Abbotsford_B1_EN",
-      "lane": "7",
-      "level": "B1",
-      "family": "Abbotsford",
-      "voice": "isla",
-      "gender": "female",
-      "title": "Abbotsford_B1_EN",
-      "labels": [
-        "EN",
-        "Trip"
-      ],
-      "card_url": "https://trello.com/c/EEI2pqnw",
-      "pos": 140737488429056
-    },
-    {
-      "trip_id": "Abbotsford_EN",
-      "lane": "7",
-      "level": "EN",
-      "family": "Abbotsford",
-      "voice": "isla",
-      "gender": "female",
-      "title": "Abbotsford_EN",
-      "labels": [
-        "EN",
-        "Trip"
-      ],
-      "card_url": "https://trello.com/c/EEI2pqnw",
-      "pos": 140737488429056
     },
     {
       "trip_id": "Plymouth_A12_EN",
