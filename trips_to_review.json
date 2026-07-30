@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-30T10:37:30+01:00",
+  "generated_at": "2026-07-30T10:41:40+01:00",
   "source": "trello 6,7",
   "trips": [
     {
@@ -313,6 +313,23 @@
       "voice": "jason",
       "gender": "male",
       "title": "ChiangKaiShek_HSK12_ZH",
+      "labels": [
+        "Trip",
+        "EN",
+        "ZH-HSK3",
+        "ZH-HSK1-2"
+      ],
+      "card_url": "https://trello.com/c/ggEEpTu0",
+      "pos": 140737488470016
+    },
+    {
+      "trip_id": "ChiangKaiShek_HSK3_ZH",
+      "lane": "6",
+      "level": "HSK3",
+      "family": "ChiangKaiShek",
+      "voice": "jason",
+      "gender": "male",
+      "title": "ChiangKaiShek_HSK3_ZH",
       "labels": [
         "Trip",
         "EN",
