@@ -37,7 +37,7 @@ from fastapi import HTTPException
 from . import config  # noqa: F401  (ensures SCRIPTS_ROOT on sys.path) — keep first
 from . import (audio_core, audio_io, audio_splice, auth, auto_checks, auto_review_ingest,
                cjk_align, cjk_splice, db, deltas, images_r2, review_audio, review_bus,
-               static360, thumbs, trello)
+               static360, thumbs, trello, zhuyin_normalize)
 from .config import (COUNTRY_VOICE_GUESS, COVERAGE_DONE_FRACTION,
                      LANGUAGE_FALLBACK_VOICE, WORK_ROOT)
 from .locks import WHISPER_LOCK
@@ -1599,6 +1599,10 @@ def update_localization(sid: str, fid: int, script: str, text: str) -> dict:
             "error": "bad_script",
             "detail": f"{script!r} is not editable on this field "
                       f"(editable: {sorted(cur.keys())})"})
+    if script == "zhuyin":
+        # Canonicalize only uniquely parseable Bopomofo runs. Ambiguous or invalid
+        # input stays untouched so Gate 1 can block it instead of autosave guessing.
+        text = zhuyin_normalize.normalize_zhuyin(text, cur.get("Hans") or "")
     changed = (cur.get(script) or "") != (text or "")
     cur[script] = text or ""
     loc["cur"] = cur

@@ -78,6 +78,16 @@ const ScriptRow = ({ sid, fid, script, cur, orig, rows, onFieldUpdate, registerF
       const req = (async () => {
         try {
           const updated = await api.putLocalization(sid, fid, script, text);
+          // The backend may canonicalize Zhuyin spacing / neutral-tone dots. Adopt
+          // that returned value only if the reviewer has not typed anything newer
+          // while this request was in flight; either way, make it the saved baseline
+          // so the next edit is compared with what the server actually stored.
+          const serverText = updated.localization?.cur[script] ?? text;
+          savedRef.current = serverText;
+          if (valueRef.current === text) {
+            valueRef.current = serverText;
+            setValue(serverText);
+          }
           end(true);
           onFieldUpdate(updated);
         } catch (e: unknown) {
