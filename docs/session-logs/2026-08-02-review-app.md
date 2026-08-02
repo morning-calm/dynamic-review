@@ -247,3 +247,48 @@ landing on working code.
 34 tests pass (3 new), backend import ok, `npm run build` ok, `eslint src` clean — run by
 me, not taken from the report. Dev checkout restored again afterwards (one v0, 7.86 s
 working take, throwaway password gone).
+
+
+## 20:15 — second red-team pass + DEPLOYED
+
+**Fixed `ZhFieldBlock.tsx` `??` → `||`** on `working_hans` (the trap flagged last pass).
+Behaviour-identical today — verified there is no backend path that writes `working_hans`
+to `''` (the only two writers, `_working_hans_patch` and `revert`, both guard on truthiness
+and the former *pops* the key) — but `||` now matches `_cjk_spoken`'s resolution exactly,
+so a future writer that emits `''` can't light "Generate from edit" on every `_ZH` field.
+
+**Second red-opus pass** over that fix plus everything I changed in response to the first
+review (none of which had had an independent look). **No correctness bugs.** It made two
+accuracy fixes, both worth having:
+- The `AudioVersion.kind` comment in `api.ts` was still incomplete — it had missed
+  `insert_silence`, `remove_silence` and `silence_trim`, which reach `_commit_working_edit`
+  positionally rather than via a `kind=` kwarg. I re-derived the true set from source: 13
+  kinds, and the comment now lists all 13. Textbook enumerated-set drift, in the one comment
+  whose entire job is to be the list.
+- My log had finding D under "triaged and left" while the tree contained the change. Moved.
+
+It also independently confirmed the first reviewer's `accept_text_as_voiced` fix (walked
+every branch: field patch and version stamp cannot diverge), and **empirically** confirmed
+the three new regression tests catch the `_loc_block` shadowing by re-creating the collision
+in a scratch harness — all three fail, the middle one with the exact production TypeError.
+
+### Deployed — 2026-08-02 15:32 UK
+`acd2c74` pushed to main → pulled on the laptop → `npm run build` → `review-app.service`
+restarted. Checked in order, deliberately: backend import under the **laptop's own venv**
+BEFORE the restart (so a bad import couldn't take the service down), then both services,
+then the migration, then the public tunnel.
+
+- `review-app` + `review-tunnel` both **active**; cloudflared re-registered 4 connections.
+- **Migration applied cleanly:** `audio_versions` gained `working_text`/`working_hans`;
+  2,296 of 2,802 rows are v0 and were backfilled, **all 2,296 matching
+  `field_edits.original_text` exactly** (0 mismatches). The 506 later rows stay NULL, so
+  in-flight sessions keep today's undo behaviour and only gain the fix going forward.
+- `https://review.dynamiclanguages.org/` serves **200** and the new bundle
+  (`index-B57T--o6.js`); `/api/trips` correctly **401**s behind the auth wall.
+- Zero errors, zero 5xx in the journal since restart.
+- Restarted in a clean window: no presence for 30 min, last session activity ~2 h earlier.
+  Today's 02:00 R2 backup covered the schema change.
+
+### Next steps
+Tell the reviewer the Create new → Insert new flow exists — it's in the admin guide, which
+the in-app **?** serves live, so no rebuild is needed to update the wording.
