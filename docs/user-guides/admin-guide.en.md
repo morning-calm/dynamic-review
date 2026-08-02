@@ -43,6 +43,30 @@ separate reviewer — you review and approve them in one pass.
   like any other language.
 - **Japanese (`_JP`)** trips use the kanji/kana narration; the voice speaks the kana line
   (see Toshifumi's guide).
+- **Edit waveform** — shows the audio itself when the text-driven tools aren't enough. Click to
+  place the cursor, drag to select, then **Silence** / **Delete** / **Cut & move** that exact
+  span, or open a gap with **+0.5s / +1s / +3s**. Pinch (or 🔍+) to zoom in for fine placement.
+  These go exactly where you put them — they *can* cut through a word, so listen back (Undo
+  steps through every take).
+- **Replacing a phrase by hand (Create new → Insert new).** When the splice engine won't do a
+  spot cleanly, do it yourself:
+  1. **Create new** → type the replacement wording → **Generate take**, audition it, then
+     **Save & insert…** (no note needed — you're doing the edit, so the take isn't sent to the
+     admin queue and the part isn't flagged edit-required). Use **Save attachment** with a note
+     instead when you want someone *else* to action it.
+  2. The waveform opens. **Delete** the audio that's being replaced.
+  3. Put the cursor in the gap and press **Insert new**. With one saved take it drops straight
+     in; with several you pick which one, auditioning each. The take is level-matched to the
+     surrounding audio automatically. Repeat for other takes as needed.
+- **"Audio already matches"** — appears next to *Edit waveform* only when you have changed the
+  text **and** shaped this part's audio by hand. It tells the app the take already says your new
+  text. Use it when, for example, you deleted a sentence from the text and cut that sentence out
+  of the audio yourself: without it the app still believes the audio contains those words, so
+  *Regenerate highlighted* and *Fix pronunciation…* keep refusing ("you've edited words elsewhere
+  that aren't in the audio yet") while *Generate from edit* says there's nothing new to voice —
+  and the only ways out would be a whole-regenerate or a Revert, both of which throw away your
+  audio work. It confirms with a diff first: **only accept if every green word is genuinely
+  spoken in the audio**, because from then on that text is what gets submitted.
 - **Revert to original** (bottom right of each part) restores that part completely: the text,
   the editable English sibling, the `_ZH` 4-script block, **and** the pristine master audio.
   After a revert the part no longer counts as an edit and won't be written to staging.

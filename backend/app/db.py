@@ -71,16 +71,23 @@ CREATE TABLE IF NOT EXISTS field_edits (
     FOREIGN KEY (session_id) REFERENCES sessions(id)
 );
 
+-- One row per archived take. working_text/working_hans snapshot what THAT take says, so
+-- undo/redo can put the splice engine's text baseline back with the audio (see
+-- sessions._restore_audio_version). '' = unset (falls back to original_text / orig.Hans);
+-- NULL = a row written before the snapshot existed, i.e. unknowable → leave the baseline
+-- alone rather than guess.
 CREATE TABLE IF NOT EXISTS audio_versions (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    session_id  TEXT NOT NULL,
-    field_id    INTEGER NOT NULL,
-    scene_index INTEGER,
-    n           INTEGER NOT NULL,
-    kind        TEXT NOT NULL,
-    path        TEXT NOT NULL,
-    label       TEXT NOT NULL,
-    created_at  REAL NOT NULL
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id   TEXT NOT NULL,
+    field_id     INTEGER NOT NULL,
+    scene_index  INTEGER,
+    n            INTEGER NOT NULL,
+    kind         TEXT NOT NULL,
+    path         TEXT NOT NULL,
+    label        TEXT NOT NULL,
+    created_at   REAL NOT NULL,
+    working_text TEXT,
+    working_hans TEXT
 );
 
 -- Manual-edit workspace: free-standing clips per field (TTS-generated or imported),
@@ -326,6 +333,19 @@ def init() -> None:
             # {"cur":{Hans,Hant,zhuyin,en}, "orig":{…}}. NULL for every non-_ZH field
             # (and for _ZH fields with no TripLocalizations entry, e.g. contentTitleKey).
             conn.execute("ALTER TABLE field_edits ADD COLUMN localization_json TEXT")
+        vcols = {r["name"] for r in conn.execute("PRAGMA table_info(audio_versions)")}
+        if "working_text" not in vcols:
+            # What each archived take SAYS, so undo/redo restores the splice engine's text
+            # baseline along with the audio. Left NULL on pre-existing rows (unknowable) —
+            # except v0, which is by definition the pristine master saying original_text /
+            # orig.Hans: backfill its working_text from the field's original_text, and its
+            # working_hans to '' (= unset, which resolves to orig.Hans — the same thing).
+            conn.execute("ALTER TABLE audio_versions ADD COLUMN working_text TEXT")
+            conn.execute("ALTER TABLE audio_versions ADD COLUMN working_hans TEXT")
+            conn.execute(
+                "UPDATE audio_versions SET working_hans='', working_text=COALESCE("
+                "  (SELECT original_text FROM field_edits WHERE id=audio_versions.field_id),"
+                "  '') WHERE kind='v0_original'")
         ccols = {r["name"] for r in conn.execute("PRAGMA table_info(manual_clips)")}
         if "comment" not in ccols:
             conn.execute("ALTER TABLE manual_clips ADD COLUMN "

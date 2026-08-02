@@ -29,6 +29,9 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onFieldUpdate: (f: Field) => void;
+  /** "Save & insert" — keep the take but hand the reviewer to the waveform editor, which
+   * is what actually pastes it into the working audio. Absent → that action is hidden. */
+  onInsertRequested?: () => void;
 }
 
 interface RowProps {
@@ -40,11 +43,14 @@ interface RowProps {
   onFieldUpdate: (f: Field) => void;
 }
 
-/** A SAVED attachment: re-voice its text, edit the admin note, or delete it. */
+/** A SAVED take: re-voice its text, edit the admin note, or delete it. A take with a note
+ * is an instruction to the admin; one without is the reviewer's own, kept to paste into
+ * the waveform. Both are listed — adding a note later promotes it to the admin queue. */
 const ClipRow = ({ clip, sid, fid, busy, setBusy, onFieldUpdate }: RowProps) => {
   const [text, setText] = useState(clip.text);
   const [note, setNote] = useState(clip.comment);
   const isGen = clip.kind === 'generated';
+  const forAdmin = Boolean(clip.comment.trim());
 
   const run = async (fn: () => Promise<Field>, label: string) => {
     setBusy(true);
@@ -59,9 +65,23 @@ const ClipRow = ({ clip, sid, fid, busy, setBusy, onFieldUpdate }: RowProps) => 
 
   return (
     <div className="space-y-1 rounded border border-gray-700 bg-gray-900/40 p-2">
-      <span className="text-[11px] uppercase tracking-wide text-gray-500">
-        {clip.kind} · attachment {clip.id}
-      </span>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[11px] uppercase tracking-wide text-gray-500">
+          {clip.kind} · attachment {clip.id}
+        </span>
+        <span
+          className={`rounded px-1.5 py-0.5 text-[10px] ${
+            forAdmin ? 'bg-amber-600/80 text-white' : 'bg-sky-900/70 text-sky-300'
+          }`}
+          title={
+            forAdmin
+              ? 'Has a note → the admin sees this in the manual-edit queue'
+              : 'No note → yours to drop into the audio with “Insert new” in the waveform editor'
+          }
+        >
+          {forAdmin ? 'for the admin' : 'to insert yourself'}
+        </span>
+      </div>
       {isGen ? (
         <textarea
           value={text}
@@ -113,18 +133,26 @@ const ClipRow = ({ clip, sid, fid, busy, setBusy, onFieldUpdate }: RowProps) => 
 };
 
 /** Per-field "Create new" workspace. Generate/Import produce an unsaved DRAFT take you can
- * audition; you then add a note and "Save attachment" to commit it (which flags the field
- * edit-required so the admin acts on it) — clearing the compose area so you can build the
- * next take. Saved takes do NOT replace the working audio. */
-const ManualEditModal = ({ field, sid, isOpen, onClose, onFieldUpdate }: Props) => {
+ * audition; you then commit it one of two ways — neither replaces the working audio:
+ *
+ *   "Save attachment"  → note REQUIRED; flags the field edit-required so the ADMIN acts on it.
+ *   "Save & insert"    → no note; the reviewer is going to paste it into the waveform
+ *                        themselves, so demanding instructions for an admin who will never
+ *                        see it is pure friction (and the edit-required flag would be a lie).
+ *
+ * Either way the take lands in `field.manual_clips`, which is what the waveform editor's
+ * "Insert new" pastes from. */
+const ManualEditModal = ({ field, sid, isOpen, onClose, onFieldUpdate, onInsertRequested }: Props) => {
   const [busy, setBusy] = useState(false);
   const [newText, setNewText] = useState(field.current_text);
   const [comment, setComment] = useState('');
   const [draftId, setDraftId] = useState<number | null>(null);
 
   const draft = draftId === null ? null : field.manual_clips.find((c) => c.id === draftId) ?? null;
-  // Saved attachments = anything with a note that isn't the in-progress draft.
-  const saved = field.manual_clips.filter((c) => c.id !== draftId && c.comment.trim());
+  // Everything that isn't the in-progress draft is saved — with a note (for the admin) or
+  // without (saved to insert here). Filtering on the note would hide the latter, which is
+  // exactly the set the waveform editor offers to paste.
+  const saved = field.manual_clips.filter((c) => c.id !== draftId);
 
   const reset = () => {
     setDraftId(null);
@@ -197,6 +225,16 @@ const ManualEditModal = ({ field, sid, isOpen, onClose, onFieldUpdate }: Props) 
     }
   };
 
+  // Commit the draft with NO note and go to the waveform editor to paste it. The note is
+  // an instruction to the admin; when the reviewer does the work themselves there is no
+  // admin in the loop, so requiring one (and the edit-required flag it raises) would be
+  // wrong as well as slow.
+  const saveForInsert = () => {
+    if (draftId === null) return;
+    reset();
+    onInsertRequested?.();
+  };
+
   // Drop an unsaved draft (its audio was never committed).
   const discardDraft = async () => {
     if (draftId === null) return;
@@ -233,9 +271,11 @@ const ManualEditModal = ({ field, sid, isOpen, onClose, onFieldUpdate }: Props) 
         </button>
       </div>
       <p className="mb-3 text-xs text-gray-400">
-        Generate a take (voiced verbatim at the trip’s voice) or import your own mp3, audition it, then add a note and
-        save it. Saved takes do <span className="font-medium text-gray-200">not</span> replace the working audio — they
-        flag the field <span className="text-amber-300">edit-required</span> so the admin handles them.
+        Generate a take (voiced verbatim at the trip’s voice) or import your own mp3, then audition it. Save it{' '}
+        <span className="font-medium text-gray-200">with a note</span> to hand it to the admin (the field is flagged{' '}
+        <span className="text-amber-300">edit-required</span>), or{' '}
+        <span className="text-sky-300">Save &amp; insert</span> to drop it into the audio yourself in the waveform
+        editor. Neither replaces the working audio on its own.
       </p>
 
       <div className="mb-3 space-y-2 rounded border border-gray-700 bg-gray-900/40 p-2">
@@ -286,6 +326,17 @@ const ManualEditModal = ({ field, sid, isOpen, onClose, onFieldUpdate }: Props) 
               <button type="button" disabled={busy} onClick={save} className={`${btn} border-custom-green text-custom-green`}>
                 Save attachment
               </button>
+              {onInsertRequested && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={saveForInsert}
+                  title="Keep this take and open the waveform, where you can delete the old audio and drop this in at the cursor. No note needed — you're doing the edit yourself."
+                  className={`${btn} border-sky-600 text-sky-300`}
+                >
+                  Save &amp; insert…
+                </button>
+              )}
               <button type="button" disabled={busy} onClick={discardDraft} className={`${btn} border-red-700 text-red-400`}>
                 Discard draft
               </button>

@@ -378,7 +378,12 @@ export interface AudioLinks {
 
 export interface AudioVersion {
   label: string;
-  kind: string; // v0_original | splice | fallback | admin_import
+  // How this take was produced. Display-only and open-ended — the backend adds kinds as
+  // tools are added (currently v0_original | splice | admin_import | manual_edit |
+  // noise_trim | silence_trim | insert_silence | remove_silence | wave_insert_silence |
+  // wave_delete | wave_silence | wave_move | wave_insert_clip); nothing in the FE
+  // switches on it.
+  kind: string;
   url: string;
 }
 
@@ -436,6 +441,12 @@ export interface Field {
    * JP "Generate from edit" gate compares the kana line against THIS, not the seed —
    * the `_ZH` sibling is `localization.working_hans`. */
   working_text: string | null;
+  /** Offer the "Audio already matches" re-baseline (`api.textMatchesAudio`)? True only
+   * when the text is ahead of the take (CJK: measured on the spoken text — `_ZH` Hans /
+   * `_JP` kana) AND the take was shaped by hand rather than generated — i.e. the one
+   * situation where the app's record of what the audio says is stale. Deliberately false
+   * during ordinary edit-then-regenerate, where the audio genuinely doesn't say it yet. */
+  can_accept_text_as_voiced: boolean;
   /** Editable English translation for non-_EN trips (empty when N/A / same as target). */
   source_text: string;
   /** The English at seed — for the original→new diff on the English editor. */
@@ -896,6 +907,24 @@ export const api = {
   // Cut [start,end) out and paste it at `to` (all measured on the clip as it stands now).
   waveMove: (sid: string, fid: number, start: number, end: number, to: number): Promise<Field> =>
     postJson(field(sid, fid, '/wave/move'), { start, end, to }),
+
+  // Drop a "Create new" take into the working audio at `at` — the paste that completes
+  // "voice a replacement → delete the bad audio → insert the new take". Level-matched to
+  // the surrounding audio server-side.
+  waveInsertClip: (sid: string, fid: number, at: number, clipId: number): Promise<Field> =>
+    postJson(field(sid, fid, '/wave/insert-clip'), { at, clip_id: clipId }),
+
+  /**
+   * "The audio already says this" — re-baseline the working take's text to the field's
+   * current text after the reviewer made the audio match BY HAND (waveform editor).
+   * Nothing is generated and no audio changes; it only records that take and text agree,
+   * which is what the splice engine diffs against. Without it, hand-removing audio for
+   * deleted words wedges every text-addressed tool (409 `unvoiced_edits_outside_highlight`
+   * one way, "edit removed text only" the other) — offer it only while
+   * `field.can_accept_text_as_voiced`.
+   */
+  textMatchesAudio: (sid: string, fid: number): Promise<Field> =>
+    postJson(field(sid, fid, '/text-matches-audio')),
 
   fallback: (
     sid: string,

@@ -271,7 +271,11 @@ const SceneCard = ({
                         hasTextChange={
                           isJp
                             ? spokenLine(descLive) !==
-                              spokenLine(sceneDesc.working_text ?? sceneDesc.original_text)
+                              // `||`, not `??`: '' means "unset" for working_text (the
+                              // backend's _working_base_raw falls back the same way), and
+                              // `??` would keep the empty string and light the button up
+                              // on every JP field.
+                              spokenLine(sceneDesc.working_text || sceneDesc.original_text)
                             : descLive !== sceneDesc.original_text
                         }
                         getSelectionRange={getSelectionRange}

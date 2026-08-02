@@ -183,7 +183,38 @@ Completed status is never reset. First real batch: 12 A12 quiz-variety manifests
   completion of a truncated word from context ("Shogunate." heard on audio ending "shoguna")
   — never use transcription to detect truncation. Full history:
   `docs/splice-end-cutoff-analysis.md`.
-- **Versioning:** canonical `<i>.mp3`; superseded takes archived `versions/<i>v<n>.mp3`.
+- **Waveform editor (`WaveformEditor.tsx` + `sessions.wave_*`)** — TIME-addressed edits, no
+  text/aligner: insert-silence / delete / silence / move, plus **`wave_insert_clip`** (2026-08-02)
+  which drops a **Create new** take in at the cursor (level-matched to the base, 8 ms seams).
+  That completes the hand path for a spot the splice engine won't do: Create new → **Save &
+  insert…** (commits the take with NO note, so it does NOT go to the admin queue or flag
+  edit_required) → Delete the bad audio → **Insert new** (1 take = straight in, >1 = picker).
+  `ManualEditModal` therefore lists ALL non-draft clips, chipped *for the admin* (has a note) vs
+  *to insert yourself* (none) — don't re-filter that list on `comment`.
+- ⚠️ **Hand audio edits desynchronise `working_text` → the text tools wedge.** `working_text`
+  (what the take says; the splice engine's diff baseline) is re-baselined ONLY at
+  combine/import/manual-promote. A reviewer who deletes text AND cuts the matching audio in the
+  waveform editor leaves it stale, after which highlight/alt 409 `unvoiced_edits_outside_highlight`
+  ("use Generate from edit") while Generate-from-edit answers "edit removed text only" — a closed
+  loop whose only exits (whole-regen, Revert) discard the audio work. Cost a reviewer a scene on
+  Kaohsiung Lotus Pond EN, 2026-08-01 (log: three 409s then a Revert). Fixed 2026-08-02 by
+  `sessions.accept_text_as_voiced` (`POST …/text-matches-audio`, FE **"Audio already matches"**):
+  pure bookkeeping, sets `working_text` (+ the `_ZH` `working_hans` sibling), touches no audio and
+  leaves coverage alone. It's an unverifiable CLAIM (ASR can't check it — Whisper hallucinates),
+  so it is offered ONLY when `_can_accept_text_as_voiced`: text ahead of the take AND the current
+  take's version `kind` is hand-made (`not in {v0_original, splice}`) — never during ordinary
+  edit-then-regenerate — and the FE confirms with a take-says→field-says diff.
+  Regression tests: `backend/tests/test_text_ahead_of_audio.py`.
+- **Versioning:** canonical `<i>.mp3`; superseded takes archived `versions/<i>v<n>.mp3`. Each
+  `audio_versions` row also snapshots **what that take SAYS** (`working_text` + `_ZH`
+  `working_hans`, added 2026-08-02) so **undo/redo restores the text baseline with the audio** —
+  before that, undoing a combine left the splice engine diffing against the newer text and
+  "Generate from edit" saw nothing to voice, so the edit could not be re-voiced at all.
+  `_set_working(new_text=…)` is passed by the ops that re-voice FROM text (combine / import /
+  promote-a-manual-take); everything else (waveform tools, trim, pauses) inherits, because it
+  changed the audio without changing what it says. `''` = unset (→ `original_text`/`orig.Hans`);
+  **NULL = a pre-migration row → leave the baseline alone** rather than guess (the migration
+  backfills v0 from `original_text`, the one case that IS knowable).
 - **Offline fix round-trip (ADMIN only):** a reviewer flags `edit_required` → the admin hits
   **Download scene audio** on the SceneCard (`GET /api/sessions/{sid}/scenes/{i}/download`,
   `require_admin`) → fixes the mp3 in a desktop editor → **Import edited MP3** on that field's

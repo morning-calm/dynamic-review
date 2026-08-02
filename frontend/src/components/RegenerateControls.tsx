@@ -3,6 +3,7 @@ import Modal from 'react-modal';
 import { toast } from 'react-toastify';
 import { api, ApiError, type Field, type RegenerateMode } from '../api';
 import type { CapturedSelection } from '../hooks';
+import InlineDiff from './InlineDiff';
 import ManualEditModal from './ManualEditModal';
 import WaveformEditor from './WaveformEditor';
 
@@ -74,6 +75,7 @@ const RegenerateControls = ({
   const [manualOpen, setManualOpen] = useState(false);
   const [bugOpen, setBugOpen] = useState(false);
   const [bugText, setBugText] = useState('');
+  const [matchOpen, setMatchOpen] = useState(false);
   const [altOpen, setAltOpen] = useState(false);
   const [altRange, setAltRange] = useState<{ start: number; end: number } | null>(null);
   const [altText, setAltText] = useState('');
@@ -291,6 +293,54 @@ const RegenerateControls = ({
       setBusy(false);
     }
   };
+
+  // "The audio already says this" — record that the take matches the edited text, after the
+  // reviewer made it so by hand in the waveform editor. Nothing is generated; this only
+  // moves the baseline the splice engine diffs against, which is what un-wedges the
+  // highlight/alt tools (they refuse outright while the text is ahead of the take).
+  // Flush the pending text save BEFORE opening the modal, never on confirm. The modal
+  // diffs `field.current_text` — the SAVED text — while the editor debounces for a second,
+  // so flushing on confirm meant a reviewer who edited and clicked inside that window
+  // approved one diff and baselined a newer one. Showing exactly what is being claimed is
+  // this modal's only job, so the flush has to land before it renders.
+  const openTextMatches = async () => {
+    setBusy(true);
+    try {
+      await onBeforeRegenerate?.();
+      setMatchOpen(true); // only once the diff is guaranteed to show the saved text
+    } catch {
+      toast.error("Couldn't save your latest edit — try again before confirming.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // "The audio already says this" — record that the take matches the edited text, after the
+  // reviewer made it so by hand in the waveform editor. Nothing is generated; this only
+  // moves the baseline the splice engine diffs against, which is what un-wedges the
+  // highlight/alt tools (they refuse outright while the text is ahead of the take).
+  const acceptTextAsVoiced = async () => {
+    setBusy(true);
+    try {
+      onFieldUpdate(await api.textMatchesAudio(sid, field.fid));
+      setMatchOpen(false);
+      toast.success('Noted — the take now counts as saying this text.');
+    } catch (e: unknown) {
+      if (e instanceof ApiError && e.status === 409) toast.info(e.detail);
+      else toast.error(`Failed: ${e instanceof ApiError ? e.detail : 'network error'}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // What the take says vs what the field says. `_ZH` is voiced from the 4-script block's
+  // Hans (never current_text), so diff THAT or the modal shows an empty change.
+  // `||` throughout: '' means "unset" on both baselines and must fall through, exactly as
+  // the backend's _working_base_raw / _cjk_spoken resolve them.
+  const voicedText = field.localization
+    ? field.localization.working_hans || field.localization.orig.Hans || ''
+    : field.working_text || field.original_text;
+  const pendingText = field.localization ? field.localization.cur.Hans ?? '' : field.current_text;
 
   const doCombine = () => {
     setBusy(true);
@@ -540,6 +590,21 @@ const RegenerateControls = ({
       Create new{savedClips > 0 ? ` (${savedClips})` : ''}
     </button>
   );
+  // Only offered while the take is genuinely behind the text (server-computed): it is a
+  // CLAIM that the audio already says the new words, and claiming it wrongly ships text
+  // the audio doesn't speak. Rendered next to the waveform editor because hand-cutting
+  // the audio in there is what creates the mismatch it resolves.
+  const textMatchesBtn = field.can_accept_text_as_voiced ? (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={() => void openTextMatches()}
+      title="You already made the audio match your text edit by hand (e.g. you deleted those words in the waveform editor) — tell the app, so the highlight and pronunciation tools work again"
+      className={`${btn} border-sky-600 text-sky-300`}
+    >
+      Audio already matches
+    </button>
+  ) : null;
   const reportBtn = (
     <button
       type="button"
@@ -658,6 +723,7 @@ const RegenerateControls = ({
         )}
         {sep}
         {waveBtn}
+        {textMatchesBtn}
         {field.audio.candidate && (
           <>
             {sep}
@@ -715,7 +781,15 @@ const RegenerateControls = ({
             {trimSilenceBtn}
           </>,
         )}
-        {group('Edit the waveform', 'precise', waveOpen, waveBtn)}
+        {group(
+          'Edit the waveform',
+          'precise',
+          waveOpen || Boolean(textMatchesBtn),
+          <>
+            {waveBtn}
+            {textMatchesBtn}
+          </>,
+        )}
         {group(
           'Takes & history',
           '',
@@ -733,7 +807,14 @@ const RegenerateControls = ({
         </div>
       </div>
 
-      {waveOpen && <WaveformEditor field={field} sid={sid} onFieldUpdate={onFieldUpdate} />}
+      {waveOpen && (
+        <WaveformEditor
+          field={field}
+          sid={sid}
+          onFieldUpdate={onFieldUpdate}
+          onOpenCreateNew={() => setManualOpen(true)}
+        />
+      )}
 
       {helpOpen && (
         <div className="space-y-1 rounded border border-gray-700 bg-gray-900/60 p-2 text-xs text-gray-300">
@@ -753,6 +834,13 @@ const RegenerateControls = ({
             exactly what you say, so it <em>can</em> cut through a word — listen back afterwards (Undo always works).
           </p>
           <p>
+            <span className="font-medium text-gray-200">Replacing a phrase by hand</span> — voice the new wording
+            under <em>Create new</em>, open the waveform, <em>Delete</em> the old audio, put the cursor in the gap
+            and press <em>Insert new</em>. If you also changed the text, finish with{' '}
+            <span className="text-sky-300">Audio already matches</span> — otherwise the highlight and pronunciation
+            tools keep refusing, because as far as the app knows the audio still says the old words.
+          </p>
+          <p>
             <span className="font-medium text-gray-200">Generate / Regenerate</span> — makes a candidate take:
             listen to it, then Combine to keep it (undoable).
           </p>
@@ -765,7 +853,52 @@ const RegenerateControls = ({
         isOpen={manualOpen}
         onClose={() => setManualOpen(false)}
         onFieldUpdate={onFieldUpdate}
+        // "Save & insert" hands the reviewer straight to the tool that pastes the take.
+        onInsertRequested={() => {
+          setManualOpen(false);
+          setWaveOpen(true);
+        }}
       />
+
+      <Modal
+        isOpen={matchOpen}
+        onRequestClose={() => !busy && setMatchOpen(false)}
+        style={MODAL_STYLE}
+        contentLabel="Audio already matches"
+      >
+        <h2 className="mb-2 text-sm font-semibold">The audio already says this?</h2>
+        <p className="mb-3 text-xs text-gray-400">
+          Confirm only if you have <span className="font-medium text-gray-200">already made the audio match</span>{' '}
+          these text changes yourself — for example you deleted the words in the waveform editor, or pasted in a{' '}
+          “Create new” take. Nothing is generated and the audio is not touched.
+        </p>
+        <p className="mb-1 text-xs text-gray-400">
+          Below: what the app believes the take says → what this field now says.
+        </p>
+        <InlineDiff original={voicedText} current={pendingText} label="Take says → field says" />
+        <p className="my-3 text-xs text-amber-300">
+          If any of the green text isn’t actually spoken in the audio, cancel and use Generate from edit or
+          Regenerate All instead — otherwise this text is submitted over audio that doesn’t say it.
+        </p>
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => setMatchOpen(false)}
+            className={`${btn} border-gray-600 text-gray-300`}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void acceptTextAsVoiced()}
+            className={`${btn} border-custom-green text-custom-green`}
+          >
+            Yes, the audio matches
+          </button>
+        </div>
+      </Modal>
 
       <Modal
         isOpen={altOpen}

@@ -281,6 +281,17 @@ def _silence_cut(base, sr, wmap, n_orig, start_idx, side, dur):
     return None, None                             # reached cap/clip start with no pause → flag
 
 
+# A deletion has no words to voice, so there is no candidate to splice — but "use
+# whole-regenerate" was the ONLY advice offered, and it discards any hand audio work on
+# the clip. The waveform editor is the surgical way to remove the audio, after which
+# "Audio already matches" re-baselines the take's text so the other tools work again
+# (sessions.accept_text_as_voiced — Kaohsiung Lotus Pond EN, 2026-08-01).
+_REMOVED_ONLY = (
+    "Your edit only removed text, so there's nothing new to voice. Either whole-regenerate, "
+    "or cut those words out of the audio in the waveform editor and then use "
+    "“Audio already matches”.")
+
+
 def plan_segment(doc_id: str, cleaned_orig: str, cleaned_new: str,
                  used_fallback: bool, whisper_words: list[dict],
                  voice_id: str, voice_settings: dict,
@@ -382,8 +393,7 @@ def plan_segment(doc_id: str, cleaned_orig: str, cleaned_new: str,
                                     "whole-regenerate advised (no surgical splice).")
 
     if bhi <= blo and (not alt_text or not alt_text.strip()):
-        return RegenPlan(edit_required=True,
-                         reason="Edit removed text only — use whole-regenerate.")
+        return RegenPlan(edit_required=True, reason=_REMOVED_ONLY)
 
     wmap = _whisper_index_map(orig_toks, whisper_words)
     n_orig = len(orig_toks)
@@ -426,8 +436,7 @@ def plan_segment(doc_id: str, cleaned_orig: str, cleaned_new: str,
         parts = new_toks[new_blo:new_bhi]
     phrase = " ".join(parts).strip()
     if not phrase:
-        return RegenPlan(edit_required=True,
-                         reason="Edit removed text only — use whole-regenerate.")
+        return RegenPlan(edit_required=True, reason=_REMOVED_ONLY)
 
     previous_text = " ".join(new_toks[max(0, new_blo - 40):new_blo]).strip() or None
     next_text = " ".join(new_toks[new_bhi:new_bhi + 40]).strip() or None

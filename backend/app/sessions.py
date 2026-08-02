@@ -902,9 +902,13 @@ def create_or_resume(trip_id: str, user, *,
             stem = name[:-4]
             db.execute(
                 "INSERT INTO audio_versions(session_id,field_id,scene_index,n,kind,"
-                "path,label,created_at) VALUES(?,?,?,?,?,?,?,?)",
+                "path,label,created_at,working_text,working_hans) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?)",
                 (sid, fid, scene_index, 0, "v0_original",
-                 str(dirs["orig"] / name), f"{stem}v0", time.time()))
+                 str(dirs["orig"] / name), f"{stem}v0", time.time(),
+                 # v0 IS the pristine master, so it says exactly what was seeded; '' hans
+                 # means "unset", which resolves to orig.Hans — right for the master.
+                 original_text or "", ""))
         return fid
 
     # trip-level
@@ -1111,18 +1115,23 @@ def serialize_field(sid: str, frow) -> dict:
             audio["fallback"] = f"/audio/{sid}/{fid}/fallback?v={fh}"
 
     versions = []
+    kind_by_n: dict[int, str] = {}
     for v in db.query(
             "SELECT n,kind,label FROM audio_versions WHERE field_id=? ORDER BY n", (fid,)):
         versions.append({"label": v["label"], "kind": v["kind"],
                          "url": f"/audio/{sid}/{fid}/v/{v['n']}"})
+        kind_by_n[v["n"]] = v["kind"]
 
     # Undo/redo through the audio version history (v0 master → each edit). cursor=None
-    # means "on the latest take".
-    max_n = max((v_["n"] for v_ in db.query(
-        "SELECT n FROM audio_versions WHERE field_id=?", (fid,))), default=0)
+    # means "on the latest take". (`kind_by_n` already holds every n for this field, so
+    # this needs no second query — and serialize_field runs once per FIELD.)
+    max_n = max(kind_by_n, default=0)
     cursor = frow["version_cursor"] if frow["version_cursor"] is not None else max_n
     can_undo = has_audio and cursor > 0
     can_redo = has_audio and cursor < max_n
+    # Each version's `kind` is the op that PRODUCED it, so the current take's provenance is
+    # the kind at the cursor (undo moves it back through the history).
+    cur_kind = kind_by_n.get(cursor, "v0_original")
 
     result = {
         "fid": fid,
@@ -1135,6 +1144,9 @@ def serialize_field(sid: str, frow) -> dict:
         # the FE compares the JP kana line against THIS, not the seed, to gate "Generate
         # from edit" (the localization block's working_hans is the _ZH sibling).
         "working_text": frow["working_text"],
+        # Offer the "Audio already matches" re-baseline? (see _can_accept_text_as_voiced)
+        "can_accept_text_as_voiced": _can_accept_text_as_voiced(
+            _trip_id_cached(sid), frow, cur_kind),
         "source_text": frow["source_text"] or "",
         "original_source": frow["original_source"] or "",
         "flag": frow["flag"],
@@ -1309,6 +1321,63 @@ def _working_base_raw(frow) -> str:
     cleans, and what a pending text edit is diffed against."""
     base = frow["working_text"] if frow["working_text"] else (frow["original_text"] or "")
     return audio_core.strip_url_lines(base)
+
+
+def _text_ahead_of_audio(trip_id: str, frow) -> bool:
+    """True when the field's text carries edits the WORKING TAKE doesn't say — i.e. the
+    audio is behind the text.
+
+    This is the exact condition every text-addressed tool trips over: the splice engine
+    diffs against `_working_base_raw` (what the take says), so while it disagrees with
+    `current_text` a highlight/alt regenerate is refused (`unvoiced_edits_outside_highlight`)
+    and 'Generate from edit' is the only sanctioned way forward. That is right when the fix
+    IS a regenerate — and a dead end when the reviewer already made the audio match by hand
+    in the waveform editor, which is what `accept_text_as_voiced` exists for. Serialized so
+    the FE can offer that escape hatch exactly when it applies (and never otherwise).
+
+    CJK reads the SPOKEN text (`_cjk_spoken`): a `_ZH` field's edits live in the 4-script
+    block's Hans, not `current_text`, and a `_JP` field is voiced from the kana line only —
+    comparing `current_text` would miss the first and cry wolf on a kanji-only edit."""
+    if not (frow["has_audio"] and frow["mp3_name"]):
+        return False
+    try:
+        cjk = _cjk_spoken(trip_id, frow)
+    except Exception:  # noqa: BLE001
+        # This runs inside serialize_field, i.e. on every GET of the session — a field
+        # whose localization blob won't parse must cost that field its escape-hatch
+        # button, not the whole trip's ability to open. Deliberately NOT pushed down into
+        # `_zh_hans_for_tts`: `regenerate` should still fail loudly there rather than
+        # quietly route Chinese text through the English splice engine.
+        return False
+    if cjk is not None:
+        _lang, old, new = cjk
+        return (old or "") != (new or "")
+    return (_working_base_raw(frow)
+            != audio_core.strip_url_lines(frow["current_text"] or ""))
+
+
+# Version kinds where the app itself put the take in step with the text: the pristine
+# master, and a splice/whole-regen it generated FROM that text. Anything else — the
+# waveform tools, trim-noise, an imported mp3, a promoted manual take — is audio the
+# reviewer shaped by hand, which is the only way the take can end up saying something the
+# app can't derive. Expressed as the complement so the growing wave_* family can't be
+# forgotten here (the enumerated-set bug this codebase keeps re-learning).
+_APP_DERIVED_KINDS = frozenset({"v0_original", "splice"})
+
+
+def _can_accept_text_as_voiced(trip_id: str, frow, cur_kind: str) -> bool:
+    """Should the FE offer "Audio already matches" on this field?
+
+    Both halves must hold. The text must be ahead of the take (otherwise there is nothing
+    to re-baseline), AND the current take must have been shaped BY HAND. Without the
+    second half the button would appear the moment anyone types in the narration box —
+    i.e. throughout the ordinary edit-then-regenerate flow, where the honest answer is
+    "no, the audio does NOT say that yet". It asserts something no machine can check, and
+    asserting it wrongly ships text over audio that doesn't speak it, so it must surface
+    only in the situation that actually needs it: the reviewer edited the audio directly
+    and the app's record of what the take says is now stale."""
+    return (cur_kind not in _APP_DERIVED_KINDS
+            and _text_ahead_of_audio(trip_id, frow))
 
 
 def _cleaned_orig(srow, frow) -> tuple[str, bool]:
@@ -1845,9 +1914,10 @@ def set_version(sid: str, version: str | None) -> dict:
         stem = name[:-4]
         db.execute(
             "INSERT INTO audio_versions(session_id,field_id,scene_index,n,kind,path,"
-            "label,created_at) VALUES(?,?,?,?,?,?,?,?)",
+            "label,created_at,working_text,working_hans) VALUES(?,?,?,?,?,?,?,?,?,?)",
             (sid, frow["id"], frow["scene_index"], 0, "v0_original",
-             str(dirs["orig"] / name), f"{stem}v0", time.time()))
+             str(dirs["orig"] / name), f"{stem}v0", time.time(),
+             frow["original_text"] or "", ""))
         patch = {
             "current_mp3_path": str(dirs["working"] / name),
             "working_audio_hash": _file_hash(dirs["working"] / name),
@@ -1868,10 +1938,32 @@ def set_version(sid: str, version: str | None) -> dict:
     return get_session(sid)
 
 
+def _version_text_snapshot(frow, new_text: str | None,
+                           new_hans: str | None) -> tuple[str, str]:
+    """What the take being archived SAYS: ``(working_text, working_hans)``.
+
+    Ops that re-voice from the text (combine / import / promote-a-manual-take) pass the
+    text they voiced. Everything else — the waveform tools, trim-noise, the pause tools —
+    changes the audio without changing what it says, so it inherits the current baseline.
+    '' is meaningful (= unset → original_text / orig.Hans); only a legacy row is NULL."""
+    if new_text is None:
+        new_text = frow["working_text"] or ""
+    if new_hans is None:
+        new_hans = (_zh_localization(frow).get("working_hans") or "").strip()
+    return new_text, new_hans
+
+
 def _set_working(sid: str, frow, samples: np.ndarray | None = None,
-                 src_mp3: Path | None = None, kind: str = "splice") -> str:
+                 src_mp3: Path | None = None, kind: str = "splice",
+                 new_text: str | None = None, new_hans: str | None = None) -> str:
     """Write new working audio (from samples or an mp3 source), archive a v{n},
-    return the new working_audio_hash."""
+    return the new working_audio_hash.
+
+    ``new_text``/``new_hans``: what the NEW take says, when the op re-voiced from text
+    (the caller sets the same values on the field). Omit them for an op that only reshapes
+    existing audio — the version then inherits the current baseline. Either way the
+    version carries the text that goes with its audio, which is what lets undo/redo put
+    both back together (_restore_audio_version)."""
     dirs = work_dirs(sid)
     name = frow["mp3_name"]
     working = dirs["working"] / name
@@ -1885,15 +1977,38 @@ def _set_working(sid: str, frow, samples: np.ndarray | None = None,
     n = (row["mx"] or 0) + 1
     vpath = dirs["versions"] / f"{stem}v{n}.mp3"
     audio_io.mp3_to_mp3_copy(working, vpath)
+    v_text, v_hans = _version_text_snapshot(frow, new_text, new_hans)
     db.execute(
         "INSERT INTO audio_versions(session_id,field_id,scene_index,n,kind,path,"
-        "label,created_at) VALUES(?,?,?,?,?,?,?,?)",
+        "label,created_at,working_text,working_hans) VALUES(?,?,?,?,?,?,?,?,?,?)",
         (sid, frow["id"], frow["scene_index"], n, kind, str(vpath),
-         f"{stem}v{n}", time.time()))
+         f"{stem}v{n}", time.time(), v_text, v_hans))
     # the working take now sits on this newest version → undo can step back to n-1,
     # and any redo branch that an earlier undo left open is truncated.
     db.execute("UPDATE field_edits SET version_cursor=? WHERE id=?", (n, frow["id"]))
     return _file_hash(working)
+
+
+def _zh_localization(frow) -> dict:
+    """The `_ZH` 4-script block (``localization_json``) as a dict — ``{}`` when the field
+    has none (every non-_ZH field) or the blob won't parse.
+
+    The readers that go through here all want the same thing: a missing key, an empty
+    value and an unreadable blob are one state, "unset", which resolves to the seed
+    (`orig.Hans`). Collapsing them here keeps that contract in ONE place instead of a
+    try/except per site. Not every toucher of the blob routes through it: the one WRITER
+    (`_working_hans_patch`) has to keep "no block" and "empty block" apart — see there.
+
+    NB the name: `_loc_block` is already taken, by the unrelated seed-time helper that
+    flattens a TripLocalizations *node* into {Hans,Hant,zhuyin,en}. Re-using it here
+    shadowed that one at module scope and broke seeding for every Mandarin trip."""
+    loc_raw = _srow_get(frow, "localization_json")
+    if not loc_raw:
+        return {}
+    try:
+        return json.loads(loc_raw)
+    except (ValueError, TypeError):
+        return {}
 
 
 def _zh_hans_for_tts(frow) -> str | None:
@@ -1915,10 +2030,14 @@ def _last_spoken_line(text: str) -> str:
     return lines[-1] if lines else ""
 
 
-def _zh_working_hans_patch(frow) -> dict:
-    """After a ZH combine, record the hanzi the working take now says (cur.Hans) as the
-    re-baseline for the NEXT surgical splice's OLD text (see _cjk_spoken). A no-op (empty
-    patch) for non-ZH fields — localization_json is only populated for Mandarin."""
+def _working_hans_patch(frow, hans: str) -> dict:
+    """Set the `_ZH` working_hans baseline to ``hans`` — or CLEAR it when ``hans`` is ''
+    (undo stepping back to a take that predates any combine, where _cjk_spoken should fall
+    back to orig.Hans). Empty patch for non-ZH fields.
+
+    Parses inline rather than via `_zh_localization`: this is the one WRITER, so it has to tell
+    "no block at all" (→ no patch, leave the column NULL) apart from "a block that happens
+    to be empty" (→ still write it back). `_zh_localization` deliberately collapses those."""
     loc_raw = _srow_get(frow, "localization_json")
     if not loc_raw:
         return {}
@@ -1926,14 +2045,27 @@ def _zh_working_hans_patch(frow) -> dict:
         loc = json.loads(loc_raw)
     except (ValueError, TypeError):
         return {}
-    hans = ((loc.get("cur") or {}).get("Hans") or "").strip()
-    if not hans:
-        return {}
-    loc["working_hans"] = hans
+    if hans:
+        loc["working_hans"] = hans
+    else:
+        loc.pop("working_hans", None)
     return {"localization_json": json.dumps(loc, ensure_ascii=False)}
 
 
-def _cjk_spoken(srow, frow) -> tuple[str, str, str] | None:
+def _zh_working_hans_patch(frow) -> dict:
+    """After a ZH combine, record the hanzi the working take now says (cur.Hans) as the
+    re-baseline for the NEXT surgical splice's OLD text (see _cjk_spoken). A no-op (empty
+    patch) for non-ZH fields — localization_json is only populated for Mandarin."""
+    hans = _zh_current_hans(frow)
+    return _working_hans_patch(frow, hans) if hans else {}
+
+
+def _zh_current_hans(frow) -> str:
+    """`localization.cur.Hans` (the hanzi the reviewer's text says), '' when absent."""
+    return ((_zh_localization(frow).get("cur") or {}).get("Hans") or "").strip()
+
+
+def _cjk_spoken(trip_id: str, frow) -> tuple[str, str, str] | None:
     """``(lang, OLD, NEW)`` spoken text for a CJK audio field — the surgical-splice /
     whole-regen source — or ``None`` for Latin trips (English/Welsh untouched).
 
@@ -1945,7 +2077,7 @@ def _cjk_spoken(srow, frow) -> tuple[str, str, str] | None:
             the reviewer's edit (current_text).
     A near-zero aligner mean-score on OLD↔audio (stale text↔audio) makes the splice bail to
     whole-regen, so OLD need only be a good approximation of the take."""
-    lang_full = audio_core.language_of(srow["trip_id"])
+    lang_full = audio_core.language_of(trip_id)
     if lang_full == "Mandarin":
         new = _zh_hans_for_tts(frow)
         if not new:
@@ -2122,7 +2254,7 @@ def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
     # WHOLE-regenerate the narration (the safe Path-A floor). Q&A fields, an explicit 'whole'
     # request, and alt text always whole-regenerate.
     cjk_fell_back = False   # surgical splice was requested but bailed to whole-regen (#5)
-    cjk = _cjk_spoken(srow, frow)
+    cjk = _cjk_spoken(srow["trip_id"], frow)
     if cjk is not None:
         cjk_lang, cjk_old, cjk_new = cjk
         plan = None
@@ -2232,7 +2364,10 @@ def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
                             "detail": "You've edited words elsewhere in this field that "
                                       "aren't in the audio yet — use Generate from edit "
                                       "first (it voices every change), or include those "
-                                      "words in the highlight."})
+                                      "words in the highlight. If you already made the "
+                                      "audio match those edits yourself (e.g. you cut "
+                                      "them out in the waveform editor), use “Audio "
+                                      "already matches”."})
                     hl_span = audio_splice.highlight_span_in_cleaned(
                         cur, cleaned_new, int(rng["start"]), int(rng["end"]))
                 base_samples = audio_io.mp3_to_samples(dirs["working"] / frow["mp3_name"])
@@ -2368,7 +2503,11 @@ def combine(sid: str, fid: int) -> dict:
         # whole-block / Q&A: replace working with the candidate take.
         cand = audio_io.mp3_to_samples(frow["candidate_mp3_path"])
         cand = audio_io.set_trailing_silence(cand, audio_io.SR, tail_target)
-        whash = _set_working(sid, frow, samples=cand, kind="splice")
+        # The version records what this take says — `or None` because an empty cur.Hans
+        # leaves working_hans untouched below, so the snapshot must inherit too.
+        whash = _set_working(sid, frow, samples=cand, kind="splice",
+                             new_text=frow["current_text"],
+                             new_hans=_zh_current_hans(frow) or None)
         _r2_upload_working(srow["trip_id"], dirs, frow)
         patch = {"working_audio_hash": whash, "splice_confidence": None,
                  "candidate_mp3_path": None, "working_text": frow["current_text"]}
@@ -2387,7 +2526,9 @@ def combine(sid: str, fid: int) -> dict:
     result = audio_splice.do_splice(base, cand, meta)
 
     spliced = audio_io.set_trailing_silence(result.samples, audio_io.SR, tail_target)
-    whash = _set_working(sid, frow, samples=spliced, kind="splice")
+    whash = _set_working(sid, frow, samples=spliced, kind="splice",
+                         new_text=frow["current_text"],
+                         new_hans=_zh_current_hans(frow) or None)
     _r2_upload_working(srow["trip_id"], dirs, frow)
     patch = {"working_audio_hash": whash,
              "splice_confidence": result.confidence,
@@ -2489,7 +2630,10 @@ def import_mp3(sid: str, fid: int, data: bytes) -> dict:
     # S7: actually re-encode — decode to 44100/mono then re-encode (libmp3lame) so a
     # hand-edited import (any rate/channel count) lands as a clean, consistent master.
     samples = audio_io.mp3_to_samples(tmp)
-    whash = _set_working(sid, frow, samples=samples, kind="admin_import")
+    # working_hans is deliberately NOT passed: this path doesn't re-baseline it (only
+    # combine does), so the version must inherit whatever the field keeps.
+    whash = _set_working(sid, frow, samples=samples, kind="admin_import",
+                         new_text=frow["current_text"])
     _r2_upload_working(srow["trip_id"], dirs, frow)
     tmp.unlink(missing_ok=True)
     patch = {"working_audio_hash": whash, "splice_confidence": None,
@@ -2644,7 +2788,7 @@ def use_clip_as_working(sid: str, fid: int, cid: int) -> dict:
         raise HTTPException(404, detail={"error": "no_clip_audio", "detail": str(cid)})
     dirs = work_dirs(sid)
     whash = _set_working(sid, frow, samples=audio_io.mp3_to_samples(c["path"]),
-                         kind="manual_edit")
+                         kind="manual_edit", new_text=frow["current_text"])
     _r2_upload_working(srow["trip_id"], dirs, frow)
     patch = {"working_audio_hash": whash, "splice_confidence": None,
              "candidate_mp3_path": None, "working_text": frow["current_text"]}
@@ -2732,7 +2876,7 @@ def trim_noise(sid: str, fid: int, start: int, end: int) -> dict:
         raise HTTPException(400, detail={"error": "no_audio", "detail": "text field"})
     # CJK (_ZH hanzi / _JP kana): char→time comes from the MMS aligner, not English
     # Whisper. Isolated branch, mirroring `regenerate`; the English body below is untouched.
-    cjk = _cjk_spoken(srow, frow)
+    cjk = _cjk_spoken(srow["trip_id"], frow)
     if cjk is not None:
         return _trim_noise_cjk(sid, srow, frow, cjk, start, end)
     dirs = work_dirs(sid)
@@ -2855,7 +2999,7 @@ def insert_silence(sid: str, fid: int, pos: int, seconds: float = 1.0) -> dict:
     # CJK (_ZH hanzi / _JP kana): the caret maps to an audio time via the MMS aligner
     # (JP carets must sit in the kana line — 409 hint otherwise). Identical pause-only
     # insertion; the English mapping below is untouched.
-    cjk = _cjk_spoken(srow, frow)
+    cjk = _cjk_spoken(srow["trip_id"], frow)
     if cjk is not None:
         t_at = _cjk_caret_seed(srow, frow, cjk, int(pos))
         run = audio_io.silence_run_nearest(base, sr, t_at, 0.4, 0.4)
@@ -2933,7 +3077,7 @@ def remove_silence(sid: str, fid: int, pos: int, seconds: float = 1.0) -> dict:
     sr = audio_io.SR
     dur = audio_io.duration_seconds(base, sr)
 
-    cjk = _cjk_spoken(srow, frow)
+    cjk = _cjk_spoken(srow["trip_id"], frow)
     if cjk is not None:
         t_at = _cjk_caret_seed(srow, frow, cjk, int(pos))
     else:
@@ -3143,6 +3287,103 @@ def wave_move(sid: str, fid: int, start: float, end: float, to: float) -> dict:
         sid, srow, frow, audio_io.crossfade_join(pieces, sr, _WAVE_SEAM_MS), "wave_move")
 
 
+def wave_insert_clip(sid: str, fid: int, at: float, cid: int) -> dict:
+    """Insert a 'Create new' take (`manual_clips`) into the working audio at EXACTLY time
+    ``at`` — the paste half of the waveform editor's cut/paste.
+
+    The workflow this completes: voice a replacement phrase under Create new, open the
+    waveform, delete the audio that's wrong, then drop the new take into the hole. Every
+    other route from a Create-new take to the working audio is all-or-nothing
+    (`use_clip_as_working` replaces the WHOLE clip) or goes through the admin — this is
+    the surgical one, and unlike the splice engine it needs no text/audio agreement, so
+    it works when the aligner has given up.
+
+    The take is level-matched to the audio it lands in (gated RMS, ±12 dB, then peak
+    limited) exactly as the splice engine matches a candidate: a clip voiced at the
+    session voice still won't sit at the master's loudness, and a foreign-loudness insert
+    is a defect the reviewer would only hear after combining. Both seams get the standard
+    8 ms equal-power crossfade.
+
+    Speech-altering, so no ``silence_edit``: the word cache goes stale on the content hash
+    and is honestly re-transcribed."""
+    srow, frow, base, sr, dur = _wave_base(sid, fid)
+    path = clip_path(sid, fid, cid)
+    if not path.exists():
+        raise HTTPException(404, detail={
+            "error": "no_clip_audio",
+            "detail": "That take's audio is missing — re-voice it under Create new."})
+    piece = audio_io.mp3_to_samples(path)
+    if len(piece) < int(0.02 * sr):
+        raise HTTPException(422, detail={
+            "error": "empty_clip",
+            "detail": "That take has no audio to insert."})
+    ref_db = audio_io.gated_rms_db(base, sr)
+    cnd_db = audio_io.gated_rms_db(piece, sr)
+    if ref_db > -119 and cnd_db > -119:
+        g = float(np.clip(ref_db - cnd_db, -12.0, 12.0))
+        if abs(g) > 0.25:                      # skip inaudible corrections
+            piece = audio_io.limit_peak(audio_io.apply_gain_db(piece, g),
+                                        audio_splice.TRUE_PEAK_CEILING_DB)
+    t = max(0.0, min(float(at), dur))
+    cut = int(round(t * sr))
+    joined = audio_io.crossfade_join([base[:cut], piece, base[cut:]], sr, _WAVE_SEAM_MS)
+    return _commit_working_edit(sid, srow, frow, joined, "wave_insert_clip")
+
+
+def accept_text_as_voiced(sid: str, fid: int) -> dict:
+    """Re-baseline the working take's TEXT to the field's current text: "I have already
+    made the audio say this myself."
+
+    THE DEADLOCK THIS BREAKS (Kaohsiung Lotus Pond EN, 2026-08-01 — see the review log):
+    a reviewer deleted a few sentences from a SceneDesc and removed the matching audio by
+    hand in the waveform editor. Correct work, but `working_text` still claimed the take
+    said the deleted words, so from then on EVERY text-addressed tool on that field was
+    refused: highlight / Fix pronunciation 409'd with `unvoiced_edits_outside_highlight`
+    ("use Generate from edit first"), and Generate from edit answered "Edit removed text
+    only — use whole-regenerate". The only exits were whole-regenerate or Revert, each of
+    which throws away the hand audio work. (The reviewer used Revert.)
+
+    Nothing is generated and no audio is touched — this only records that the take and the
+    text now agree, which is what the splice engine diffs against. Coverage is deliberately
+    left alone: the AUDIO is unchanged, so what the reviewer has heard is still true (and
+    the waveform edit that got them here already reset it).
+
+    It is a claim, not a check — we cannot verify by machine that the audio says the new
+    text (ASR was tried for exactly this class of question and rejected: Whisper
+    hallucinates from context, docs/splice-end-cutoff-analysis.md). So the FE shows the
+    reviewer the precise pending difference and makes them confirm it, and this refuses
+    when there is nothing to re-baseline rather than silently no-op'ing."""
+    srow = _session_row(sid)
+    frow = _field_row(sid, fid)
+    if not (frow["has_audio"] and frow["mp3_name"]):
+        raise HTTPException(400, detail={
+            "error": "no_audio", "detail": "this field has no audio"})
+    if not _text_ahead_of_audio(srow["trip_id"], frow):
+        raise HTTPException(409, detail={
+            "error": "already_matches",
+            "detail": "The take already matches this text — nothing to re-baseline."})
+    patch = {"working_text": frow["current_text"]}
+    patch.update(_zh_working_hans_patch(frow))   # the _ZH sibling baseline (Hans)
+    db.update_fields(frow["id"], **patch)
+    # This changes what the CURRENT take is held to say without archiving a new one, so
+    # re-stamp the version it sits on — otherwise an undo/redo round-trip would restore
+    # the pre-claim baseline and silently wedge the field all over again. Stamped through
+    # the same helper _set_working uses, with the same `… or None` inherit signal as the
+    # combine sites, so the row can never disagree with the patch just applied: an empty
+    # cur.Hans leaves the field's working_hans untouched above, so the snapshot has to
+    # inherit it too (a literal '' would make a later redo CLEAR a baseline the field
+    # still holds, sending the next _ZH splice back to the seed orig.Hans).
+    cursor = frow["version_cursor"]
+    if cursor is None:
+        cursor = _max_version_n(fid)
+    v_text, v_hans = _version_text_snapshot(
+        frow, frow["current_text"], _zh_current_hans(frow) or None)
+    db.execute("UPDATE audio_versions SET working_text=?, working_hans=? "
+               "WHERE field_id=? AND n=?", (v_text, v_hans, fid, cursor))
+    db.touch_session(sid)
+    return serialize_field(sid, _field_row(sid, fid))
+
+
 def played(sid: str, fid: int, ranges: list[list[float]],
            track: str = "working") -> dict:
     _session_row(sid)
@@ -3271,12 +3512,21 @@ def _max_version_n(fid: int) -> int:
 def _restore_audio_version(sid: str, fid: int, target_n: int) -> dict:
     """Make audio_versions.n == ``target_n`` the working take (undo/redo step). Does NOT
     archive a new version — it just moves the cursor and copies that take back to working.
-    Clears any pending candidate and resets coverage/done (the audio changed)."""
+    Clears any pending candidate and resets coverage/done (the audio changed).
+
+    The TEXT baseline moves with the audio. `working_text` (+ the `_ZH` `working_hans`) is
+    what the splice engine believes the take says; leaving it on the newest take's text
+    while stepping the audio back made every later text tool diff against words the
+    restored audio doesn't speak — e.g. undoing a combine left "Generate from edit"
+    convinced the edit was already voiced, so it could not be re-voiced at all. A row
+    written before the snapshot existed has NULL and is left alone: unknowable beats
+    guessing wrong."""
     frow = _field_row(sid, fid)
     if not (frow["has_audio"] and frow["mp3_name"]):
         raise HTTPException(400, detail={"error": "no_audio", "detail": "text field"})
     row = db.query_one(
-        "SELECT path FROM audio_versions WHERE field_id=? AND n=?", (fid, target_n))
+        "SELECT path,working_text,working_hans FROM audio_versions "
+        "WHERE field_id=? AND n=?", (fid, target_n))
     if not row or not Path(row["path"]).exists():
         raise HTTPException(404, detail={"error": "no_version", "detail": str(target_n)})
     dirs = work_dirs(sid)
@@ -3284,6 +3534,9 @@ def _restore_audio_version(sid: str, fid: int, target_n: int) -> dict:
     audio_io.mp3_to_mp3_copy(Path(row["path"]), working)
     patch = {"working_audio_hash": _file_hash(working), "version_cursor": target_n,
              "candidate_mp3_path": None, "splice_confidence": None}
+    if row["working_text"] is not None:
+        patch["working_text"] = row["working_text"]
+        patch.update(_working_hans_patch(frow, row["working_hans"] or ""))
     patch.update(_clear_coverage_and_done(frow))
     db.update_fields(fid, **patch)
     _r2_upload_working(_session_row(sid)["trip_id"], dirs, frow)

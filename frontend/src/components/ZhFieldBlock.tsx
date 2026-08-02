@@ -53,9 +53,14 @@ const ZhFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine, ro
   // Enable "Generate from edit" only when the hanzi differs from what the WORKING take
   // currently says (working_hans, re-baselined at each combine) — not the seed. Otherwise
   // the button stays lit after a combine with nothing new to generate.
+  // `||`, not `??`: '' means "unset" for working_hans and must fall through to the seed,
+  // exactly as the backend's `_cjk_spoken` resolves it. `??` only happens to work today
+  // because `_working_hans_patch` DELETES the key rather than writing '' — the moment
+  // anything writes an empty string, `??` would keep it and light this button on every
+  // `_ZH` field.
   const hanziChanged = Boolean(
     field.localization &&
-      field.localization.cur.Hans !== (field.localization.working_hans ?? field.localization.orig.Hans),
+      field.localization.cur.Hans !== (field.localization.working_hans || field.localization.orig.Hans),
   );
   return (
     <div className="space-y-2">

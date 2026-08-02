@@ -17,7 +17,7 @@ from .models import (CreateSession, TextUpdate, SourceUpdate, Regenerate, Fallba
                      PlayedRanges, FlagSet, CommentSet, NarrationSet,
                      ClipCreate, ClipRegen, ClipComment, TrimNoise, TrimCandidate,
                      InsertSilence, RemoveSilence, RequestChanges, CompleteTrip,
-                     WaveInsertSilence, WaveRange, WaveMove,
+                     WaveInsertSilence, WaveRange, WaveMove, WaveInsertClip,
                      LocalizationUpdate, VersionSet, ApplySuggestedFix,
                      FindingResponse, SkipTriage,
                      Heartbeat, Recall, RecallResolve, ExternalReportStatus)
@@ -165,6 +165,20 @@ async def post_wave_silence(sid: str, fid: int, body: WaveRange):
 async def post_wave_move(sid: str, fid: int, body: WaveMove):
     return await run_in_threadpool(sessions.wave_move, sid, fid,
                                    body.start, body.end, body.to)
+
+
+@router.post("/sessions/{sid}/fields/{fid}/wave/insert-clip", dependencies=_EDIT)
+async def post_wave_insert_clip(sid: str, fid: int, body: WaveInsertClip):
+    # mp3 decode + encode is blocking — keep it off the event loop.
+    return await run_in_threadpool(sessions.wave_insert_clip, sid, fid,
+                                   body.at, body.clip_id)
+
+
+@router.post("/sessions/{sid}/fields/{fid}/text-matches-audio", dependencies=_EDIT)
+def post_text_matches_audio(sid: str, fid: int):
+    """"The audio already says this" — re-baseline the take's text after the reviewer made
+    the audio match by hand (waveform editor). Pure bookkeeping; touches no audio."""
+    return sessions.accept_text_as_voiced(sid, fid)
 
 
 @router.post("/sessions/{sid}/fields/{fid}/fallback", dependencies=_EDIT)

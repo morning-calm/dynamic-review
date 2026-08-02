@@ -207,6 +207,12 @@ class WaveMove(BaseModel):
     to: float
 
 
+class WaveInsertClip(BaseModel):
+    """Drop a 'Create new' take into the working audio at exactly ``at``."""
+    at: float
+    clip_id: int
+
+
 class Fallback(BaseModel):
     extent: Literal["sentence", "scene", "custom"]
     text: Optional[str] = None

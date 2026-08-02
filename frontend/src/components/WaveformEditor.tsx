@@ -6,6 +6,8 @@ interface WaveformEditorProps {
   field: Field;
   sid: string;
   onFieldUpdate: (f: Field) => void;
+  /** Opens the "Create new" workspace (this editor pastes what that produces). */
+  onOpenCreateNew?: () => void;
 }
 
 /**
@@ -25,7 +27,9 @@ interface WaveformEditorProps {
  *
  * Interaction: click to place the playhead, drag to select a span. With a span:
  * Silence / Delete / Cut (then click where to drop it). With no span, the Insert
- * buttons open a gap at the playhead.
+ * buttons open a gap at the playhead — or "Insert new" drops a take voiced under
+ * "Create new" in at the cursor, which is how a phrase gets REPLACED without the
+ * splice engine: delete the wrong audio, then paste the new take into the hole.
  */
 const HEIGHT = 96;
 
@@ -35,11 +39,13 @@ const fmt = (t: number) => {
   return `${m}:${s.toFixed(2).padStart(5, '0')}`;
 };
 
-const WaveformEditor = ({ field, sid, onFieldUpdate }: WaveformEditorProps) => {
+const WaveformEditor = ({ field, sid, onFieldUpdate, onOpenCreateNew }: WaveformEditorProps) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [wave, setWave] = useState<Waveform | null>(null);
   const [busy, setBusy] = useState(false);
+  // Open when the reviewer has more than one "Create new" take and must say which to paste.
+  const [pickClip, setPickClip] = useState(false);
   const [cursor, setCursor] = useState(0);
   const [sel, setSel] = useState<{ a: number; b: number } | null>(null);
   const [playhead, setPlayhead] = useState(0);
@@ -252,6 +258,7 @@ const WaveformEditor = ({ field, sid, onFieldUpdate }: WaveformEditorProps) => {
       onFieldUpdate(updated);
       setSel(null);
       setPending(null);
+      setPickClip(false);
       toast.success(`${label} — listen back to confirm.`);
     } catch (e) {
       if (e instanceof ApiError) toast.warn(e.detail);
@@ -283,6 +290,22 @@ const WaveformEditor = ({ field, sid, onFieldUpdate }: WaveformEditorProps) => {
   const dropHere = () =>
     pending &&
     run('Moved the selection', () => api.waveMove(sid, field.fid, pending.start, pending.end, cursor));
+
+  // --- paste a "Create new" take -------------------------------------------------
+  const clips = field.manual_clips;
+  const insertClip = (id: number) =>
+    run(`Inserted take ${id} at ${fmt(cursor)}`, () => api.waveInsertClip(sid, field.fid, cursor, id));
+
+  // One take → no question to ask; several → the reviewer picks which one goes here.
+  const onInsertNew = () => {
+    if (clips.length === 0) {
+      toast.info('Voice the replacement under “Create new” first, then insert it here.');
+      onOpenCreateNew?.();
+      return;
+    }
+    if (clips.length === 1) void insertClip(clips[0]!.id);
+    else setPickClip(true);
+  };
 
   // --- audition ------------------------------------------------------------------
   const playFromCursor = () => {
@@ -468,6 +491,23 @@ const WaveformEditor = ({ field, sid, onFieldUpdate }: WaveformEditorProps) => {
         >
           Cut &amp; move…
         </button>
+
+        <span aria-hidden="true" className="h-5 w-px shrink-0 self-center bg-gray-600" />
+        <button
+          type="button"
+          disabled={busy || Boolean(pending)}
+          onClick={onInsertNew}
+          title={
+            clips.length
+              ? `Drop a take you voiced under “Create new” in at the cursor (${clips.length} available)`
+              : 'Voice a replacement under “Create new”, then drop it in at the cursor'
+          }
+          className={`${btn} ${
+            clips.length ? 'border-amber-500 bg-amber-500/10 text-amber-300' : 'border-gray-600 text-gray-200'
+          }`}
+        >
+          Insert new{clips.length > 1 ? `… (${clips.length})` : ''}
+        </button>
         {pending && (
           <>
             <button
@@ -486,10 +526,49 @@ const WaveformEditor = ({ field, sid, onFieldUpdate }: WaveformEditorProps) => {
         {busy && <span className="text-xs text-gray-500">working…</span>}
       </div>
 
+      {/* Several takes attached → say which one lands at the cursor. Each is auditionable
+          here, so the choice is made by ear rather than by remembering an id. */}
+      {pickClip && clips.length > 1 && (
+        <div className="space-y-2 rounded border border-amber-700/60 bg-amber-950/20 p-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-amber-200">
+              Which take goes in at <span className="font-mono">{fmt(cursor)}</span>?
+            </span>
+            <button
+              type="button"
+              onClick={() => setPickClip(false)}
+              className="text-xs text-gray-400 hover:text-gray-200"
+            >
+              Cancel
+            </button>
+          </div>
+          {clips.map((c) => (
+            <div key={c.id} className="space-y-1 rounded border border-gray-700 bg-gray-900/50 p-2">
+              <span className="text-[11px] uppercase tracking-wide text-gray-500">
+                {c.kind} · attachment {c.id}
+              </span>
+              {c.kind === 'generated' && c.text.trim() && (
+                <p className="break-words text-xs text-gray-300">“{c.text.trim()}”</p>
+              )}
+              <audio controls preload="none" src={c.url} className="h-8 w-full" />
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void insertClip(c.id)}
+                className={`${btn} border-custom-green text-custom-green`}
+              >
+                Insert this one
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <p className="text-xs text-gray-500">
-        Click to place the cursor, drag to select. Pinch (or 🔍+) to zoom in for fine placement. These edits go
-        exactly where you put them — they can cut through a word, so listen back. Undo steps back through every
-        change.
+        Click to place the cursor, drag to select. Pinch (or 🔍+) to zoom in for fine placement. To swap a phrase:
+        voice it under “Create new”, <em>Delete</em> the old audio here, put the cursor in the gap and press{' '}
+        <em>Insert new</em>. These edits go exactly where you put them — they can cut through a word, so listen
+        back. Undo steps back through every change.
       </p>
     </div>
   );

@@ -37,6 +37,12 @@ The atom the UI renders/edits. One per editable thing.
                                       // original_text; re-set at each combine). JP gates
                                       // "Generate from edit" on the kana line vs THIS,
                                       // not the seed (_ZH sibling: working_hans).
+  "can_accept_text_as_voiced": false, // offer "Audio already matches"? True only when the
+                                      // text is ahead of the take AND the take was shaped
+                                      // by hand (version kind not v0_original/splice) —
+                                      // i.e. the reviewer edited the audio directly and
+                                      // working_text is stale. Never during ordinary
+                                      // edit-then-regenerate. See POST …/text-matches-audio.
   "flag": "none",                     // "none" | "done" | "edit_required"
   "comment": "",
   "edited_by": null,                  // who last changed this field (best-effort audit;
@@ -191,7 +197,13 @@ are admin-only. The audio-snapshot GET authenticates via the httpOnly cookie (br
 | `POST /api/sessions/{sid}/fields/{fid}/remove-silence` | `{ "pos": int, "seconds": 1.0 }` | `Field` — the inverse: shorten the pause at the caret by up to `seconds`, taken from the middle of the silence run (word release/onset untouched, ≥0.25s natural pause always kept). `409 no_pause` / `409 no_excess_pause`. Archives a version; drops any pending candidate. |
 | `POST /api/sessions/{sid}/fields/{fid}/trim-silence` | — | `Field` — normalize the TRAILING pause to the trip's level requirement (beginner ≈3s kept, others trimmed). No-op when already correct. |
 | `POST /api/sessions/{sid}/fields/{fid}/trim-candidate` | `{ "delta_ms": float }` | `Field` — nudge how much is trimmed off the END of the pending candidate before combining (+ trims more, − restores; re-derived from the pristine candidate). |
-| `POST /api/sessions/{sid}/fields/{fid}/undo` · `/redo` | — | `Field` — step the working take back/forward through the archived versions (v0 = pristine master). `409` at either end. Restoring clears any pending candidate. |
+| `GET /api/sessions/{sid}/fields/{fid}/waveform?track=working｜original` | — | `{ "duration": float, "buckets": int, "peaks": [int…], "hash": "…" }` — min/max envelope for the waveform editor (`peaks` interleaved min,max per bucket, each −127..127). |
+| `POST /api/sessions/{sid}/fields/{fid}/wave/insert-silence` | `{ "at": float, "seconds": 1.0 }` | `Field` — open a gap at EXACTLY `at`. Unlike the caret-driven `insert-silence` it does **not** snap to a real pause: the reviewer is looking at the waveform. |
+| `POST /api/sessions/{sid}/fields/{fid}/wave/delete` · `/wave/silence` | `{ "start": float, "end": float }` | `Field` — remove the span and close the gap (8 ms seam), or blank it to silence keeping the clip's length. `422 bad_range` under 10 ms; delete also `422 would_empty`. |
+| `POST /api/sessions/{sid}/fields/{fid}/wave/move` | `{ "start": float, "end": float, "to": float }` | `Field` — cut the span and paste it at `to` (all measured on the clip as it stands NOW). `422 paste_inside_selection`. |
+| `POST /api/sessions/{sid}/fields/{fid}/wave/insert-clip` | `{ "at": float, "clip_id": int }` | `Field` — drop a **Create new** take (`manual_clips`) into the working audio at `at`, level-matched to the surrounding audio (gated RMS, ±12 dB) with 8 ms seams. The paste half of "voice a replacement → delete the bad audio → insert it". `404 no_clip_audio`, `422 empty_clip`. |
+| `POST /api/sessions/{sid}/fields/{fid}/text-matches-audio` | — | `Field` — **"Audio already matches"**: re-baseline `working_text` (+ `_ZH` `working_hans`) to the current text after the reviewer made the audio match BY HAND. Generates nothing, touches no audio, leaves coverage alone. Without it, hand-cutting the audio for deleted words wedges the field (`409 unvoiced_edits_outside_highlight` one way, "edit removed text only" the other). `409 already_matches` when the take is already in step; `400 no_audio` on a text-only field. Offer it only while `Field.can_accept_text_as_voiced`. |
+| `POST /api/sessions/{sid}/fields/{fid}/undo` · `/redo` | — | `Field` — step the working take back/forward through the archived versions (v0 = pristine master). `409` at either end. Restoring clears any pending candidate **and restores that take's text baseline** (`working_text` / `_ZH` `working_hans`), so the splice engine diffs against what the restored audio actually says. Versions archived before 2026-08-02 carry no snapshot and leave the baseline untouched. |
 | `POST /api/sessions/{sid}/fields/{fid}/fallback` | `{ "extent": "sentence"|"scene"|"custom", "text": "…"?, "description": "…" }` | `Field` — generates a **standalone ElevenLabs** clip (`audio.fallback`), sets `flag:"edit_required"`, stores the description for the admin. |
 | `POST /api/sessions/{sid}/fields/{fid}/import-mp3` | multipart `file=<mp3>` | `Field` — **admin** replaces working `{i}.mp3` with a hand-edited file; archives prior take. |
 | `POST /api/sessions/{sid}/fields/{fid}/played` | `{ "ranges": [[s,e],…] }` | `{ "played_coverage": [[s,e],…], "can_mark_done": bool }` — merges coverage of the **current** working audio. |
