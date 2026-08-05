@@ -166,6 +166,17 @@ Reviewer `john` (Mandarin, replaces Ted) was created without an email —
 `manage.py set-email --username john --email …` once known, else the activity notifier
 and ai_review findings emails silently skip him.
 
+### 0i. Set the Korean reviewer's email — and decide the account's real name (added 2026-08-06)
+Reviewer `korean` (24 TOPIK rungs, created live 2026-08-06) has **no email**, dave's call at
+creation: `manage.py set-email --username korean --email …`, else the activity notifier and
+ai_review findings emails silently skip the account (nav badge only). ⚠ Set it **before** the
+first Gate-2 run ingests findings for a Korean trip — findings ingested pre-email are
+watermarked past and never mailed, which is exactly how toshifumi's Tokyo_03 findings went
+badge-only on 2026-08-05.
+`korean` is a **placeholder** account name (the EU convention), not a person — the Scripts
+log's `<sunyoung>` was a template placeholder, never a real identity. If a named individual
+takes the work, create their own account and deactivate this one rather than renaming.
+
 ### 0f. ~~Make pipeline re-uploads a supported operation~~ — **DONE 2026-07-23 (`scripts/refresh_trips.py`)**
 `audit` (per-trip CLEAR / RESEED / HANDS OFF from sessions + presence + reviewer work +
 completed status) · `clear` (guarded: asserts no other trip's cache moved) · `verify`
