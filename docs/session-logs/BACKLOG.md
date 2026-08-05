@@ -121,7 +121,10 @@ predicted. See session-2 log.
 `ted`'s address is set in the live DB, and `app_url` is now in the laptop's
 `scripts/notifier_config.json`, so the findings email deep-links to
 `https://review.dynamiclanguages.org/review/<sid>` (verified HTTP 200).
-**Remaining:** `toshifumi` and `admin` still have no email set.
+**Remaining:** `admin` (and the EU-language accounts + `john`, see 0h) still have no email
+set. `toshifumi` was set to tosh.kawashita@gmail.com on 2026-08-05 — but AFTER his Tokyo_03
+findings were ingested, so those were watermarked past with no email (badge only); future
+findings will email him.
 
 ### 0d. Two design questions dave deferred
 - Should a carried-forward `rejected` answer survive a **verdict change** (warning→needs_human
