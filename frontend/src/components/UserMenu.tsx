@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../authContext';
-import { api, type AuthUser } from '../api';
+import { api, type AuthUser, type FindingsInbox } from '../api';
 
 /** Current user + logout, the "Completed" link (both roles), the "Bug reports" link
  * (both roles, with an unread/open badge), the admin-only "Review queue" link, and the
@@ -11,7 +11,8 @@ const UserMenu = () => {
   const [bugBadge, setBugBadge] = useState(0);
   const [recallBadge, setRecallBadge] = useState(0);
   const [aiBadge, setAiBadge] = useState(0);
-  const [aiHref, setAiHref] = useState('/');
+  const [aiSessions, setAiSessions] = useState<FindingsInbox['sessions']>([]);
+  const [aiOpen, setAiOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
@@ -34,8 +35,9 @@ const UserMenu = () => {
   }, [user]);
 
   // AI-review triage waiting on THIS user (a reviewer sees their own submissions; an admin
-  // sees every trip parked with a reviewer). Links straight into the trip when there's just
-  // one — that's the common case, and it saves hunting for it in the list.
+  // sees every trip parked with a reviewer). One waiting session links straight into it —
+  // the common case. Several open a picker: the old fallback linked to '/', which from the
+  // trip list itself navigated nowhere and read as a dead button (dave, 2026-08-05).
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
@@ -45,9 +47,7 @@ const UserMenu = () => {
         .then((inbox) => {
           if (cancelled) return;
           setAiBadge(inbox.count);
-          setAiHref(
-            inbox.sessions.length === 1 ? `/review/${inbox.sessions[0].session_id}` : '/',
-          );
+          setAiSessions(inbox.sessions);
         })
         .catch(() => {});
     load();
@@ -99,7 +99,7 @@ const UserMenu = () => {
         bugBadge={bugBadge}
         recallBadge={recallBadge}
         aiBadge={aiBadge}
-        aiHref={aiHref}
+        aiSessions={aiSessions}
       />
 
       <div className="hidden flex-wrap items-center justify-end gap-2 gap-y-1 text-xs sm:flex">
@@ -134,9 +134,9 @@ const UserMenu = () => {
           </>
         )}
       </div>
-      {aiBadge > 0 && (
+      {aiBadge > 0 && aiSessions.length === 1 && (
         <Link
-          to={aiHref}
+          to={`/review/${aiSessions[0].session_id}`}
           className="relative rounded border border-purple-600 bg-purple-900/30 px-2 py-1 text-purple-100 hover:bg-purple-800/50"
           title={`${aiBadge} AI-review item${aiBadge === 1 ? '' : 's'} waiting for your response`}
         >
@@ -145,6 +145,47 @@ const UserMenu = () => {
             {aiBadge}
           </span>
         </Link>
+      )}
+      {aiBadge > 0 && aiSessions.length > 1 && (
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setAiOpen((o) => !o)}
+            aria-haspopup="menu"
+            aria-expanded={aiOpen}
+            className="relative rounded border border-purple-600 bg-purple-900/30 px-2 py-1 text-purple-100 hover:bg-purple-800/50"
+            title={`${aiBadge} AI-review item${aiBadge === 1 ? '' : 's'} across ${aiSessions.length} trips — click to pick one`}
+          >
+            AI review
+            <span className="ml-1 rounded-full bg-purple-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+              {aiBadge}
+            </span>
+          </button>
+          {aiOpen && (
+            <>
+              {/* click-away backdrop (same pattern as the help menu) */}
+              <div className="fixed inset-0 z-30" onClick={() => setAiOpen(false)} />
+              <div className="absolute right-0 z-40 mt-1 min-w-64 rounded border border-gray-700 bg-gray-900 py-1 shadow-lg">
+                {aiSessions.map((s) => (
+                  <Link
+                    key={s.session_id}
+                    to={`/review/${s.session_id}`}
+                    onClick={() => setAiOpen(false)}
+                    className="flex items-center justify-between gap-3 whitespace-nowrap rounded px-3 py-1.5 text-left text-gray-200 hover:bg-gray-700"
+                  >
+                    <span>
+                      {s.trip_id}
+                      {s.submitted_by && <span className="text-gray-500"> · {s.submitted_by}</span>}
+                    </span>
+                    <span className="rounded-full bg-purple-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                      {s.open}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       )}
       <Link
         to="/bugs"
@@ -207,7 +248,7 @@ const MobileMenu = ({
   bugBadge,
   recallBadge,
   aiBadge,
-  aiHref,
+  aiSessions,
 }: {
   user: AuthUser;
   logout: () => void;
@@ -215,7 +256,7 @@ const MobileMenu = ({
   bugBadge: number;
   recallBadge: number;
   aiBadge: number;
-  aiHref: string;
+  aiSessions: FindingsInbox['sessions'];
 }) => {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
@@ -247,12 +288,14 @@ const MobileMenu = ({
             <div className="border-b border-gray-800 px-3 py-2 text-xs text-gray-400">
               {user.username} <span className="text-gray-600">·</span> {user.role}
             </div>
-            {aiBadge > 0 && (
-              <Link to={aiHref} className={item} onClick={close}>
-                <span>AI review</span>
-                {badge(aiBadge, 'bg-purple-600 text-white')}
+            {/* One row per waiting trip — a single collapsed "AI review" row used to
+                link to '/' when several trips waited, which navigated nowhere. */}
+            {aiSessions.map((s) => (
+              <Link key={s.session_id} to={`/review/${s.session_id}`} className={item} onClick={close}>
+                <span className="truncate">AI review · {s.trip_id}</span>
+                {badge(s.open, 'bg-purple-600 text-white')}
               </Link>
-            )}
+            ))}
             <Link to="/bugs" className={item} onClick={close}>
               <span>Bug reports</span>
               {badge(bugBadge, 'bg-rose-600 text-white')}
