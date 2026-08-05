@@ -28,7 +28,7 @@ const MODAL_STYLE: Modal.Styles = {
 };
 
 // Variant display order within a family.
-const LEVEL_ORDER = ['EN', 'A12', 'B1', 'B2', 'N5', 'N4', 'HSK1-2', 'HSK3', 'ZH', 'JP', ''];
+const LEVEL_ORDER = ['EN', 'A12', 'B1', 'B2', 'N5', 'N4', 'N3', 'HSK1-2', 'HSK3', 'ZH', 'JP', ''];
 const levelRank = (l: string): number => {
   const i = LEVEL_ORDER.indexOf(l);
   return i < 0 ? 99 : i;

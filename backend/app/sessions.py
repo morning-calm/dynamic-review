@@ -633,6 +633,12 @@ def _list_trips_from_manifest() -> list[dict]:
 _LEVEL_SUFFIXES = [
     ("_A12_EN", "A12"), ("_B1_EN", "B1"), ("_B2_EN", "B2"),
     ("_Beg_N5_JP", "N5"), ("_Beg_N4_JP", "N4"), ("_N5_JP", "N5"), ("_N4_JP", "N4"),
+    # The N3 rung (26 trips, wired to the queue 2026-08-05). Without it `_N3_JP` fell
+    # through to the generic ("_JP", "JP") below, which labels the rung "JP" and — worse —
+    # bases its family at `Tokyo_06_HieShrine_N3`, splitting it off from the N5/N4 rungs
+    # of the same place. The trip list survives that (a manifest row carries its own
+    # level/family), but `completed_trips` does not: its family is _level_family's.
+    ("_N3_JP", "N3"),
     ("_Beg_JP", "N5"),   # real N5 ids use _Beg_JP (e.g. Tokyo_07_Olympic_Beg_JP)
     ("_HSK12_ZH", "HSK1-2"), ("_HSK3_ZH", "HSK3"),
     # EU languages (2026-07-16): _A12_* joins _BEGINNER_LEVELS (3s SceneDesc tail);
@@ -4923,6 +4929,10 @@ _IMAGE_BASE_RES = [
     (re.compile(r"^(?P<b>.+)_HSK\d+_ZH$"), ("{b}_EN",)),
     (re.compile(r"^(?P<b>.+)_Beg_N4_JP$"), ("{b}_Beg_JP", "{b}_EN")),
     (re.compile(r"^(?P<b>.+)_Beg_N5_JP$"), ("{b}_Beg_JP", "{b}_EN")),
+    # The N3 rung narrates the SAME scenes as its N5/N4 siblings, so it shares their
+    # stills. Without this it matched no rule and only ever looked under its own id —
+    # a folder that does not exist, leaving every scene image null in the review card.
+    (re.compile(r"^(?P<b>.+)_N3_JP$"), ("{b}_Beg_JP", "{b}_EN")),
     (re.compile(r"^(?P<b>.+)_Beg_JP$"), ("{b}_EN",)),
     (re.compile(r"^(?P<b>.+)_(?:A12|B1|B2)_EN$"), ("{b}_EN",)),
 ]
