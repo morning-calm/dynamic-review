@@ -44,24 +44,9 @@ const ZhFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine, ro
     selection,
     clearSelection,
   } = useTextSelection(field.localization?.cur.Hans ?? '', field.audio.working);
-  // SceneDesc supports the surgical CJK splice ("Generate from edit", mode=segment): the
-  // backend re-voices just the edited hanzi clause and falls back to whole-regen when
-  // uncertain. Enabled once the Simplified hanzi differs from the seed. Q&A fields stay
-  // whole-only. The selection ops read the Hans highlight (offsets are sent as-is; the
-  // backend maps them onto the spoken hanzi via the CJK aligner).
+  // SceneDesc gets the highlight/selection audio tools (the backend maps the Hans
+  // selection onto the spoken hanzi via the CJK aligner). Q&A fields stay whole-only.
   const isSceneDesc = field.field_path === 'SceneDesc';
-  // Enable "Generate from edit" only when the hanzi differs from what the WORKING take
-  // currently says (working_hans, re-baselined at each combine) — not the seed. Otherwise
-  // the button stays lit after a combine with nothing new to generate.
-  // `||`, not `??`: '' means "unset" for working_hans and must fall through to the seed,
-  // exactly as the backend's `_cjk_spoken` resolves it. `??` only happens to work today
-  // because `_working_hans_patch` DELETES the key rather than writing '' — the moment
-  // anything writes an empty string, `??` would keep it and light this button on every
-  // `_ZH` field.
-  const hanziChanged = Boolean(
-    field.localization &&
-      field.localization.cur.Hans !== (field.localization.working_hans || field.localization.orig.Hans),
-  );
   return (
     <div className="space-y-2">
       {header}
@@ -96,7 +81,6 @@ const ZhFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine, ro
               field={field}
               sid={sid}
               onFieldUpdate={onFieldUpdate}
-              hasTextChange={isSceneDesc && hanziChanged}
               wholeOnly={!isSceneDesc}
               hasSelection={isSceneDesc && Boolean(field.localization)}
               // Only offer the selection-reading tools when a Hans surface exists —
@@ -114,7 +98,14 @@ const ZhFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine, ro
         </>
       )}
       <div className="space-y-2" inert={readOnly}>
-        <FlagControl field={field} sid={sid} onFieldUpdate={onFieldUpdate} />
+        <FlagControl
+          field={field}
+          sid={sid}
+          onFieldUpdate={onFieldUpdate}
+          beforeRevert={async () => {
+            await flushRef.current?.();
+          }}
+        />
         <CommentBox field={field} sid={sid} onFieldUpdate={onFieldUpdate} />
       </div>
     </div>

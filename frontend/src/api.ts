@@ -43,7 +43,7 @@ export const setUnauthorizedHandler = (fn: (() => void) | null): void => {
 // ---------------------------------------------------------------------------
 
 export type FlagValue = 'none' | 'done' | 'edit_required';
-export type RegenerateMode = 'segment' | 'whole' | 'highlight' | 'alt';
+export type RegenerateMode = 'whole' | 'highlight' | 'alt';
 export type FallbackExtent = 'sentence' | 'scene' | 'custom';
 export type SessionStatus =
   | 'in_review' | 'submitted' | 'approving' | 'approved' | 'changes_requested' | 'ai_review';
@@ -414,8 +414,8 @@ export interface LocalizationBlock {
   cur: LocalizationScripts;
   orig: LocalizationScripts;
   /** The Simplified hanzi the WORKING take currently says — re-baselined at each combine.
-   * Undefined before the first combine (then compare against `orig.Hans`). Drives whether
-   * "Generate from edit" has anything new to do since the last take was built. */
+   * Undefined before the first combine (then compare against `orig.Hans`). The splice
+   * engine's diff baseline for the highlight/alt tools. */
   working_hans?: string | null;
 }
 
@@ -437,9 +437,8 @@ export interface Field {
   has_audio: boolean;
   original_text: string;
   current_text: string;
-  /** What the WORKING take says (seeded to original_text; re-set at each combine). The
-   * JP "Generate from edit" gate compares the kana line against THIS, not the seed —
-   * the `_ZH` sibling is `localization.working_hans`. */
+  /** What the WORKING take says (seeded to original_text; re-set at each combine) —
+   * the splice engine's diff baseline. The `_ZH` sibling is `localization.working_hans`. */
   working_text: string | null;
   /** Offer the "Audio already matches" re-baseline (`api.textMatchesAudio`)? True only
    * when the text is ahead of the take (CJK: measured on the spoken text — `_ZH` Hans /
@@ -635,6 +634,14 @@ export interface TripListItem {
   reviewable: boolean;
   /** Admin pinned this trip to the top of the reviewer list (above Trello order). */
   pinned: boolean;
+  /** Admin priority score (higher = review sooner); scored trips order first. Null = none. */
+  priority: number | null;
+  /** The trip's language, from its id suffix ("English" / "Japanese" / "Mandarin" / …) —
+   * what a reviewer holding that language ACL sees. Drives the admin's language filter. */
+  language: string;
+  /** Total seconds of review audio in this trip (all narration + Q&A clips), or null
+   * when unknown. Manifest-stamped by the Scripts export, else measured server-side. */
+  duration_sec: number | null;
 }
 
 export interface PlayedResponse {
@@ -1050,6 +1057,11 @@ export const api = {
       method: 'DELETE',
       headers: jsonHeaders(),
     }),
+
+  /** Admin only: set (score) or clear (null) a trip's priority — higher scores order
+   * first in every reviewer's list, above pins. */
+  setTripPriority: (tripId: string, score: number | null): Promise<{ ok: boolean }> =>
+    postJson(`/api/trips/${encodeURIComponent(tripId)}/priority`, { score }),
 
   login: (username: string, password: string): Promise<LoginResponse> =>
     postJson('/api/login', { username, password }),

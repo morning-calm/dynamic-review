@@ -147,12 +147,25 @@ CREATE TABLE IF NOT EXISTS completed_trips (
     note         TEXT NOT NULL DEFAULT ''
 );
 
--- In-app prioritisation: an admin "pins" a trip to the top of the reviewer list. The
--- Trello card order is the base; pinned trips float above it (newest pin first).
+-- In-app prioritisation: an admin "pins" a trip to the top of the reviewer list, and/or
+-- gives it a numeric priority `score` (higher = sooner; the reviewer list is ordered
+-- scored-desc, then pinned (newest pin first), then Trello card order). A row may hold a
+-- pin, a score, or both: pinned_at NULL = not pinned (score-only row).
 CREATE TABLE IF NOT EXISTS trip_priority (
     trip_id   TEXT PRIMARY KEY,
-    pinned_by TEXT NOT NULL,
-    pinned_at REAL NOT NULL
+    pinned_by TEXT NOT NULL DEFAULT '',
+    pinned_at REAL,
+    score     REAL
+);
+
+-- Cached total mp3 duration of a trip's review audio (sum of the canonical scene/Q&A
+-- clips in its resolved master dir). Written lazily by list_trips when the manifest
+-- doesn't already carry a duration; a manifest value always wins over this cache.
+CREATE TABLE IF NOT EXISTS trip_durations (
+    trip_id     TEXT PRIMARY KEY,
+    seconds     REAL NOT NULL,
+    files       INTEGER NOT NULL,
+    computed_at REAL NOT NULL
 );
 
 -- Bug reports: a reviewer/admin flags a problem on a specific field, in any language.
@@ -376,6 +389,14 @@ def init() -> None:
         ucols = {r["name"] for r in conn.execute("PRAGMA table_info(users)")}
         if "email" not in ucols:
             conn.execute("ALTER TABLE users ADD COLUMN email TEXT")
+        # Priority scoring (2026-08-05): trip_priority grows a nullable `score`. Existing
+        # rows are pins; pinned_at stays NOT NULL in old DBs, which is fine (the schema's
+        # nullable pinned_at only matters for NEW score-only rows — SQLite ALTERs don't
+        # rewrite constraints, and we never insert a NULL pinned_at into an old table
+        # without the migration below having added `score` first).
+        pcols = {r["name"] for r in conn.execute("PRAGMA table_info(trip_priority)")}
+        if "score" not in pcols:
+            conn.execute("ALTER TABLE trip_priority ADD COLUMN score REAL")
         conn.commit()
         _CONN = conn
 

@@ -49,14 +49,6 @@ const ScriptRow = ({ sid, fid, script, cur, orig, rows, onFieldUpdate, registerF
   valueRef.current = value;
   const { begin, end } = useSaveCoordinator();
 
-  // Adopt external changes (e.g. another reviewer, or a resume) without clobbering active typing.
-  useEffect(() => {
-    if (cur !== savedRef.current) {
-      savedRef.current = cur;
-      setValue(cur);
-    }
-  }, [cur]);
-
   // Debounced value for the orig→new diff (mirrors the target editor).
   const [diffValue, setDiffValue] = useState(value);
   useEffect(() => {
@@ -94,7 +86,12 @@ const ScriptRow = ({ sid, fid, script, cur, orig, rows, onFieldUpdate, registerF
           end(false);
           savedRef.current = prev; // delta is unsaved again
           toast.error(`Couldn't save ${SCRIPT_LABEL[script]}: ${e instanceof ApiError ? e.detail : 'network error'}`);
-          if (!isRetry) window.setTimeout(() => void persistRef.current(text, true), RETRY_MS);
+          // Retry only while the textarea still holds this text — after an external
+          // replace (revert/undo) a retry would write the reverted-away script back.
+          if (!isRetry)
+            window.setTimeout(() => {
+              if (valueRef.current === text) void persistRef.current(text, true);
+            }, RETRY_MS);
         }
       })();
       inFlightRef.current = req;
@@ -109,6 +106,17 @@ const ScriptRow = ({ sid, fid, script, cur, orig, rows, onFieldUpdate, registerF
   persistRef.current = persist;
 
   const save = useDebouncedCallback((text: string) => void persist(text), 1000);
+
+  // Adopt external changes (another reviewer, a resume, a revert) without clobbering
+  // active typing — and cancel any pending debounced save, so a stale autosave can't
+  // re-write the replaced-away script a second later (same class as EditableField).
+  useEffect(() => {
+    if (cur !== savedRef.current) {
+      save.cancel();
+      savedRef.current = cur;
+      setValue(cur);
+    }
+  }, [cur, save]);
 
   // Expose an awaitable flush to the parent (S3): run any pending debounce now and wait
   // for the in-flight PUT, so a regenerate reads the just-saved hanzi.

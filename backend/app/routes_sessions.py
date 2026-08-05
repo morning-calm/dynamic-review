@@ -19,7 +19,7 @@ from .models import (CreateSession, TextUpdate, SourceUpdate, Regenerate, Fallba
                      InsertSilence, RemoveSilence, RequestChanges, CompleteTrip,
                      WaveInsertSilence, WaveRange, WaveMove, WaveInsertClip,
                      LocalizationUpdate, VersionSet, ApplySuggestedFix,
-                     FindingResponse, SkipTriage,
+                     FindingResponse, SkipTriage, TripPriority,
                      Heartbeat, Recall, RecallResolve, ExternalReportStatus)
 
 router = APIRouter(prefix="/api")
@@ -423,3 +423,11 @@ def post_pin_trip(trip_id: str, admin=Depends(auth.require_admin)):
 @router.delete("/trips/{trip_id}/pin")
 def delete_pin_trip(trip_id: str, admin=Depends(auth.require_admin)):
     return sessions.unpin_trip(admin, trip_id)
+
+
+@router.post("/trips/{trip_id}/priority")
+def post_trip_priority(trip_id: str, body: TripPriority,
+                       admin=Depends(auth.require_admin)):
+    """Set (or clear, with score=null) a trip's numeric priority — higher scores order
+    first in every reviewer's list."""
+    return sessions.set_trip_priority(admin, trip_id, body.score)

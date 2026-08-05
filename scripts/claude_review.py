@@ -160,12 +160,26 @@ def call_claude(diff: dict) -> dict:
     if proc.returncode != 0:
         if _looks_like_limit(proc.stdout, proc.stderr):
             raise UsageLimitError(f"claude usage limit: {(proc.stderr or proc.stdout)[:200]}")
-        raise RuntimeError(f"claude exited {proc.returncode}: {proc.stderr[:400]}")
+        # The real reason usually rides in the JSON envelope on STDOUT (e.g. "Not logged
+        # in · Please run /login" after a laptop re-auth lapse — 2026-08-04/05, five
+        # silent "claude exited 1:" retries), so surface stdout too, preferring the
+        # envelope's own result text.
+        detail = proc.stderr.strip() or ""
+        try:
+            env = json.loads(proc.stdout)
+            detail = detail or str(env.get("result") or env)[:400]
+        except (ValueError, TypeError):
+            detail = detail or proc.stdout.strip()[:400]
+        if "not logged in" in detail.lower():
+            detail += "  → ssh to the host and run `claude /login` (interactive)."
+        raise RuntimeError(f"claude exited {proc.returncode}: {detail[:400]}")
     envelope = json.loads(proc.stdout)
     if isinstance(envelope, dict) and envelope.get("is_error"):
         msg = str(envelope.get("result") or envelope)[:400]
         if _looks_like_limit(msg, str(envelope.get("api_error_status") or "")):
             raise UsageLimitError(f"claude usage limit: {msg[:200]}")
+        if "not logged in" in msg.lower():
+            msg += "  → ssh to the host and run `claude /login` (interactive)."
         raise RuntimeError(f"claude error envelope: {msg}")
     text = envelope.get("result") if isinstance(envelope, dict) else None
     if not text:

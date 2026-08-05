@@ -156,8 +156,14 @@ class RegenRange(BaseModel):
     end: int
 
 
+class TripPriority(BaseModel):
+    """Admin priority score for a trip: higher = review sooner; null clears it."""
+    score: Optional[float] = None
+
+
 class Regenerate(BaseModel):
-    mode: Literal["segment", "whole", "highlight", "alt"]
+    # "segment" (Generate from edit) was removed 2026-08-05 — highlight/alt/whole cover it.
+    mode: Literal["whole", "highlight", "alt"]
     range: Optional[RegenRange] = None
     alt_text: Optional[str] = None   # mode="alt": free/phonetic text to voice in the span
 

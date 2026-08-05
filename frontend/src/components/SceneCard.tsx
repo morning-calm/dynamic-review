@@ -37,14 +37,6 @@ interface SceneCardProps {
   language?: string;
 }
 
-/** The line ElevenLabs actually voices for a Japanese SceneDesc: the last non-empty line
- * (the kana under the kanji). Editing only the kanji line therefore changes nothing in the
- * audio — the "Generate from edit" gate keys off this so it doesn't light up spuriously. */
-const spokenLine = (text: string): string => {
-  const ls = text.split('\n').map((s) => s.trim()).filter(Boolean);
-  return ls.length ? ls[ls.length - 1] : text;
-};
-
 const optionIndex = (fieldPath: string): number | null => {
   const m = fieldPath.match(/^questionOption\[(\d+)\]$/);
   return m ? Number(m[1]) : null;
@@ -148,7 +140,7 @@ const SceneCard = ({
     onApplied: onFindingApplied,
   };
 
-  // Live SceneDesc text + textarea ref, for "Generate from edit" + highlight mode.
+  // Live SceneDesc text + textarea ref, for the highlight/selection audio tools.
   const descFlushRef = useRef<(() => Promise<void>) | null>(null);
   const [descLive, setDescLive] = useState(sceneDesc?.current_text ?? '');
 
@@ -264,20 +256,6 @@ const SceneCard = ({
                         field={sceneDesc}
                         sid={sid}
                         onFieldUpdate={onFieldUpdate}
-                        // JP: only a change to the voiced (kana) line should enable "Generate
-                        // from edit" — compared against what the WORKING take says (set at
-                        // combine), not the seed, or the button re-lights after a combine when
-                        // only the kanji was touched. English keys off the whole field.
-                        hasTextChange={
-                          isJp
-                            ? spokenLine(descLive) !==
-                              // `||`, not `??`: '' means "unset" for working_text (the
-                              // backend's _working_base_raw falls back the same way), and
-                              // `??` would keep the empty string and light the button up
-                              // on every JP field.
-                              spokenLine(sceneDesc.working_text || sceneDesc.original_text)
-                            : descLive !== sceneDesc.original_text
-                        }
                         getSelectionRange={getSelectionRange}
                         capturedSelection={descSelection}
                         onClearSelection={clearDescSelection}
@@ -292,7 +270,14 @@ const SceneCard = ({
                   </>
                 )}
                 <div className="space-y-2" inert={readOnly}>
-                  <FlagControl field={sceneDesc} sid={sid} onFieldUpdate={onFieldUpdate} />
+                  <FlagControl
+                    field={sceneDesc}
+                    sid={sid}
+                    onFieldUpdate={onFieldUpdate}
+                    beforeRevert={async () => {
+                      await descFlushRef.current?.();
+                    }}
+                  />
                   <CommentBox field={sceneDesc} sid={sid} onFieldUpdate={onFieldUpdate} />
                 </div>
               </>

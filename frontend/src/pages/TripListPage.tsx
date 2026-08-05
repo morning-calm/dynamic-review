@@ -43,6 +43,17 @@ const STATUS_BADGE: Record<SessionStatus, { label: string; cls: string }> = {
   ai_review: { label: 'AI review — respond', cls: 'bg-purple-600' },
 };
 
+/** "12:34" under an hour, else "1h 02m" — total review audio in the trip. */
+const formatDuration = (sec: number): string => {
+  const s = Math.round(sec);
+  if (s < 3600) {
+    const m = Math.floor(s / 60);
+    return `${m}:${String(s % 60).padStart(2, '0')}`;
+  }
+  const h = Math.floor(s / 3600);
+  return `${h}h ${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}m`;
+};
+
 const StatusBadge = ({ trip }: { trip: TripListItem }) => {
   if (!trip.has_session || !trip.status) {
     return <span className="rounded bg-gray-700 px-2 py-0.5 text-xs text-gray-300">Not started</span>;
@@ -69,6 +80,11 @@ const TripListPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
   const [lane, setLane] = useState<LaneFilter>('all');
+  // Admin-only language filter: show exactly what a reviewer with that language sees.
+  const [langFilter, setLangFilter] = useState<string>('all');
+  // Priority editor: which trip's inline score input is open, and its draft value.
+  const [prioTarget, setPrioTarget] = useState<string | null>(null);
+  const [prioDraft, setPrioDraft] = useState('');
   // Live presence dots: who is on which trip right now (heartbeat from the session pages).
   const presence = usePresence();
 
@@ -120,6 +136,28 @@ const TripListPage = () => {
       .catch((e: unknown) => toast.error(`Pin failed: ${e instanceof ApiError ? e.detail : 'network error'}`));
   };
 
+  const openPriority = (trip: TripListItem) => {
+    setPrioDraft(trip.priority !== null ? String(trip.priority) : '');
+    setPrioTarget(trip.trip_id);
+  };
+
+  const savePriority = (tripId: string, raw: string) => {
+    const trimmed = raw.trim();
+    const score = trimmed === '' ? null : Number(trimmed);
+    if (score !== null && !Number.isFinite(score)) {
+      toast.warn('Priority must be a number (empty clears it).');
+      return;
+    }
+    api
+      .setTripPriority(tripId, score)
+      .then(() => {
+        setPrioTarget(null);
+        return refreshTrips();
+      })
+      .catch((e: unknown) =>
+        toast.error(`Priority failed: ${e instanceof ApiError ? e.detail : 'network error'}`));
+  };
+
   const openCompleteModal = (trip: TripListItem) => {
     setCompleteNote('');
     setCompleteTarget(trip);
@@ -147,13 +185,22 @@ const TripListPage = () => {
     return c;
   }, [trips]);
 
-  // Filter by lane, then group by family (place). Priority comes from the SERVER order
-  // (pinned trips first, then Trello card order), so groups are ordered by their topmost
-  // server position and pinned variants float to the top within a group.
+  // Languages present in the (admin's) list — the filter's options.
+  const languages = useMemo(() => {
+    const s = new Set<string>();
+    for (const t of trips ?? []) if (t.language) s.add(t.language);
+    return [...s].sort();
+  }, [trips]);
+
+  // Filter by lane (+ admin language filter), then group by family (place). Order comes
+  // from the SERVER (priority scores first, then pins, then Trello card order), so groups
+  // are ordered by their topmost server position; within a group, scored variants first
+  // (highest score), then pinned, then level order.
   const groups = useMemo(() => {
     if (!trips) return [];
     const serverIndex = new Map(trips.map((t, i) => [t.trip_id, i] as const));
-    const filtered = lane === 'all' ? trips : trips.filter((t) => t.lane === lane);
+    let filtered = lane === 'all' ? trips : trips.filter((t) => t.lane === lane);
+    if (langFilter !== 'all') filtered = filtered.filter((t) => t.language === langFilter);
     const byFamily = new Map<string, TripListItem[]>();
     for (const t of filtered) {
       const key = t.family || t.trip_id;
@@ -166,6 +213,7 @@ const TripListPage = () => {
         family,
         items: [...items].sort(
           (a, b) =>
+            (b.priority ?? Number.NEGATIVE_INFINITY) - (a.priority ?? Number.NEGATIVE_INFINITY) ||
             Number(b.pinned) - Number(a.pinned) ||
             levelRank(a.level) - levelRank(b.level) ||
             a.trip_id.localeCompare(b.trip_id),
@@ -173,7 +221,7 @@ const TripListPage = () => {
         rank: Math.min(...items.map((t) => serverIndex.get(t.trip_id) ?? Number.MAX_SAFE_INTEGER)),
       }))
       .sort((a, b) => a.rank - b.rank);
-  }, [trips, lane]);
+  }, [trips, lane, langFilter]);
 
   const openTrip = (tripId: string) => {
     setOpening(tripId);
@@ -219,7 +267,7 @@ const TripListPage = () => {
           variant to correct.
         </p>
 
-      <div className="mb-5 flex gap-2">
+      <div className="mb-5 flex flex-wrap items-center gap-2">
         {tabs.map(([v, label]) => (
           <button
             key={v}
@@ -232,6 +280,23 @@ const TripListPage = () => {
             {label}
           </button>
         ))}
+        {/* Admin: view the list as one language's reviewer sees it (reviewers are already
+            scoped server-side, so the filter would be a no-op for them). */}
+        {isAdmin && languages.length > 1 && (
+          <select
+            value={langFilter}
+            onChange={(e) => setLangFilter(e.target.value)}
+            className="ml-auto rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm text-gray-200"
+            title="Show only one language's trips — exactly what that translator sees"
+          >
+            <option value="all">All languages</option>
+            {languages.map((l) => (
+              <option key={l} value={l}>
+                {l}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {trips === null && <p className="text-gray-400">Loading trips…</p>}
@@ -313,6 +378,14 @@ const TripListPage = () => {
               {g.items.map((trip) => (
                 <li key={trip.trip_id} className="flex flex-wrap items-center justify-between gap-4 gap-y-2 px-4 py-2.5">
                   <div className="flex min-w-0 items-center gap-2">
+                    {trip.priority !== null && (
+                      <span
+                        className="shrink-0 rounded bg-rose-900/60 px-1.5 py-0.5 text-[11px] font-semibold text-rose-300"
+                        title="Priority — higher numbers first; work top-down"
+                      >
+                        P{trip.priority}
+                      </span>
+                    )}
                     {trip.pinned && (
                       <span className="shrink-0 text-amber-400" title="Pinned to top">📌</span>
                     )}
@@ -324,7 +397,17 @@ const TripListPage = () => {
                         <p className="truncate text-sm text-gray-200">{trip.title || trip.trip_id}</p>
                         <PresenceBadge entries={presence.filter((p) => p.trip_id === trip.trip_id)} />
                       </div>
-                      <p className="truncate text-[11px] text-gray-500">{trip.trip_id}</p>
+                      <p className="truncate text-[11px] text-gray-500">
+                        {trip.trip_id}
+                        {trip.duration_sec !== null && trip.duration_sec > 0 && (
+                          <span
+                            className="text-gray-400"
+                            title="Total audio to review in this trip (all narration + question clips)"
+                          >
+                            {' '}· 🎧 {formatDuration(trip.duration_sec)}
+                          </span>
+                        )}
+                      </p>
                     </div>
                   </div>
                   <div className="flex w-full flex-wrap items-center gap-2 gap-y-2 sm:w-auto sm:shrink-0 sm:justify-end sm:gap-3">
@@ -347,6 +430,51 @@ const TripListPage = () => {
                         {trip.pinned ? 'Unpin' : 'Pin'}
                       </button>
                     )}
+                    {isAdmin &&
+                      (prioTarget === trip.trip_id ? (
+                        <span className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            value={prioDraft}
+                            onChange={(e) => setPrioDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') savePriority(trip.trip_id, prioDraft);
+                              if (e.key === 'Escape') setPrioTarget(null);
+                            }}
+                            autoFocus
+                            placeholder="e.g. 10"
+                            className="w-16 rounded border border-gray-600 bg-gray-900 px-1.5 py-0.5 text-xs text-gray-100"
+                            title="Higher = sooner. Empty clears the score."
+                          />
+                          <button
+                            type="button"
+                            onClick={() => savePriority(trip.trip_id, prioDraft)}
+                            className="rounded border border-custom-green px-2 py-1 text-xs text-custom-green hover:bg-custom-green hover:text-white"
+                          >
+                            Set
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPrioTarget(null)}
+                            className="rounded border border-gray-600 px-2 py-1 text-xs text-gray-300 hover:bg-gray-700"
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => openPriority(trip)}
+                          className={`rounded border px-2 py-1 text-xs ${
+                            trip.priority !== null
+                              ? 'border-rose-500 text-rose-300 hover:bg-rose-900/30'
+                              : 'border-gray-600 text-gray-300 hover:bg-gray-700'
+                          }`}
+                          title="Set a priority score — scored trips order first (highest score at the top) in every reviewer's list"
+                        >
+                          {trip.priority !== null ? `Priority ${trip.priority}` : 'Priority…'}
+                        </button>
+                      ))}
                     {isAdmin && (
                       <button
                         type="button"

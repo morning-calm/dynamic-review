@@ -7,6 +7,12 @@ interface FlagControlProps {
   field: Field;
   sid: string;
   onFieldUpdate: (f: Field) => void;
+  /** Flush + await any pending text autosave BEFORE reverting. Without this, a save
+   * debouncing (or in flight) when Revert is clicked lands AFTER the revert and silently
+   * writes the reverted-away edit back — the field looks like it never reverted
+   * (Jedburgh1_TownAbbey_EN scene 7, 2026-08-04). Best-effort: revert proceeds even if
+   * the flush fails (the editors' adopt-on-external-change cancel covers the rest). */
+  beforeRevert?: () => Promise<void> | void;
 }
 
 const FLAG_BADGE: Record<FlagValue, { label: string; cls: string }> = {
@@ -18,7 +24,7 @@ const FLAG_BADGE: Record<FlagValue, { label: string; cls: string }> = {
 const SCRIPT_LABEL = Object.fromEntries(ZH_SCRIPTS) as Record<ZhScript, string>;
 
 /** done / edit-required / clear, with done gated on `can_mark_done`. Also offers revert. */
-const FlagControl = ({ field, sid, onFieldUpdate }: FlagControlProps) => {
+const FlagControl = ({ field, sid, onFieldUpdate, beforeRevert }: FlagControlProps) => {
   const [busy, setBusy] = useState(false);
 
   const run = (fn: () => Promise<Field>, okMsg?: string) => {
@@ -102,7 +108,15 @@ const FlagControl = ({ field, sid, onFieldUpdate }: FlagControlProps) => {
         type="button"
         disabled={busy}
         onClick={() =>
-          run(() => api.revert(sid, field.fid), 'Reverted to original text + audio.')
+          run(async () => {
+            try {
+              await beforeRevert?.();
+            } catch {
+              // A failed flush must not block the revert — the revert overwrites
+              // whatever the flush would have saved anyway.
+            }
+            return api.revert(sid, field.fid);
+          }, 'Reverted to original text + audio.')
         }
         title="Change text and working audio file back to original"
         className="ml-auto text-xs text-gray-500 underline enabled:hover:text-gray-300 disabled:opacity-40"

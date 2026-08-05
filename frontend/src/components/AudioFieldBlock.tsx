@@ -25,7 +25,7 @@ interface AudioFieldBlockProps {
  * One editable field that may carry audio (titleKey / questionKey / option).
  * Owns its own awaitable flush so a whole-regenerate always persists the latest
  * text first (S3). SceneDesc is rendered inline in SceneCard because it has the
- * extra segment/highlight controls.
+ * extra highlight/selection controls.
  */
 const AudioFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine, rows, readOnly = false }: AudioFieldBlockProps) => {
   const flushRef = useRef<(() => Promise<void>) | null>(null);
@@ -64,7 +64,6 @@ const AudioFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine,
               field={field}
               sid={sid}
               onFieldUpdate={onFieldUpdate}
-              hasTextChange={false}
               wholeOnly
               getSelectionRange={getSelectionRange}
               capturedSelection={selection}
@@ -78,7 +77,14 @@ const AudioFieldBlock = ({ field, sid, onFieldUpdate, label, header, singleLine,
         </>
       )}
       <div className="space-y-2" inert={readOnly}>
-        <FlagControl field={field} sid={sid} onFieldUpdate={onFieldUpdate} />
+        <FlagControl
+          field={field}
+          sid={sid}
+          onFieldUpdate={onFieldUpdate}
+          beforeRevert={async () => {
+            await flushRef.current?.();
+          }}
+        />
         <CommentBox field={field} sid={sid} onFieldUpdate={onFieldUpdate} />
       </div>
     </div>

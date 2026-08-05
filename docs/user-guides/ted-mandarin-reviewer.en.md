@@ -32,19 +32,22 @@ What to do:
 
 ## 4. Fix the audio after you change the words
 1. Correct the Simplified text.
-2. Click **"Generate from edit"** — the app re-records **just the words you changed** and
-   keeps the rest of the original recording.
+2. **Highlight the words you changed** in the Simplified (简体) box and click
+   **"Regenerate highlighted"** — the app re-records **just that phrase** and keeps the
+   rest of the original recording.
 3. **Listen** to the new version.
 4. If it's good, click **"Combine"** to keep it.
 5. If it's not right:
-   - **"Regenerate All"** re-records the entire line, or
+   - **"Regenerate All"** re-records the entire line from the current text, or
    - **"Create new"** lets you attach a fresh take **with a note** for David.
 
 Notes:
 - If you only changed the Traditional / Zhuyin / English lines, the audio has nothing new to
-  say — the app will remind you that **the voice follows the Simplified (简体) line**.
-- Occasionally the app can't re-record just your edit cleanly; it then re-records the whole
-  narration and tells you so — simply **re-listen to the full clip**.
+  say — **the voice follows the Simplified (简体) line**.
+- If you changed words in several places, either highlight each spot in turn, or use
+  **"Regenerate All"** once.
+- Occasionally the app can't re-record just the highlighted spot cleanly; it then re-records
+  the whole narration and tells you so — simply **re-listen to the full clip**.
 
 ## 5. Fix a spot by highlighting it (no text change needed)
 Sometimes the words are right but the **sound** is wrong — a mispronounced word, a noise, a

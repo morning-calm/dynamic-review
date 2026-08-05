@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { Field, Session } from '../api';
 import { fieldChanged } from '../fieldDiff';
 import { useSaveCoordinator } from '../saveStatusContext';
@@ -29,6 +29,10 @@ const AdminInlineEdit = ({ session, onUpdate }: { session: Session; onUpdate: (f
       return n;
     });
   const isZh = session.is_zh;
+  // Awaitable autosave flushes for the two header editors, so Revert can drain a
+  // pending/in-flight save first (see FlagControl.beforeRevert).
+  const titleFlushRef = useRef<(() => Promise<void>) | null>(null);
+  const descFlushRef = useRef<(() => Promise<void>) | null>(null);
   const contentTitleKey = session.trip_fields.find((f) => f.field_path === 'contentTitleKey');
   const tripDescription = session.trip_fields.find((f) => f.field_path === 'tripgroup_description');
   const tripChanged = session.trip_fields.some(fieldChanged);
@@ -79,8 +83,16 @@ const AdminInlineEdit = ({ session, onUpdate }: { session: Session; onUpdate: (f
                       onFieldUpdate={onUpdate}
                       label="Display title (contentTitleKey)"
                       singleLine
+                      flushRef={titleFlushRef}
                     />
-                    <FlagControl field={contentTitleKey} sid={session.id} onFieldUpdate={onUpdate} />
+                    <FlagControl
+                      field={contentTitleKey}
+                      sid={session.id}
+                      onFieldUpdate={onUpdate}
+                      beforeRevert={async () => {
+                        await titleFlushRef.current?.();
+                      }}
+                    />
                   </div>
                 ))}
               {tripDescription &&
@@ -100,8 +112,16 @@ const AdminInlineEdit = ({ session, onUpdate }: { session: Session; onUpdate: (f
                       onFieldUpdate={onUpdate}
                       label="TripGroup description"
                       rows={4}
+                      flushRef={descFlushRef}
                     />
-                    <FlagControl field={tripDescription} sid={session.id} onFieldUpdate={onUpdate} />
+                    <FlagControl
+                      field={tripDescription}
+                      sid={session.id}
+                      onFieldUpdate={onUpdate}
+                      beforeRevert={async () => {
+                        await descFlushRef.current?.();
+                      }}
+                    />
                   </div>
                 ))}
             </div>

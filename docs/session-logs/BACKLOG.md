@@ -231,20 +231,18 @@ runners, run `py -3.12 upload_review_audio_r2.py --manifest`.
 ### 3. Stamp `user_id` on `field_edits`
 **What:** add a `user_id` column, stamp it at edit time from the request's auth session.
 **Why:** start/break attribution is currently inferred from login watermarks + token liveness
-and has misattributed twice (both patched reactively — see 2026-07-08 log). An explicit column
-makes it exact and retires that bug class.
+and has misattributed THREE times (2026-07-07, 2026-07-11, and 2026-08-05 — "toshifumi
+started KochiCity_N3_JP" when admin merely opened it; opening seeds all field rows with no
+`edited_by`). The 08-05 fix makes the notifier read the **presence table first**
+(`actor_for` → `presence_by_session`), which covers every observed case exactly; this
+column remains the durable fix for activity with no presence heartbeat (beacon writes, etc.).
 **Where:** `backend/app/db.py:41-63` (`field_edits` has no `user_id`; `auth_sessions.user_id`
 exists at `db.py:106` as the source). Touches the edit write path + a migration. Needs a restart.
 
-### 3b. English `hasTextChange` compares against `original_text` (added 2026-07-29)
-**What:** `SceneCard.tsx:271` lights "Generate from edit" when `descLive !== sceneDesc.original_text`,
-so after ANY accepted edit the button stays lit forever; clicking it now deterministically returns
-"No text change detected" and flags the field `edit_required` + appends a comment (before the
-2026-07-29 highlight fixes, Gemini clean-drift sometimes manufactured a phantom splice instead —
-strictly worse — but the button state is still misleading).
-**Fix:** compare against `working_text ?? original_text`, exactly as the JP branch already does
-(`spokenLine(...)` a few lines below). One-line FE change + rebuild; found by the 2026-07-29
-red-team pass.
+### 3b. ~~English `hasTextChange` compares against `original_text`~~ — **OBSOLETE 2026-08-05**
+"Generate from edit" (and with it `hasTextChange`/`spokenLine`) was removed entirely —
+dave, 2026-08-05: unreliable one-word candidates combining at the wrong spot. Text edits
+are voiced via highlight → Regenerate highlighted / Regenerate All. See the 08-05 log.
 
 ### 4. ~~Prune inert Mandarin A/B leftovers~~ — **DONE (confirmed 2026-07-29)**
 Verified by grep on 2026-07-29: `ab_audio_path`, `_copy_audio_set` and the `/ab/` route have

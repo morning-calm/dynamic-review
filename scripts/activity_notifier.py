@@ -45,16 +45,19 @@ MAX_PER_DAY = 40
 IMMEDIATE_KINDS = {"login", "start", "finish", "auto_review"}
 
 # ---------------------------------------------------------------- attribution
-# EXACT when we have it: field_edits.edited_by is stamped by db.update_fields from the
-# authenticated request's user, so the last editor of a session IS the person working on
-# it. Use that first (`actor_for`) — the heuristic below could only ever guess, and got it
-# wrong when an ADMIN picked up a Mandarin session Ted owns (2026-07-11: "ted resumed
-# Taipei101" when it was admin). Finishes use the exact submitted_by/approved_by/
-# completed_by column.
-#
-# The heuristic remains the FALLBACK for rows written before edited_by existed, and for
-# the low-level writes that bypass update_fields: the language-capable user who logged in
-# most recently before the activity (falling back to the language default).
+# EXACT when we have it, in order:
+#   0) the PRESENCE heartbeat — the session pages post (username, session_id) every few
+#      seconds, so a presence row on THIS session at/after the activity IS the person
+#      working on it. This is what the heuristics below kept getting wrong: merely
+#      OPENING a trip seeds all its field rows but stamps no edited_by, and the
+#      specialist almost always holds a live token (they last 14 days), so an ADMIN
+#      opening a Japanese trip read as "toshifumi started …" (KochiCity_N3_JP,
+#      2026-08-05 — the third misattribution of this class).
+#   1) field_edits.edited_by — stamped by db.update_fields from the authenticated
+#      request's user (the 2026-07-11 fix: "ted resumed Taipei101" when it was admin).
+#   2) the heuristic guess (specialist live-token / most recent language-capable login)
+#      — only for activity with no presence row and no recent stamped write.
+# Finishes use the exact submitted_by/approved_by/completed_by column.
 #
 # How stale an edited_by stamp may be and still be trusted as "who is active now". The
 # fallback only kicks in when the recent writes carried no editor at all.
@@ -64,6 +67,10 @@ LANG_DEFAULT = {"Mandarin": "ted", "Japanese": "toshifumi", "English": "admin"}
 # have logged in within this window before the activity (admin login noise notwithstanding).
 SPECIALIST = {"Mandarin": "ted", "Japanese": "toshifumi"}
 SPECIALIST_LOGIN_WINDOW = 12 * 3600
+# A presence heartbeat may lag the DB write that triggered the event by a beat (or lead
+# it — the page heartbeats before the first save lands), so accept rows slightly older
+# than the activity too.
+PRESENCE_ATTR_SLACK = 60
 
 
 def session_language(row) -> str:
@@ -176,9 +183,29 @@ def attribute(lang, at_ts, users, logins, live_tokens=None):
     return best or LANG_DEFAULT.get(lang, "someone")
 
 
-def actor_for(s, lang, at_ts, users, logins, live_tokens=None) -> str:
-    """Who is working on session *s* at *at_ts*. Prefers the RECORDED editor (exact);
-    falls back to `attribute`'s guess only when no recent write carried one."""
+def presence_by_session(con):
+    """session_id -> [(username, updated_at), …] from the presence heartbeat table.
+    Tolerates the table not existing (a DB from before the presence feature)."""
+    out = {}
+    try:
+        for r in con.execute("SELECT username, session_id, updated_at FROM presence"):
+            if r["session_id"]:
+                out.setdefault(r["session_id"], []).append((r["username"], r["updated_at"]))
+    except sqlite3.OperationalError:
+        pass
+    return out
+
+
+def actor_for(s, sid, lang, at_ts, users, logins, live_tokens=None, presence=None) -> str:
+    """Who is working on session *sid* at *at_ts*. Prefers the presence heartbeat on this
+    exact session (exact), then the RECORDED editor, then `attribute`'s guess."""
+    best = None
+    for who, p_ts in (presence or {}).get(sid, []):
+        if p_ts is not None and p_ts >= at_ts - PRESENCE_ATTR_SLACK:
+            if best is None or p_ts > best[1]:
+                best = (who, p_ts)
+    if best:
+        return best[0]
     who, stamped = s.get("last_editor"), s.get("last_editor_ts")
     if who and stamped is not None and (at_ts - stamped) <= ACTOR_STAMP_WINDOW:
         return who
@@ -234,7 +261,7 @@ def fresh_state():
 
 
 # ---------------------------------------------------------------- detection
-def detect(state, sess, completed, users, logins, now, live_tokens=None):
+def detect(state, sess, completed, users, logins, now, live_tokens=None, presence=None):
     """Mutate state.sessions and append events to state['pending']. Returns new events list."""
     new_events = []
     st = state["sessions"]
@@ -254,7 +281,7 @@ def detect(state, sess, completed, users, logins, now, live_tokens=None):
                 # Attribute at the RECENT activity time, not first_ts — a session seeded
                 # weeks ago by admin then picked up by ted must read "ted", not "admin"
                 # (the 2026-07-07 mis-attribution), and vice versa (2026-07-11).
-                who = actor_for(s, lang, last_ts, users, logins, live_tokens)
+                who = actor_for(s, sid, lang, last_ts, users, logins, live_tokens, presence)
                 verb = "resumed" if resumed else "started"
                 new_events.append({"ts": last_ts if resumed else (s.get("first_ts") or last_ts),
                                    "kind": "start", "user": who, "trip": s["trip_id"],
@@ -275,7 +302,8 @@ def detect(state, sess, completed, users, logins, now, live_tokens=None):
             state_verb, who = finished_now
             done = s.get("done", 0); touched_n = s.get("touched", 0)
             new_events.append({"ts": s.get("last_ts") or now, "kind": "finish",
-                               "user": who or actor_for(s, lang, now, users, logins, live_tokens),
+                               "user": who or actor_for(s, sid, lang, now, users, logins,
+                                                        live_tokens, presence),
                                "trip": s["trip_id"], "lang": lang, "verb": state_verb,
                                "done": done, "touched": touched_n})
             prev["finished"] = True
@@ -283,7 +311,7 @@ def detect(state, sess, completed, users, logins, now, live_tokens=None):
         # ---- BREAK 90m+ ----
         if (prev["started"] and not prev["finished"] and last_ts is not None
                 and (now - last_ts) >= BREAK_SECONDS and not prev.get("break_reported")):
-            who = actor_for(s, lang, last_ts, users, logins, live_tokens)
+            who = actor_for(s, sid, lang, last_ts, users, logins, live_tokens, presence)
             new_events.append({"ts": last_ts, "kind": "break", "user": who,
                                "trip": s["trip_id"], "lang": lang,
                                "done": s.get("done", 0), "touched": s.get("touched", 0),
@@ -539,7 +567,8 @@ def main():
     new_events = detect_logins(state, users, logins, now)
     new_events += detect_auto_reviews(state, con, now)
     live_tokens = live_tokens_by_user(con, now)
-    new_events += detect(state, sess, completed, users, logins, now, live_tokens)
+    presence = presence_by_session(con)
+    new_events += detect(state, sess, completed, users, logins, now, live_tokens, presence)
     for e in new_events:
         print(f"[event] {e['kind']:6} {fmt_time(e['ts'])} {e['user']} {e.get('trip','')}")
 

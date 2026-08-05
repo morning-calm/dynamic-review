@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type TextareaHTMLAtt
  * Returns a stable debounced wrapper around `fn`. The latest `fn` is always
  * used (kept in a ref) so callers can pass an inline closure without resetting
  * the timer. `flush()` invokes immediately with the last args; `cancel()` drops
- * a pending call.
+ * a pending call AND its args — a later flush() must not resurrect a cancelled
+ * save (a stale re-save after Revert is how an edit survives being reverted).
  */
 export const useDebouncedCallback = <A extends unknown[]>(
   fn: (...args: A) => void,
@@ -21,6 +22,7 @@ export const useDebouncedCallback = <A extends unknown[]>(
       clearTimeout(timer.current);
       timer.current = null;
     }
+    lastArgs.current = null;
   }, []);
 
   const flush = useCallback(() => {

@@ -299,7 +299,9 @@ def plan_segment(doc_id: str, cleaned_orig: str, cleaned_new: str,
                  highlight_orig_span: tuple[int, int] | None = None,
                  model_id: str = audio_core.EL_MODEL,
                  alt_text: str | None = None) -> RegenPlan:
-    """Span-only regenerate + splice plan (shared by 'generate from edit' and highlight).
+    """Span-only regenerate + splice plan (the highlight / fix-pronunciation engine;
+    a None ``highlight_orig_span`` diffs the whole field — the retired 'generate from
+    edit' path, kept because the span math is shared).
 
     Renders the changed/highlighted words and plans a splice whose cuts land in REAL
     silence in ``base_samples`` (the current working take). When a boundary is connected
@@ -501,8 +503,8 @@ def pending_edit_outside_highlight(working_raw: str, current_raw: str,
     highlighted char range — i.e. the reviewer holds un-voiced edits elsewhere in the
     field. Combining a highlight re-baselines working_text to the WHOLE current text,
     so voicing just the highlight would silently stamp those other edits as spoken
-    (and the next 'Generate from edit' would see no change to voice). The caller
-    refuses instead. Edits the highlight overlaps are fine — plan_segment widens the
+    (text the audio never says would ship as reviewed). The caller refuses
+    instead. Edits the highlight overlaps are fine — plan_segment widens the
     span over them, so they DO get voiced."""
     if (working_raw or "") == (current_raw or ""):
         return False
@@ -510,7 +512,7 @@ def pending_edit_outside_highlight(working_raw: str, current_raw: str,
     # No token under the selection (whitespace only) → an empty range at the start, so
     # ANY pending edit reads as "outside" and is refused. That mirrors what such a
     # selection would do downstream anyway: highlight_span_in_cleaned falls back to the
-    # WHOLE field, which is a job for "Generate from edit", not a highlight.
+    # WHOLE field, which is a job for Regenerate All, not a highlight.
     span = _raw_token_span(cur_m, start, end)
     rlo, rhi = span if span is not None else (0, 0)
     sm = difflib.SequenceMatcher(

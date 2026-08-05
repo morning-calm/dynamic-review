@@ -2,15 +2,15 @@
 
 A reviewer deleted the trailing sentences of a SceneDesc and removed the matching audio
 by hand in the waveform editor. `working_text` still claimed the take said the deleted
-words, so from then on the field was wedged:
+words, so from then on the field was wedged: highlight / "Fix pronunciation" → 409
+`unvoiced_edits_outside_highlight`, and the only advertised exits (whole-regenerate,
+Revert) discard the hand audio work. The live log shows exactly that loop — regenerate
+409, 409, 409 — ending in a Revert. These tests pin the trap and the state
+`sessions.accept_text_as_voiced` moves to open it.
 
-  * highlight / "Fix pronunciation" → 409 `unvoiced_edits_outside_highlight`
-    ("use Generate from edit first"), and
-  * "Generate from edit" → "Edit removed text only — use whole-regenerate",
-
-with no exit that keeps the hand audio work. The live log shows exactly that loop —
-regenerate 409, 409, 409 — ending in a Revert. These tests pin both jaws of the trap and
-the state `sessions.accept_text_as_voiced` moves to open it.
+("Generate from edit" — mode='segment', the full-field diff — was removed from the API
+on 2026-08-05; plan_segment's no-span diff path remains and its delete-only guard is
+still pinned below, since the message it returns is user-visible advice.)
 """
 
 import sys
@@ -54,8 +54,8 @@ def test_highlight_allowed_once_the_take_is_re_baselined():
     assert audio_splice.pending_edit_outside_highlight(EDITED, EDITED, start, end) is False
 
 
-# --- jaw 2: the advice it hands you ("Generate from edit") has nothing to voice --------
-def test_generate_from_edit_on_a_delete_only_change_has_nothing_to_voice():
+# --- jaw 2: a full-field diff of a delete-only change has nothing to voice ------------
+def test_full_diff_on_a_delete_only_change_has_nothing_to_voice():
     plan = audio_splice.plan_segment(
         "KaohsiungLotusPond_EN", VOICED, EDITED, False,
         whisper_words=[], voice_id="v", voice_settings={},

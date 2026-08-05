@@ -11,8 +11,6 @@ interface RegenerateControlsProps {
   field: Field;
   sid: string;
   onFieldUpdate: (f: Field) => void;
-  /** SceneDesc text edited since last save → enables "Generate from edit". */
-  hasTextChange: boolean;
   /** Reads the textarea selection for highlight mode. Absent for Q&A (whole only). */
   getSelectionRange?: () => { start: number; end: number } | null;
   /** The persisted capture (useTextSelection) — renders the "Selected: …" chip so the
@@ -59,7 +57,6 @@ const RegenerateControls = ({
   field,
   sid,
   onFieldUpdate,
-  hasTextChange,
   getSelectionRange,
   capturedSelection,
   onClearSelection,
@@ -437,21 +434,6 @@ const RegenerateControls = ({
       Fix pronunciation…
     </button>
   );
-  const genFromEditBtn = (
-    <button
-      type="button"
-      disabled={busy || !hasTextChange}
-      onClick={() => regen('segment')}
-      title={
-        hasTextChange
-          ? 'Re-record just the words you edited and splice them into the existing audio'
-          : `Edit ${surfaceLabel} first`
-      }
-      className={`${btn} border-gray-600 text-gray-200`}
-    >
-      Generate from edit
-    </button>
-  );
   const highlightBtn = (
     <button
       type="button"
@@ -705,7 +687,6 @@ const RegenerateControls = ({
         {wholeOnly && trimSilenceBtn}
         {!wholeOnly && (
           <>
-            {genFromEditBtn}
             {/* Selection-based ops read getSelectionRange from the language's narration
                 surface: EN/JP the SceneDesc textarea (JP: the kana line), _ZH the Simplified
                 (Hans) field of the 4-script block. */}
@@ -752,26 +733,17 @@ const RegenerateControls = ({
           </div>
         )}
         {group(
-          'Generate',
-          'whole take',
-          false,
+          'Re-record & fix',
+          hasSelectionTools ? 'whole take, or select text first' : 'whole take',
+          hasChipSelection,
           <>
             {regenAllBtn}
-            {!wholeOnly && genFromEditBtn}
             {wholeOnly && fixPronWholeBtn}
+            {hasSelectionTools && highlightBtn}
+            {hasSelectionTools && fixPronBtn}
+            {getSelectionRange && trimNoiseBtn}
           </>,
         )}
-        {(hasSelectionTools || Boolean(getSelectionRange)) &&
-          group(
-            'Fix a highlighted spot',
-            'select text first',
-            hasChipSelection,
-            <>
-              {hasSelectionTools && highlightBtn}
-              {hasSelectionTools && fixPronBtn}
-              {getSelectionRange && trimNoiseBtn}
-            </>,
-          )}
         {group(
           'Pauses & silence',
           hasPauseTools ? 'tap where the pause is' : '',
@@ -877,8 +849,8 @@ const RegenerateControls = ({
         </p>
         <InlineDiff original={voicedText} current={pendingText} label="Take says → field says" />
         <p className="my-3 text-xs text-amber-300">
-          If any of the green text isn’t actually spoken in the audio, cancel and use Generate from edit or
-          Regenerate All instead — otherwise this text is submitted over audio that doesn’t say it.
+          If any of the green text isn’t actually spoken in the audio, cancel and use Regenerate All
+          instead — otherwise this text is submitted over audio that doesn’t say it.
         </p>
         <div className="flex justify-end gap-2">
           <button

@@ -10,7 +10,7 @@ interface EditableFieldProps {
   field: Field;
   sid: string;
   onFieldUpdate: (f: Field) => void;
-  /** Live local text (fires on every keystroke) — lets the parent gate "Generate from edit". */
+  /** Live local text (fires on every keystroke) — drives the parent's selection tools. */
   onLocalChange?: (text: string) => void;
   label?: string;
   placeholder?: string;
@@ -31,7 +31,7 @@ interface EditableFieldProps {
   diffAbove?: boolean;
   /**
    * The parent sets this to a function that flushes any pending save and resolves
-   * once the PUT completes — call it before a segment/highlight regenerate so the
+   * once the PUT completes — call it before a highlight regenerate so the
    * server diffs the intended (saved) text (S3).
    */
   flushRef?: RefObject<(() => Promise<void>) | null>;
@@ -63,14 +63,6 @@ const EditableField = ({
   const valueRef = useRef(value); // CO1: read latest value without re-binding listeners
   valueRef.current = value;
   const { begin, end } = useSaveCoordinator();
-
-  // Adopt external text changes (e.g. revert) without clobbering active typing.
-  useEffect(() => {
-    if (field.current_text !== savedRef.current) {
-      savedRef.current = field.current_text;
-      setValue(field.current_text);
-    }
-  }, [field.current_text]);
 
   // CO2: feed the diff a value debounced ~300 ms behind the live text.
   const [diffValue, setDiffValue] = useState(value);
@@ -104,7 +96,13 @@ const EditableField = ({
           end(false);
           savedRef.current = prev; // delta is unsaved again
           toast.error(`Couldn't save ${field.field_path}: ${e instanceof ApiError ? e.detail : 'network error'}`);
-          if (!isRetry) window.setTimeout(() => void persistRef.current(text, true), RETRY_MS);
+          // Retry only while the textarea still holds this text — if the field was
+          // externally replaced meanwhile (a revert/undo), re-saving would silently
+          // write the reverted-away edit back over it.
+          if (!isRetry)
+            window.setTimeout(() => {
+              if (valueRef.current === text) void persistRef.current(text, true);
+            }, RETRY_MS);
         }
       })();
       inFlightRef.current = req;
@@ -119,6 +117,20 @@ const EditableField = ({
   persistRef.current = persist;
 
   const save = useDebouncedCallback((text: string) => void persist(text), 1000);
+
+  // Adopt external text changes (e.g. revert, undo) without clobbering active typing —
+  // and CANCEL any pending debounced save: the field was just replaced from outside, so
+  // a save armed a moment earlier holds the replaced-away text, and letting it fire
+  // (timer or a later blur-flush) would silently write the old edit straight back.
+  // This is the bug that made "Revert to original" appear not to revert (Jedburgh,
+  // 2026-08-04): a stale autosave landed seconds after the 200-OK revert.
+  useEffect(() => {
+    if (field.current_text !== savedRef.current) {
+      save.cancel();
+      savedRef.current = field.current_text;
+      setValue(field.current_text);
+    }
+  }, [field.current_text, save]);
 
   // Flush a pending save when the tab is hidden or unloaded (CO1: value via ref).
   useEffect(() => {

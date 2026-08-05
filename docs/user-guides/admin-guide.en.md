@@ -15,12 +15,12 @@ separate reviewer — you review and approve them in one pass.
 ## 2. Reviewing a trip (same as the reviewer guides)
 - Open a trip, correct each part's text, regenerate/combine the audio, listen fully, mark Done.
 - **The full narration toolset works in every language** on the SceneDesc:
-  - **Generate from edit** — re-record just the changed words. If the *voiced* line is
-    unchanged (JP: kanji-only edit; ZH: a non-Simplified script), the app refuses with a
-    message saying which line drives the audio.
   - **Regenerate highlighted** / **Fix pronunciation…** — select words in the narration and re-record
     them (alt text lets you spell a tricky pronunciation phonetically; on screen the text is
-    unchanged).
+    unchanged). This is also how a **text edit** gets voiced: change the words, highlight
+    them, Regenerate highlighted. (The old *Generate from edit* button — a whole-field text
+    diff — was removed 2026-08-05: its splices were unreliable, and highlight / the waveform
+    editor cover every case.)
   - **Trim highlighted noise** — highlight where an unwanted blip/breath is and trim it.
     Also available on **question and answer-option audio** (highlight in that field's own
     text box), in every language.
@@ -33,7 +33,7 @@ separate reviewer — you review and approve them in one pass.
   **kana** (last) line of the narration (kanji-line selections get a hint); **Mandarin** — the
   **Simplified (Hans)** box of the 4-script block.
 - **CJK safety behaviour:** the splice engine is deliberately conservative. When it can't cut
-  at the exact spot safely, *Regenerate highlighted / Generate from edit* fall back to
+  at the exact spot safely, *Regenerate highlighted* falls back to
   re-recording the whole narration (a toast tells you — re-listen to the full clip);
   *Fix pronunciation…* instead flags the part **edit-required** (the alt text is never silently voiced
   as the whole field); the trim/pause tools refuse with a clear message rather than guess.
@@ -63,8 +63,8 @@ separate reviewer — you review and approve them in one pass.
   text. Use it when, for example, you deleted a sentence from the text and cut that sentence out
   of the audio yourself: without it the app still believes the audio contains those words, so
   *Regenerate highlighted* and *Fix pronunciation…* keep refusing ("you've edited words elsewhere
-  that aren't in the audio yet") while *Generate from edit* says there's nothing new to voice —
-  and the only ways out would be a whole-regenerate or a Revert, both of which throw away your
+  that aren't in the audio yet") — and the only ways out would be a whole-regenerate or a
+  Revert, both of which throw away your
   audio work. It confirms with a diff first: **only accept if every green word is genuinely
   spoken in the audio**, because from then on that text is what gets submitted.
 - **Revert to original** (bottom right of each part) restores that part completely: the text,

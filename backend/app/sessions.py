@@ -557,22 +557,50 @@ def list_trips(user=None) -> list[dict]:
     if user is not None:
         from . import auth   # lazy (auth imports sessions) — no module-load cycle
         trips = [t for t in trips if auth.language_allowed(user, t["trip_id"])]
-    # In-app pins float to the top (newest pin first); everything else keeps the manifest
-    # = Trello-card order (a stable sort preserves it). `pinned` drives the UI indicator.
-    pins = {r["trip_id"]: r["pinned_at"]
-            for r in db.query("SELECT trip_id, pinned_at FROM trip_priority")}
+    # The language each trip's id resolves to (suffix-based) — lets the admin's list
+    # filter down to exactly what a reviewer with that language ACL sees.
     for t in trips:
-        t["pinned"] = t["trip_id"] in pins
-    if pins:
-        trips.sort(key=lambda t: (0, -pins[t["trip_id"]]) if t["pinned"] else (1, 0.0))
+        t["language"] = audio_core.language_of(t["trip_id"])
+        t.setdefault("duration_sec", None)
+    prio = {r["trip_id"]: dict(r) for r in db.query(
+        "SELECT trip_id, pinned_at, score FROM trip_priority")}
+    _apply_priority_order(trips, prio)
     return trips
 
 
-def _fetch_trip_and_reviewable(tid: str) -> tuple[dict | None, bool]:
+def _apply_priority_order(trips: list[dict], prio: dict[str, dict]) -> None:
+    """Stamp `pinned`/`priority` and order the list in place (stable, so the manifest =
+    Trello-card order stays the base):
+      1. scored trips first, highest score first — the admin's explicit sequencing of a
+         reviewer's work (set_trip_priority);
+      2. then pins (newest pin first) — the older "do this next" nudge;
+      3. then everything else in Trello order.
+    pinned_at 0/NULL = not pinned (0 is the sentinel old-schema NOT NULL rows need)."""
+    for t in trips:
+        row = prio.get(t["trip_id"])
+        t["pinned"] = bool(row and (row["pinned_at"] or 0) > 0)
+        t["priority"] = row["score"] if row else None
+    if prio:
+        def _rank(t: dict):
+            if t["priority"] is not None:
+                return (0, -t["priority"], 0.0)
+            if t["pinned"]:
+                return (1, 0.0, -(prio[t["trip_id"]]["pinned_at"] or 0))
+            return (2, 0.0, 0.0)
+        trips.sort(key=_rank)
+
+
+def _fetch_trip_and_reviewable(entry: dict) -> tuple[dict | None, bool, float | None]:
     """Off-thread I/O for one manifest entry: the staging Firestore read plus
     (best-effort) audio resolution, including ``resolve_audio_dir``'s R2 seed-cache
     download fallback. Both are blocking network calls, so this is run in a thread
-    pool by ``_list_trips_from_manifest`` rather than serially per trip."""
+    pool by ``_list_trips_from_manifest`` rather than serially per trip.
+
+    Also resolves the trip's total review-audio duration: the manifest's own
+    ``duration_sec`` (stamped by the Scripts-side export, which has the masters) wins;
+    otherwise it is measured once from the resolved clip dir and cached in
+    ``trip_durations``."""
+    tid = entry["trip_id"]
     trip = None
     try:
         trip = get_trip(tid)                 # staging; may be absent
@@ -584,7 +612,10 @@ def _fetch_trip_and_reviewable(tid: str) -> tuple[dict | None, bool]:
             reviewable = _has_scene_mp3(resolve_audio_dir(tid, trip))
         except Exception:  # noqa: BLE001
             reviewable = False
-    return trip, reviewable
+    duration = entry.get("duration_sec")
+    if duration is None and reviewable:
+        duration = _trip_audio_duration(tid, trip)
+    return trip, reviewable, duration
 
 
 def _list_trips_from_manifest() -> list[dict]:
@@ -606,9 +637,9 @@ def _list_trips_from_manifest() -> list[dict]:
     # the tunnel/edge timeout). Both release the GIL on I/O and use shared, thread-safe
     # clients (boto3, the Firestore client), so fan them out instead.
     with ThreadPoolExecutor(max_workers=16) as pool:
-        fetched = list(pool.map(_fetch_trip_and_reviewable, (t["trip_id"] for t in entries)))
+        fetched = list(pool.map(_fetch_trip_and_reviewable, entries))
     out: list[dict] = []
-    for t, (trip, reviewable) in zip(entries, fetched):
+    for t, (trip, reviewable, duration) in zip(entries, fetched):
         tid = t["trip_id"]
         folder_name = (trip.get("folderName") or "") if trip else ""
         title = (trip.get("contentTitleKey") if trip else None) or t.get("title") or tid
@@ -625,8 +656,41 @@ def _list_trips_from_manifest() -> list[dict]:
             "status": status,
             "edit_required": edit_required,
             "reviewable": reviewable,
+            "duration_sec": duration,
         })
     return out
+
+
+# The canonical reviewable clips in a trip's master dir: scene narration ({i}.mp3),
+# question prompt ({i}_q.mp3) and options ({i}_a{n}.mp3). Deliberately EXCLUDES the
+# unreviewed answer clip ({i}_a.mp3), archived corrections ({i}v{n}.mp3), fallbacks and
+# the originals/ archive that an R2 seed cache can contain.
+_CLIP_MP3_RE = re.compile(r"^\d+(?:_q|_a\d+)?\.mp3$", re.I)
+
+
+def _trip_audio_duration(tid: str, trip: dict | None) -> float | None:
+    """Total seconds of this trip's reviewable clips, measured once (ffprobe per clip)
+    and cached in ``trip_durations``. Best-effort — a missing dir or ffprobe just means
+    no duration shown, never a failed listing."""
+    row = db.query_one("SELECT seconds FROM trip_durations WHERE trip_id=?", (tid,))
+    if row:
+        return row["seconds"]
+    try:
+        d = resolve_audio_dir(tid, trip)
+        clips = [p for p in d.iterdir() if p.is_file() and _CLIP_MP3_RE.match(p.name)]
+        if not clips:
+            return None
+        secs = sum(audio_io.mp3_duration_seconds(p) for p in clips)
+    except Exception:  # noqa: BLE001
+        return None
+    if secs <= 0:
+        return None
+    db.execute(
+        "INSERT INTO trip_durations(trip_id,seconds,files,computed_at) VALUES(?,?,?,?) "
+        "ON CONFLICT(trip_id) DO UPDATE SET seconds=excluded.seconds, "
+        "files=excluded.files, computed_at=excluded.computed_at",
+        (tid, secs, len(clips), time.time()))
+    return secs
 
 
 # trip-id suffix → (level label, family-base). Longest/most-specific suffix first.
@@ -1336,7 +1400,7 @@ def _text_ahead_of_audio(trip_id: str, frow) -> bool:
     This is the exact condition every text-addressed tool trips over: the splice engine
     diffs against `_working_base_raw` (what the take says), so while it disagrees with
     `current_text` a highlight/alt regenerate is refused (`unvoiced_edits_outside_highlight`)
-    and 'Generate from edit' is the only sanctioned way forward. That is right when the fix
+    and a whole-regenerate is the only sanctioned way forward. That is right when the fix
     IS a regenerate — and a dead end when the reviewer already made the audio match by hand
     in the waveform editor, which is what `accept_text_as_voiced` exists for. Serialized so
     the FE can offer that escape hatch exactly when it applies (and never otherwise).
@@ -1554,7 +1618,7 @@ def _reindex_word_cache(sid: str, frow, a: float, b: float, ins: float,
 
     Why this exists: the cache is keyed on the working mp3's content hash, so EVERY
     pause edit invalidated it, and the next tool call (another pause, a trim, a
-    'generate from edit') paid a full faster-whisper re-transcription of the whole clip
+    highlight regenerate) paid a full faster-whisper re-transcription of the whole clip
     — beam 5, `small`, on the laptop's CPU. That re-transcription was the entire
     perceived cost of the pause tools.
 
@@ -2300,21 +2364,9 @@ def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
         elif alt_text and alt_text.strip():
             plan = audio_splice.plan_whole(alt_text.strip(), False, voice_id,
                                            voice_settings, model_id)
-        elif mode != "whole" and can_surgical:
-            if cjk_old == cjk_new:
-                # "Generate from edit" with the VOICED line unchanged (only the kanji
-                # line / a non-Hans script was edited): regenerating would silently voice
-                # the same text — tell the reviewer which line drives the audio instead.
-                raise HTTPException(409, detail={
-                    "error": "spoken_line_unchanged",
-                    "detail": ("The kana (last) line — the voiced text — is unchanged. "
-                               "Edit the kana line to change the audio."
-                               if cjk_lang == "jp" else
-                               "The Simplified (Hans) script — the voiced text — is "
-                               "unchanged. Edit the Hans line to change the audio.")})
-            cjk_wanted_surgical = True
-            plan = cjk_splice.plan_cjk(str(working_mp3), cjk_old, cjk_new,
-                                       voice_id, voice_settings, model_id, cjk_lang)
+        # ("Generate from edit" — the full-diff surgical branch, mode='segment' — was
+        # removed 2026-08-05: reviewers fix audio via highlight/alt, the waveform editor,
+        # or Regenerate All. cjk_splice.plan_cjk still backs the span planner.)
         if plan is None:      # Q&A / whole / no clean splice → whole-regenerate the narration
             cjk_fell_back = cjk_wanted_surgical
             plan = audio_splice.plan_whole(cjk_new, False, voice_id, voice_settings, model_id)
@@ -2354,28 +2406,31 @@ def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
                     edit_required=True,
                     reason="No word timing available for this take's audio.")
             else:
-                hl_span = None
-                if mode in ("highlight", "alt") and rng:
-                    # Un-voiced edits OUTSIDE the highlight: combining just the
-                    # highlight would re-baseline working_text to the whole current
-                    # text and silently stamp those edits as spoken (after which
-                    # 'Generate from edit' sees nothing to voice). Refuse with
-                    # directions instead. Edits the highlight covers are fine —
-                    # plan_segment voices them.
-                    if audio_splice.pending_edit_outside_highlight(
-                            working_raw, cur,
-                            int(rng["start"]), int(rng["end"])):
-                        raise HTTPException(409, detail={
-                            "error": "unvoiced_edits_outside_highlight",
-                            "detail": "You've edited words elsewhere in this field that "
-                                      "aren't in the audio yet — use Generate from edit "
-                                      "first (it voices every change), or include those "
-                                      "words in the highlight. If you already made the "
-                                      "audio match those edits yourself (e.g. you cut "
-                                      "them out in the waveform editor), use “Audio "
-                                      "already matches”."})
-                    hl_span = audio_splice.highlight_span_in_cleaned(
-                        cur, cleaned_new, int(rng["start"]), int(rng["end"]))
+                if not rng:
+                    # mode here is highlight/alt on a SceneDesc ('whole' branched above,
+                    # and 'segment' no longer exists) — both need a selection.
+                    raise HTTPException(400, detail={
+                        "error": "selection_required",
+                        "detail": "Select the phrase in the narration first."})
+                # Un-voiced edits OUTSIDE the highlight: combining just the
+                # highlight would re-baseline working_text to the whole current
+                # text and silently stamp those edits as spoken. Refuse with
+                # directions instead. Edits the highlight covers are fine —
+                # plan_segment voices them.
+                if audio_splice.pending_edit_outside_highlight(
+                        working_raw, cur,
+                        int(rng["start"]), int(rng["end"])):
+                    raise HTTPException(409, detail={
+                        "error": "unvoiced_edits_outside_highlight",
+                        "detail": "You've edited words elsewhere in this field that "
+                                  "aren't in the audio yet — include those words in "
+                                  "the highlight, or use Regenerate All (it re-records "
+                                  "the whole block from the current text). If you "
+                                  "already made the audio match those edits yourself "
+                                  "(e.g. you cut them out in the waveform editor), use "
+                                  "“Audio already matches”."})
+                hl_span = audio_splice.highlight_span_in_cleaned(
+                    cur, cleaned_new, int(rng["start"]), int(rng["end"]))
                 base_samples = audio_io.mp3_to_samples(dirs["working"] / frow["mp3_name"])
                 plan = audio_splice.plan_segment(
                     srow["trip_id"], cleaned_orig, cleaned_new, fb_new, words,
@@ -3344,10 +3399,10 @@ def accept_text_as_voiced(sid: str, fid: int) -> dict:
     a reviewer deleted a few sentences from a SceneDesc and removed the matching audio by
     hand in the waveform editor. Correct work, but `working_text` still claimed the take
     said the deleted words, so from then on EVERY text-addressed tool on that field was
-    refused: highlight / Fix pronunciation 409'd with `unvoiced_edits_outside_highlight`
-    ("use Generate from edit first"), and Generate from edit answered "Edit removed text
-    only — use whole-regenerate". The only exits were whole-regenerate or Revert, each of
-    which throws away the hand audio work. (The reviewer used Revert.)
+    refused: highlight / Fix pronunciation 409'd with `unvoiced_edits_outside_highlight`,
+    and the then-extant "Generate from edit" answered "Edit removed text only — use
+    whole-regenerate". The only exits were whole-regenerate or Revert, each of which
+    throws away the hand audio work. (The reviewer used Revert.)
 
     Nothing is generated and no audio is touched — this only records that the take and the
     text now agree, which is what the splice engine diffs against. Coverage is deliberately
@@ -3523,7 +3578,7 @@ def _restore_audio_version(sid: str, fid: int, target_n: int) -> dict:
     The TEXT baseline moves with the audio. `working_text` (+ the `_ZH` `working_hans`) is
     what the splice engine believes the take says; leaving it on the newest take's text
     while stepping the audio back made every later text tool diff against words the
-    restored audio doesn't speak — e.g. undoing a combine left "Generate from edit"
+    restored audio doesn't speak — e.g. undoing a combine left the splice engine
     convinced the edit was already voiced, so it could not be re-voiced at all. A row
     written before the snapshot existed has NULL and is left alone: unknowable beats
     guessing wrong."""
@@ -4889,8 +4944,30 @@ def pin_trip(user, trip_id: str) -> dict:
 
 
 def unpin_trip(user, trip_id: str) -> dict:
-    """ADMIN: remove a trip's pin — it returns to the Trello base order."""
-    db.execute("DELETE FROM trip_priority WHERE trip_id=?", (trip_id,))
+    """ADMIN: remove a trip's pin — it returns to the Trello base order (or its scored
+    position, if it also carries a priority score). pinned_at=0 is the "not pinned"
+    sentinel rather than NULL: live DBs created before the score column carry a NOT NULL
+    constraint on pinned_at that an ALTER can't relax."""
+    db.execute("DELETE FROM trip_priority WHERE trip_id=? AND score IS NULL", (trip_id,))
+    db.execute("UPDATE trip_priority SET pinned_at=0, pinned_by='' WHERE trip_id=?",
+               (trip_id,))
+    return {"ok": True}
+
+
+def set_trip_priority(user, trip_id: str, score: float | None) -> dict:
+    """ADMIN: give a trip a numeric priority score (higher = review sooner). The reviewer
+    list orders scored trips first (descending), then pins, then Trello order — this is
+    the mechanism for sequencing a translator's work. ``None`` clears the score."""
+    if score is None:
+        db.execute("DELETE FROM trip_priority "
+                   "WHERE trip_id=? AND COALESCE(pinned_at,0)=0", (trip_id,))
+        db.execute("UPDATE trip_priority SET score=NULL WHERE trip_id=?", (trip_id,))
+    else:
+        db.execute(
+            "INSERT INTO trip_priority(trip_id,pinned_by,pinned_at,score) "
+            "VALUES(?,?,0,?) "
+            "ON CONFLICT(trip_id) DO UPDATE SET score=excluded.score",
+            (trip_id, getattr(user, "username", None) or "", float(score)))
     return {"ok": True}
 
 

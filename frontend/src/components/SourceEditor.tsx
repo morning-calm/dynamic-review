@@ -18,14 +18,6 @@ const SourceEditor = ({
   const [value, setValue] = useState(field.source_text);
   const savedRef = useRef(field.source_text);
 
-  // Adopt external changes without clobbering active typing.
-  useEffect(() => {
-    if (field.source_text !== savedRef.current) {
-      savedRef.current = field.source_text;
-      setValue(field.source_text);
-    }
-  }, [field.source_text]);
-
   // Debounced value for the original→new diff (mirrors the target editor).
   const [diffValue, setDiffValue] = useState(value);
   useEffect(() => {
@@ -44,6 +36,17 @@ const SourceEditor = ({
         toast.error(`Couldn't save English: ${e instanceof ApiError ? e.detail : 'network error'}`),
       );
   }, 1000);
+
+  // Adopt external changes (e.g. revert) without clobbering active typing — and cancel
+  // any pending debounced save, so a stale autosave can't re-write the reverted-away
+  // English a second after the revert (same class as the EditableField fix).
+  useEffect(() => {
+    if (field.source_text !== savedRef.current) {
+      save.cancel();
+      savedRef.current = field.source_text;
+      setValue(field.source_text);
+    }
+  }, [field.source_text, save]);
 
   return (
     <div className="mt-1.5">
