@@ -64,6 +64,27 @@ def test_fallback_voice_stays_in_language():
     assert audio_core.VOICE_REGISTRY[config.LANGUAGE_FALLBACK_VOICE["Korean"]]["language"] == "Korean"
 
 
+def test_every_language_language_of_can_return_is_grantable():
+    # manage.py's allow-list must stay in step with language_of: a language the app can
+    # infer but the CLI cannot grant is admin-only forever. Hit the EU four in July 2026;
+    # Korean would have been the second time.
+    import manage
+
+    representative = {
+        "Trip_EN": "English",
+        "Trip_Beg_JP": "Japanese",
+        "Trip_HSK3_ZH": "Mandarin",
+        "Trip_TPK1_KO": "Korean",
+        "Trip_A12_ES": "Spanish",
+        "Trip_A12_FR": "French",
+        "Trip_A12_DE": "German",
+        "Trip_A12_IT": "Italian",
+    }
+    for cid, lang in representative.items():
+        assert audio_core.language_of(cid) == lang, cid
+        assert lang in manage.VALID_LANGUAGES, f"{lang} is inferable but not grantable"
+
+
 def test_korean_rungs_share_the_english_parents_images():
     # A rung matching no _IMAGE_BASE_RES rule searches only its own id — a folder that
     # does not exist — so every scene image in the review card comes back null. That is

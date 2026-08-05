@@ -33,11 +33,13 @@ from app import auth, db
 # Must stay in step with audio_core.language_of(), which is what language_allowed()
 # compares against: a language it can return but that is missing here cannot be
 # granted to a reviewer, so those trips would be admin-only forever (the EU four
-# were in language_of from 2026-07-16 but unlistable here until 2026-07-17).
+# were in language_of from 2026-07-16 but unlistable here until 2026-07-17, and Korean
+# would have repeated it on 2026-08-05). test_korean_language_wiring pins the two in step.
 VALID_LANGUAGES = (
     "English",
     "Japanese",
     "Mandarin",
+    "Korean",
     "Spanish",
     "French",
     "German",
