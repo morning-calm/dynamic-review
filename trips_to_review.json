@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-30T10:51:12+01:00",
+  "generated_at": "2026-08-05T10:36:23+01:00",
   "source": "trello 6,7",
   "trips": [
     {
@@ -10,7 +10,9 @@
       "voice": "sebastien",
       "gender": "male",
       "title": "Monaco1_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/7MMuTozA",
       "pos": 140737488289792
     },
@@ -22,7 +24,9 @@
       "voice": "marco",
       "gender": "male",
       "title": "Monaco1_A12_IT",
-      "labels": [],
+      "labels": [
+        "Italy"
+      ],
       "card_url": "https://trello.com/c/duVvwKxF",
       "pos": 140737488306176
     },
@@ -34,7 +38,9 @@
       "voice": "sebastien",
       "gender": "male",
       "title": "Monaco2_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/9JlJR6Gc",
       "pos": 140737488322560
     },
@@ -46,7 +52,9 @@
       "voice": "marco",
       "gender": "male",
       "title": "Monaco2_A12_IT",
-      "labels": [],
+      "labels": [
+        "Italy"
+      ],
       "card_url": "https://trello.com/c/1hzuxQE0",
       "pos": 140737488338944
     },
@@ -59,10 +67,7 @@
       "gender": "male",
       "title": "Taichung_HSK12_ZH",
       "labels": [
-        "Trip",
-        "EN",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
+        "Taiwan"
       ],
       "card_url": "https://trello.com/c/Iu0gKxqs",
       "pos": 140737488363520
@@ -76,10 +81,7 @@
       "gender": "male",
       "title": "Taichung_HSK3_ZH",
       "labels": [
-        "Trip",
-        "EN",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
+        "Taiwan"
       ],
       "card_url": "https://trello.com/c/Iu0gKxqs",
       "pos": 140737488363520
@@ -93,115 +95,10 @@
       "gender": "male",
       "title": "Taichung_HSK4_ZH",
       "labels": [
-        "Trip",
-        "EN",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
+        "Taiwan"
       ],
       "card_url": "https://trello.com/c/Iu0gKxqs",
       "pos": 140737488363520
-    },
-    {
-      "trip_id": "KaohsiungLotusPond_HSK12_ZH",
-      "lane": "6",
-      "level": "HSK1-2",
-      "family": "KaohsiungLotusPond",
-      "voice": "annasu",
-      "gender": "female",
-      "title": "KaohsiungLotusPond_HSK12_ZH",
-      "labels": [
-        "Trip",
-        "EN",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/oMq4bChv",
-      "pos": 140737488379904
-    },
-    {
-      "trip_id": "KaohsiungLotusPond_HSK3_ZH",
-      "lane": "6",
-      "level": "HSK3",
-      "family": "KaohsiungLotusPond",
-      "voice": "annasu",
-      "gender": "female",
-      "title": "KaohsiungLotusPond_HSK3_ZH",
-      "labels": [
-        "Trip",
-        "EN",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/oMq4bChv",
-      "pos": 140737488379904
-    },
-    {
-      "trip_id": "KaohsiungLotusPond_HSK4_ZH",
-      "lane": "6",
-      "level": "HSK4",
-      "family": "KaohsiungLotusPond",
-      "voice": "annasu",
-      "gender": "female",
-      "title": "KaohsiungLotusPond_HSK4_ZH",
-      "labels": [
-        "Trip",
-        "EN",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/oMq4bChv",
-      "pos": 140737488379904
-    },
-    {
-      "trip_id": "Taipei101_HSK12_ZH",
-      "lane": "6",
-      "level": "HSK1-2",
-      "family": "Taipei101",
-      "voice": "jason",
-      "gender": "male",
-      "title": "Taipei101_HSK12_ZH",
-      "labels": [
-        "EN",
-        "Trip",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/5fy4E76e",
-      "pos": 140737488388096
-    },
-    {
-      "trip_id": "Taipei101_HSK3_ZH",
-      "lane": "6",
-      "level": "HSK3",
-      "family": "Taipei101",
-      "voice": "jason",
-      "gender": "male",
-      "title": "Taipei101_HSK3_ZH",
-      "labels": [
-        "EN",
-        "Trip",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/5fy4E76e",
-      "pos": 140737488388096
-    },
-    {
-      "trip_id": "Taipei101_HSK4_ZH",
-      "lane": "6",
-      "level": "HSK4",
-      "family": "Taipei101",
-      "voice": "yu",
-      "gender": "male",
-      "title": "Taipei101_HSK4_ZH",
-      "labels": [
-        "EN",
-        "Trip",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/5fy4E76e",
-      "pos": 140737488388096
     },
     {
       "trip_id": "LunarNewYear_HSK12_ZH",
@@ -212,10 +109,7 @@
       "gender": "female",
       "title": "LunarNewYear_HSK12_ZH",
       "labels": [
-        "EN",
-        "Trip",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
+        "Taiwan"
       ],
       "card_url": "https://trello.com/c/wNOzg1YI",
       "pos": 140737488437248
@@ -229,10 +123,7 @@
       "gender": "female",
       "title": "LunarNewYear_HSK3_ZH",
       "labels": [
-        "EN",
-        "Trip",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
+        "Taiwan"
       ],
       "card_url": "https://trello.com/c/wNOzg1YI",
       "pos": 140737488437248
@@ -246,10 +137,7 @@
       "gender": "female",
       "title": "LunarNewYear_HSK4_ZH",
       "labels": [
-        "EN",
-        "Trip",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
+        "Taiwan"
       ],
       "card_url": "https://trello.com/c/wNOzg1YI",
       "pos": 140737488437248
@@ -263,10 +151,7 @@
       "gender": "male",
       "title": "SunYatSen_HSK12_ZH",
       "labels": [
-        "EN",
-        "Trip",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
+        "Taiwan"
       ],
       "card_url": "https://trello.com/c/8p14NP8M",
       "pos": 140737488453632
@@ -280,10 +165,7 @@
       "gender": "male",
       "title": "SunYatSen_HSK3_ZH",
       "labels": [
-        "EN",
-        "Trip",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
+        "Taiwan"
       ],
       "card_url": "https://trello.com/c/8p14NP8M",
       "pos": 140737488453632
@@ -297,10 +179,7 @@
       "gender": "male",
       "title": "SunYatSen_HSK4_ZH",
       "labels": [
-        "EN",
-        "Trip",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
+        "Taiwan"
       ],
       "card_url": "https://trello.com/c/8p14NP8M",
       "pos": 140737488453632
@@ -314,10 +193,7 @@
       "gender": "male",
       "title": "ChiangKaiShek_HSK12_ZH",
       "labels": [
-        "Trip",
-        "EN",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
+        "Taiwan"
       ],
       "card_url": "https://trello.com/c/ggEEpTu0",
       "pos": 140737488470016
@@ -331,10 +207,7 @@
       "gender": "male",
       "title": "ChiangKaiShek_HSK3_ZH",
       "labels": [
-        "Trip",
-        "EN",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
+        "Taiwan"
       ],
       "card_url": "https://trello.com/c/ggEEpTu0",
       "pos": 140737488470016
@@ -348,10 +221,7 @@
       "gender": "male",
       "title": "ChiangKaiShek_HSK4_ZH",
       "labels": [
-        "Trip",
-        "EN",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
+        "Taiwan"
       ],
       "card_url": "https://trello.com/c/ggEEpTu0",
       "pos": 140737488470016
@@ -365,10 +235,21 @@
       "gender": "female",
       "title": "Tokyo_03_Beg_N4_JP",
       "labels": [
-        "Trip",
-        "EN",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/y4y5UUSk",
+      "pos": 140737488519168
+    },
+    {
+      "trip_id": "Tokyo_03_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Tokyo_03",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Tokyo_03_N3_JP",
+      "labels": [
+        "Japan"
       ],
       "card_url": "https://trello.com/c/y4y5UUSk",
       "pos": 140737488519168
@@ -382,10 +263,21 @@
       "gender": "female",
       "title": "Tokyo_04_Beg_N4_JP",
       "labels": [
-        "Trip",
-        "EN",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/wq0Kp32y",
+      "pos": 140737488535552
+    },
+    {
+      "trip_id": "Tokyo_04_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Tokyo_04",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Tokyo_04_N3_JP",
+      "labels": [
+        "Japan"
       ],
       "card_url": "https://trello.com/c/wq0Kp32y",
       "pos": 140737488535552
@@ -399,10 +291,21 @@
       "gender": "female",
       "title": "Tokyo_05_Beg_N4_JP",
       "labels": [
-        "Trip",
-        "EN",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/W6yv0lJ9",
+      "pos": 140737488539648
+    },
+    {
+      "trip_id": "Tokyo_05_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Tokyo_05",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Tokyo_05_N3_JP",
+      "labels": [
+        "Japan"
       ],
       "card_url": "https://trello.com/c/W6yv0lJ9",
       "pos": 140737488539648
@@ -416,10 +319,21 @@
       "gender": "female",
       "title": "Takao_Beg_N4_JP",
       "labels": [
-        "Trip",
-        "EN",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/Fm2C7wr2",
+      "pos": 140737488543744
+    },
+    {
+      "trip_id": "Takao_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Takao",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Takao_N3_JP",
+      "labels": [
+        "Japan"
       ],
       "card_url": "https://trello.com/c/Fm2C7wr2",
       "pos": 140737488543744
@@ -433,10 +347,21 @@
       "gender": "female",
       "title": "Takao_Fire_Beg_N4_JP",
       "labels": [
-        "Trip",
-        "EN",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/oM7nvuoP",
+      "pos": 140737488568320
+    },
+    {
+      "trip_id": "Takao_Fire_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Takao_Fire",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Takao_Fire_N3_JP",
+      "labels": [
+        "Japan"
       ],
       "card_url": "https://trello.com/c/oM7nvuoP",
       "pos": 140737488568320
@@ -450,10 +375,21 @@
       "gender": "male",
       "title": "AmagoiWaterfalls_Beg_N4_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/BcsQPUkd",
+      "pos": 140737488584704
+    },
+    {
+      "trip_id": "AmagoiWaterfalls_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "AmagoiWaterfalls",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "AmagoiWaterfalls_N3_JP",
+      "labels": [
+        "Japan"
       ],
       "card_url": "https://trello.com/c/BcsQPUkd",
       "pos": 140737488584704
@@ -467,10 +403,21 @@
       "gender": "male",
       "title": "IyaValley1_Beg_N4_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/fyh7ds9I",
+      "pos": 140737488601088
+    },
+    {
+      "trip_id": "IyaValley1_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "IyaValley1",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "IyaValley1_N3_JP",
+      "labels": [
+        "Japan"
       ],
       "card_url": "https://trello.com/c/fyh7ds9I",
       "pos": 140737488601088
@@ -484,10 +431,21 @@
       "gender": "male",
       "title": "IyaValley2_Beg_N4_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/IaO8pd2Z",
+      "pos": 140737488617472
+    },
+    {
+      "trip_id": "IyaValley2_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "IyaValley2",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "IyaValley2_N3_JP",
+      "labels": [
+        "Japan"
       ],
       "card_url": "https://trello.com/c/IaO8pd2Z",
       "pos": 140737488617472
@@ -501,10 +459,21 @@
       "gender": "male",
       "title": "Oboke_Beg_N4_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/8KV2ULYe",
+      "pos": 140737488633856
+    },
+    {
+      "trip_id": "Oboke_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Oboke",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Oboke_N3_JP",
+      "labels": [
+        "Japan"
       ],
       "card_url": "https://trello.com/c/8KV2ULYe",
       "pos": 140737488633856
@@ -518,10 +487,21 @@
       "gender": "male",
       "title": "KochiCity_Beg_N4_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/qPuxApEa",
+      "pos": 140737488650240
+    },
+    {
+      "trip_id": "KochiCity_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "KochiCity",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "KochiCity_N3_JP",
+      "labels": [
+        "Japan"
       ],
       "card_url": "https://trello.com/c/qPuxApEa",
       "pos": 140737488650240
@@ -535,10 +515,21 @@
       "gender": "male",
       "title": "KochiOutskirts_Beg_N4_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/7CucrI7U",
+      "pos": 140737488666624
+    },
+    {
+      "trip_id": "KochiOutskirts_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "KochiOutskirts",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "KochiOutskirts_N3_JP",
+      "labels": [
+        "Japan"
       ],
       "card_url": "https://trello.com/c/7CucrI7U",
       "pos": 140737488666624
@@ -552,10 +543,21 @@
       "gender": "male",
       "title": "Shikoku_Karst_Beg_N4_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/IVts0t0L",
+      "pos": 140737488683008
+    },
+    {
+      "trip_id": "Shikoku_Karst_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Shikoku_Karst",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Shikoku_Karst_N3_JP",
+      "labels": [
+        "Japan"
       ],
       "card_url": "https://trello.com/c/IVts0t0L",
       "pos": 140737488683008
@@ -569,10 +571,21 @@
       "gender": "male",
       "title": "Yusuhara_Beg_N4_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/kBensxAN",
+      "pos": 140737488699392
+    },
+    {
+      "trip_id": "Yusuhara_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Yusuhara",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Yusuhara_N3_JP",
+      "labels": [
+        "Japan"
       ],
       "card_url": "https://trello.com/c/kBensxAN",
       "pos": 140737488699392
@@ -586,10 +599,7 @@
       "gender": "male",
       "title": "Tokyo_06_HieShrine_Beg_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/Jw0RVsPV",
       "pos": 140737488715776
@@ -603,10 +613,21 @@
       "gender": "male",
       "title": "Tokyo_06_HieShrine_Beg_N4_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/Jw0RVsPV",
+      "pos": 140737488715776
+    },
+    {
+      "trip_id": "Tokyo_06_HieShrine_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Tokyo_06_HieShrine",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Tokyo_06_HieShrine_N3_JP",
+      "labels": [
+        "Japan"
       ],
       "card_url": "https://trello.com/c/Jw0RVsPV",
       "pos": 140737488715776
@@ -620,10 +641,7 @@
       "gender": "male",
       "title": "Tokyo_08_ImperialPalace_Beg_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/cKylO0ar",
       "pos": 140737488732160
@@ -637,10 +655,21 @@
       "gender": "male",
       "title": "Tokyo_08_ImperialPalace_Beg_N4_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/cKylO0ar",
+      "pos": 140737488732160
+    },
+    {
+      "trip_id": "Tokyo_08_ImperialPalace_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Tokyo_08_ImperialPalace",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Tokyo_08_ImperialPalace_N3_JP",
+      "labels": [
+        "Japan"
       ],
       "card_url": "https://trello.com/c/cKylO0ar",
       "pos": 140737488732160
@@ -654,10 +683,7 @@
       "gender": "female",
       "title": "Hida_Festival_Beg_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/4CEMxQiC",
       "pos": 140737488748544
@@ -671,10 +697,21 @@
       "gender": "female",
       "title": "Hida_Festival_Beg_N4_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/4CEMxQiC",
+      "pos": 140737488748544
+    },
+    {
+      "trip_id": "Hida_Festival_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Hida_Festival",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Hida_Festival_N3_JP",
+      "labels": [
+        "Japan"
       ],
       "card_url": "https://trello.com/c/4CEMxQiC",
       "pos": 140737488748544
@@ -688,10 +725,7 @@
       "gender": "male",
       "title": "Tokyo_10_Zojoji_Beg_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/rBy1dZpj",
       "pos": 140737488764928
@@ -705,10 +739,21 @@
       "gender": "male",
       "title": "Tokyo_10_Zojoji_Beg_N4_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/rBy1dZpj",
+      "pos": 140737488764928
+    },
+    {
+      "trip_id": "Tokyo_10_Zojoji_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Tokyo_10_Zojoji",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Tokyo_10_Zojoji_N3_JP",
+      "labels": [
+        "Japan"
       ],
       "card_url": "https://trello.com/c/rBy1dZpj",
       "pos": 140737488764928
@@ -722,10 +767,7 @@
       "gender": "male",
       "title": "Tokyo_09_Yasukuni_Beg_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/rFJvBVza",
       "pos": 140737488781312
@@ -739,10 +781,21 @@
       "gender": "male",
       "title": "Tokyo_09_Yasukuni_Beg_N4_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/rFJvBVza",
+      "pos": 140737488781312
+    },
+    {
+      "trip_id": "Tokyo_09_Yasukuni_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Tokyo_09_Yasukuni",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Tokyo_09_Yasukuni_N3_JP",
+      "labels": [
+        "Japan"
       ],
       "card_url": "https://trello.com/c/rFJvBVza",
       "pos": 140737488781312
@@ -756,10 +809,7 @@
       "gender": "male",
       "title": "Tokyo_07_Olympic_Beg_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/nSwVQ51a",
       "pos": 140737488797696
@@ -773,10 +823,21 @@
       "gender": "male",
       "title": "Tokyo_07_Olympic_Beg_N4_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/nSwVQ51a",
+      "pos": 140737488797696
+    },
+    {
+      "trip_id": "Tokyo_07_Olympic_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Tokyo_07_Olympic",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Tokyo_07_Olympic_N3_JP",
+      "labels": [
+        "Japan"
       ],
       "card_url": "https://trello.com/c/nSwVQ51a",
       "pos": 140737488797696
@@ -790,10 +851,7 @@
       "gender": "female",
       "title": "Hida_Beg_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/MFisgS94",
       "pos": 140737488814080
@@ -807,10 +865,21 @@
       "gender": "female",
       "title": "Hida_Beg_N4_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/MFisgS94",
+      "pos": 140737488814080
+    },
+    {
+      "trip_id": "Hida_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Hida",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Hida_N3_JP",
+      "labels": [
+        "Japan"
       ],
       "card_url": "https://trello.com/c/MFisgS94",
       "pos": 140737488814080
@@ -824,10 +893,7 @@
       "gender": "female",
       "title": "Takayama_Beg_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/YgW6nJe7",
       "pos": 140737488830464
@@ -841,10 +907,21 @@
       "gender": "female",
       "title": "Takayama_Beg_N4_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/YgW6nJe7",
+      "pos": 140737488830464
+    },
+    {
+      "trip_id": "Takayama_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Takayama",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Takayama_N3_JP",
+      "labels": [
+        "Japan"
       ],
       "card_url": "https://trello.com/c/YgW6nJe7",
       "pos": 140737488830464
@@ -858,10 +935,7 @@
       "gender": "female",
       "title": "HidaNoSato_Beg_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/Aar8uP1X",
       "pos": 140737488846848
@@ -875,10 +949,21 @@
       "gender": "female",
       "title": "HidaNoSato_Beg_N4_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/Aar8uP1X",
+      "pos": 140737488846848
+    },
+    {
+      "trip_id": "HidaNoSato_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "HidaNoSato",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "HidaNoSato_N3_JP",
+      "labels": [
+        "Japan"
       ],
       "card_url": "https://trello.com/c/Aar8uP1X",
       "pos": 140737488846848
@@ -892,10 +977,7 @@
       "gender": "female",
       "title": "Takayama_Jinya_Beg_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/LU9isgHn",
       "pos": 140737488863232
@@ -909,10 +991,21 @@
       "gender": "female",
       "title": "Takayama_Jinya_Beg_N4_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/LU9isgHn",
+      "pos": 140737488863232
+    },
+    {
+      "trip_id": "Takayama_Jinya_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Takayama_Jinya",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Takayama_Jinya_N3_JP",
+      "labels": [
+        "Japan"
       ],
       "card_url": "https://trello.com/c/LU9isgHn",
       "pos": 140737488863232
@@ -926,10 +1019,7 @@
       "gender": "female",
       "title": "Shirakawago_Beg_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/lde6zVso",
       "pos": 140737488879616
@@ -943,10 +1033,21 @@
       "gender": "female",
       "title": "Shirakawago_Beg_N4_JP",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/lde6zVso",
+      "pos": 140737488879616
+    },
+    {
+      "trip_id": "Shirakawago_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Shirakawago",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Shirakawago_N3_JP",
+      "labels": [
+        "Japan"
       ],
       "card_url": "https://trello.com/c/lde6zVso",
       "pos": 140737488879616
@@ -959,21 +1060,11 @@
       "voice": "sara",
       "gender": "female",
       "title": "Ainsa_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/tEeI4LZp",
       "pos": 140737488896000
-    },
-    {
-      "trip_id": "Baden-Baden_A12_DE",
-      "lane": "6",
-      "level": "DE-A12",
-      "family": "Baden-Baden_Beg_DE",
-      "voice": "noah",
-      "gender": "male",
-      "title": "Baden-Baden_A12_DE",
-      "labels": [],
-      "card_url": "https://trello.com/c/6qQsM297",
-      "pos": 140737488912384
     },
     {
       "trip_id": "CastellodiBrolio_A12_IT",
@@ -983,7 +1074,9 @@
       "voice": "marco",
       "gender": "male",
       "title": "CastellodiBrolio_A12_IT",
-      "labels": [],
+      "labels": [
+        "Italy"
+      ],
       "card_url": "https://trello.com/c/z66hXasz",
       "pos": 140737488928768
     },
@@ -995,7 +1088,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Cordoba3_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/P0WI2e2R",
       "pos": 140737488945152
     },
@@ -1007,21 +1102,11 @@
       "voice": "linda",
       "gender": "female",
       "title": "Florence_Duomo_A12_IT",
-      "labels": [],
+      "labels": [
+        "Italy"
+      ],
       "card_url": "https://trello.com/c/VilUFFDk",
       "pos": 140737488961536
-    },
-    {
-      "trip_id": "Hirsau_Abbey_A12_DE",
-      "lane": "6",
-      "level": "DE-A12",
-      "family": "Hirsau_Abbey_Beg_DE",
-      "voice": "dana",
-      "gender": "female",
-      "title": "Hirsau_Abbey_A12_DE",
-      "labels": [],
-      "card_url": "https://trello.com/c/a2qeFqqg",
-      "pos": 140737488977920
     },
     {
       "trip_id": "Hyeres_A12_FR",
@@ -1031,7 +1116,9 @@
       "voice": "yvonne",
       "gender": "female",
       "title": "Hyeres_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/GqdU69yz",
       "pos": 140737488994304
     },
@@ -1043,7 +1130,9 @@
       "voice": "sebastien",
       "gender": "male",
       "title": "Reims3_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/qCkP1jVo",
       "pos": 140737489010688
     },
@@ -1055,7 +1144,9 @@
       "voice": "linda",
       "gender": "female",
       "title": "Fiesole_A12_IT",
-      "labels": [],
+      "labels": [
+        "Italy"
+      ],
       "card_url": "https://trello.com/c/KYjWgLN2",
       "pos": 140737489027072
     },
@@ -1067,7 +1158,9 @@
       "voice": "linda",
       "gender": "female",
       "title": "Florence1_A12_IT",
-      "labels": [],
+      "labels": [
+        "Italy"
+      ],
       "card_url": "https://trello.com/c/qYxGp6QE",
       "pos": 140737489043456
     },
@@ -1079,7 +1172,9 @@
       "voice": "linda",
       "gender": "female",
       "title": "Florence2_A12_IT",
-      "labels": [],
+      "labels": [
+        "Italy"
+      ],
       "card_url": "https://trello.com/c/1Q2Qc1cm",
       "pos": 140737489059840
     },
@@ -1091,7 +1186,9 @@
       "voice": "linda",
       "gender": "female",
       "title": "Florence3_A12_IT",
-      "labels": [],
+      "labels": [
+        "Italy"
+      ],
       "card_url": "https://trello.com/c/dThEgUnA",
       "pos": 140737489076224
     },
@@ -1103,7 +1200,9 @@
       "voice": "marco",
       "gender": "male",
       "title": "Alps1_A12_IT",
-      "labels": [],
+      "labels": [
+        "Italy"
+      ],
       "card_url": "https://trello.com/c/2Lprwhld",
       "pos": 140737489092608
     },
@@ -1115,7 +1214,9 @@
       "voice": "marco",
       "gender": "male",
       "title": "Alps2_A12_IT",
-      "labels": [],
+      "labels": [
+        "Italy"
+      ],
       "card_url": "https://trello.com/c/iS3QELVP",
       "pos": 140737489108992
     },
@@ -1127,7 +1228,9 @@
       "voice": "marco",
       "gender": "male",
       "title": "Pisa_A12_IT",
-      "labels": [],
+      "labels": [
+        "Italy"
+      ],
       "card_url": "https://trello.com/c/uhM219g4",
       "pos": 140737489158144
     },
@@ -1139,7 +1242,9 @@
       "voice": "marco",
       "gender": "male",
       "title": "Radda_SanGusme_A12_IT",
-      "labels": [],
+      "labels": [
+        "Italy"
+      ],
       "card_url": "https://trello.com/c/Z26LDbzu",
       "pos": 140737489174528
     },
@@ -1151,7 +1256,9 @@
       "voice": "marco",
       "gender": "male",
       "title": "Siena1_A12_IT",
-      "labels": [],
+      "labels": [
+        "Italy"
+      ],
       "card_url": "https://trello.com/c/7diCq4Rt",
       "pos": 140737489190912
     },
@@ -1163,21 +1270,11 @@
       "voice": "marco",
       "gender": "male",
       "title": "Siena2_A12_IT",
-      "labels": [],
+      "labels": [
+        "Italy"
+      ],
       "card_url": "https://trello.com/c/IT8lYodK",
       "pos": 140737489207296
-    },
-    {
-      "trip_id": "Allerheiligen_A12_DE",
-      "lane": "6",
-      "level": "DE-A12",
-      "family": "Allerheiligen_Beg_DE",
-      "voice": "dana",
-      "gender": "female",
-      "title": "Allerheiligen_A12_DE",
-      "labels": [],
-      "card_url": "https://trello.com/c/Our7pEKs",
-      "pos": 140737489223680
     },
     {
       "trip_id": "Alps1_A12_DE",
@@ -1187,7 +1284,9 @@
       "voice": "dana",
       "gender": "female",
       "title": "Alps1_A12_DE",
-      "labels": [],
+      "labels": [
+        "Germany"
+      ],
       "card_url": "https://trello.com/c/Cu6Qsn3O",
       "pos": 140737489240064
     },
@@ -1199,7 +1298,9 @@
       "voice": "dana",
       "gender": "female",
       "title": "Alps2_A12_DE",
-      "labels": [],
+      "labels": [
+        "Germany"
+      ],
       "card_url": "https://trello.com/c/JqpTwrc1",
       "pos": 140737489256448
     },
@@ -1211,7 +1312,9 @@
       "voice": "dana",
       "gender": "female",
       "title": "Black_Forest_High_Road_A12_DE",
-      "labels": [],
+      "labels": [
+        "Germany"
+      ],
       "card_url": "https://trello.com/c/YH9ScUEP",
       "pos": 140737489272832
     },
@@ -1223,7 +1326,9 @@
       "voice": "dana",
       "gender": "female",
       "title": "Cuckoo_Clocks_A12_DE",
-      "labels": [],
+      "labels": [
+        "Germany"
+      ],
       "card_url": "https://trello.com/c/wlnRf91l",
       "pos": 140737489289216
     },
@@ -1235,7 +1340,9 @@
       "voice": "dana",
       "gender": "female",
       "title": "Freiburg_im_Breisgau_II_A12_DE",
-      "labels": [],
+      "labels": [
+        "Germany"
+      ],
       "card_url": "https://trello.com/c/gAtNCnxJ",
       "pos": 140737489305600
     },
@@ -1247,7 +1354,9 @@
       "voice": "dana",
       "gender": "female",
       "title": "Freiburg_im_Breisgau_I_A12_DE",
-      "labels": [],
+      "labels": [
+        "Germany"
+      ],
       "card_url": "https://trello.com/c/m0XqgYhx",
       "pos": 140737489321984
     },
@@ -1259,7 +1368,9 @@
       "voice": "dana",
       "gender": "female",
       "title": "Nagold_A12_DE",
-      "labels": [],
+      "labels": [
+        "Germany"
+      ],
       "card_url": "https://trello.com/c/8HPsFVrw",
       "pos": 140737489338368
     },
@@ -1271,7 +1382,9 @@
       "voice": "dana",
       "gender": "female",
       "title": "Schiltach_A12_DE",
-      "labels": [],
+      "labels": [
+        "Germany"
+      ],
       "card_url": "https://trello.com/c/BHBVmQvQ",
       "pos": 140737489354752
     },
@@ -1283,7 +1396,9 @@
       "voice": "dana",
       "gender": "female",
       "title": "Triberg_im_Schwarzwald_A12_DE",
-      "labels": [],
+      "labels": [
+        "Germany"
+      ],
       "card_url": "https://trello.com/c/Unn0tYkl",
       "pos": 140737489371136
     },
@@ -1295,7 +1410,9 @@
       "voice": "noah",
       "gender": "male",
       "title": "Baden-Baden_III_A12_DE",
-      "labels": [],
+      "labels": [
+        "Germany"
+      ],
       "card_url": "https://trello.com/c/C4g243it",
       "pos": 140737489387520
     },
@@ -1307,7 +1424,9 @@
       "voice": "noah",
       "gender": "male",
       "title": "Baden-Baden_II_A12_DE",
-      "labels": [],
+      "labels": [
+        "Germany"
+      ],
       "card_url": "https://trello.com/c/XsQXwIzb",
       "pos": 140737489403904
     },
@@ -1319,7 +1438,9 @@
       "voice": "noah",
       "gender": "male",
       "title": "Liechtenstein_A12_DE",
-      "labels": [],
+      "labels": [
+        "Germany"
+      ],
       "card_url": "https://trello.com/c/SihaxD83",
       "pos": 140737489420288
     },
@@ -1331,7 +1452,9 @@
       "voice": "noah",
       "gender": "male",
       "title": "Memmingen_A12_DE",
-      "labels": [],
+      "labels": [
+        "Germany"
+      ],
       "card_url": "https://trello.com/c/0gdxOfh6",
       "pos": 140737489436672
     },
@@ -1343,7 +1466,9 @@
       "voice": "noah",
       "gender": "male",
       "title": "Mummelsee_Titisee_A12_DE",
-      "labels": [],
+      "labels": [
+        "Germany"
+      ],
       "card_url": "https://trello.com/c/2Y8bUW7R",
       "pos": 140737489453056
     },
@@ -1355,7 +1480,9 @@
       "voice": "noah",
       "gender": "male",
       "title": "Ravenna_Gorge_A12_DE",
-      "labels": [],
+      "labels": [
+        "Germany"
+      ],
       "card_url": "https://trello.com/c/GTYZA51s",
       "pos": 140737489469440
     },
@@ -1367,7 +1494,9 @@
       "voice": "sebastien",
       "gender": "male",
       "title": "Cassis_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/5npTXe7r",
       "pos": 140737489485824
     },
@@ -1379,7 +1508,9 @@
       "voice": "sebastien",
       "gender": "male",
       "title": "Reims1_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/ymEYBDjl",
       "pos": 140737489502208
     },
@@ -1391,7 +1522,9 @@
       "voice": "sebastien",
       "gender": "male",
       "title": "Reims2_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/t3AruZVg",
       "pos": 140737489518592
     },
@@ -1403,7 +1536,9 @@
       "voice": "yvonne",
       "gender": "female",
       "title": "Alps1_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/6OtpfMVG",
       "pos": 140737489534976
     },
@@ -1415,7 +1550,9 @@
       "voice": "yvonne",
       "gender": "female",
       "title": "Alps2_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/8mrLtm9d",
       "pos": 140737489551360
     },
@@ -1427,7 +1564,9 @@
       "voice": "yvonne",
       "gender": "female",
       "title": "Bandol_Toulon_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/2DOmjNkF",
       "pos": 140737489567744
     },
@@ -1439,7 +1578,9 @@
       "voice": "yvonne",
       "gender": "female",
       "title": "Blesle_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/qd803dK2",
       "pos": 140737489584128
     },
@@ -1451,7 +1592,9 @@
       "voice": "yvonne",
       "gender": "female",
       "title": "Causses3_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/3KZF0Py2",
       "pos": 140737489600512
     },
@@ -1463,7 +1606,9 @@
       "voice": "yvonne",
       "gender": "female",
       "title": "Colmar1_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/CQurFnK0",
       "pos": 140737489616896
     },
@@ -1475,7 +1620,9 @@
       "voice": "yvonne",
       "gender": "female",
       "title": "Colmar2_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/vNuVzpgn",
       "pos": 140737489633280
     },
@@ -1487,7 +1634,9 @@
       "voice": "yvonne",
       "gender": "female",
       "title": "Gassin_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/GAlY8gJG",
       "pos": 140737489649664
     },
@@ -1499,7 +1648,9 @@
       "voice": "yvonne",
       "gender": "female",
       "title": "Gorges_du_Tarn_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/ETyekSY9",
       "pos": 140737489666048
     },
@@ -1511,7 +1662,9 @@
       "voice": "yvonne",
       "gender": "female",
       "title": "Hautvillers_Epernay_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/ox4kRvua",
       "pos": 140737489682432
     },
@@ -1523,7 +1676,9 @@
       "voice": "yvonne",
       "gender": "female",
       "title": "Le_Malzieu-Ville_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/BOORa8np",
       "pos": 140737489698816
     },
@@ -1535,7 +1690,9 @@
       "voice": "yvonne",
       "gender": "female",
       "title": "Saint_Tropez_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/iz9QJxaL",
       "pos": 140737489715200
     },
@@ -1547,7 +1704,9 @@
       "voice": "yvonne",
       "gender": "female",
       "title": "Sainte_Enimie_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/jItRPgT2",
       "pos": 140737489731584
     },
@@ -1559,7 +1718,9 @@
       "voice": "yvonne",
       "gender": "female",
       "title": "Strasbourg1_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/rEHRxCEG",
       "pos": 140737489747968
     },
@@ -1571,7 +1732,9 @@
       "voice": "yvonne",
       "gender": "female",
       "title": "Strasbourg2_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/Eo7Jrids",
       "pos": 140737489764352
     },
@@ -1583,7 +1746,9 @@
       "voice": "yvonne",
       "gender": "female",
       "title": "Strasbourg3_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/vEcm8Xyl",
       "pos": 140737489780736
     },
@@ -1595,7 +1760,9 @@
       "voice": "yvonne",
       "gender": "female",
       "title": "Strasbourg4_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/Bs8lwgey",
       "pos": 140737489797120
     },
@@ -1607,7 +1774,9 @@
       "voice": "yvonne",
       "gender": "female",
       "title": "Strasbourg5_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/hymfGLML",
       "pos": 140737489813504
     },
@@ -1619,7 +1788,9 @@
       "voice": "yvonne",
       "gender": "female",
       "title": "Vichy_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/NHi5uVd9",
       "pos": 140737489829888
     },
@@ -1631,7 +1802,9 @@
       "voice": "sara",
       "gender": "female",
       "title": "Besalu_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/jNGqnn9e",
       "pos": 140737489846272
     },
@@ -1643,7 +1816,9 @@
       "voice": "sara",
       "gender": "female",
       "title": "Cadaques_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/6Obx0Rul",
       "pos": 140737489862656
     },
@@ -1655,7 +1830,9 @@
       "voice": "sara",
       "gender": "female",
       "title": "ElCamino_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/iOSXBIX6",
       "pos": 140737489879040
     },
@@ -1667,7 +1844,9 @@
       "voice": "sara",
       "gender": "female",
       "title": "El_Planeta_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/2QXkkBIE",
       "pos": 140737489895424
     },
@@ -1679,7 +1858,9 @@
       "voice": "sara",
       "gender": "female",
       "title": "Ingenio_Humano1_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/FP84NjLh",
       "pos": 140737489911808
     },
@@ -1691,7 +1872,9 @@
       "voice": "sara",
       "gender": "female",
       "title": "Ingenio_Humano2_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/HwV9AFja",
       "pos": 140737489928192
     },
@@ -1703,7 +1886,9 @@
       "voice": "sara",
       "gender": "female",
       "title": "Mercados_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/DT97MUXc",
       "pos": 140737489944576
     },
@@ -1715,7 +1900,9 @@
       "voice": "sara",
       "gender": "female",
       "title": "Moros_y_Cristianos_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/pseFq89n",
       "pos": 140737489960960
     },
@@ -1727,7 +1914,9 @@
       "voice": "sara",
       "gender": "female",
       "title": "Org_Social1_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/vkE1x7pW",
       "pos": 140737489977344
     },
@@ -1739,7 +1928,9 @@
       "voice": "sara",
       "gender": "female",
       "title": "Org_Social2_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/oKvEKhlA",
       "pos": 140737489993728
     },
@@ -1751,7 +1942,9 @@
       "voice": "sara",
       "gender": "female",
       "title": "Sanguesa_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/dNhGLqCb",
       "pos": 140737490010112
     },
@@ -1763,7 +1956,9 @@
       "voice": "sara",
       "gender": "female",
       "title": "Segovia_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/L7dOBjRc",
       "pos": 140737490026496
     },
@@ -1775,7 +1970,9 @@
       "voice": "sara",
       "gender": "female",
       "title": "UrbanoRural_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/NJBFxFv1",
       "pos": 140737490042880
     },
@@ -1787,7 +1984,9 @@
       "voice": "sara",
       "gender": "female",
       "title": "ArtsSci_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/dsPL45LF",
       "pos": 140737490059264
     },
@@ -1799,7 +1998,9 @@
       "voice": "sara",
       "gender": "female",
       "title": "Don_Quijote_La_Mancha_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/9sNvxTRg",
       "pos": 140737490075648
     },
@@ -1811,7 +2012,9 @@
       "voice": "sara",
       "gender": "female",
       "title": "Toledo1_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/tSvYC65C",
       "pos": 140737490092032
     },
@@ -1823,7 +2026,9 @@
       "voice": "sara",
       "gender": "female",
       "title": "Toledo2_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/WHJ1eStd",
       "pos": 140737490108416
     },
@@ -1835,7 +2040,9 @@
       "voice": "sara",
       "gender": "female",
       "title": "Toledo3_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/uSw2dd1y",
       "pos": 140737490124800
     },
@@ -1847,7 +2054,9 @@
       "voice": "sara",
       "gender": "female",
       "title": "Vic_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/S9YIQgUv",
       "pos": 140737490141184
     },
@@ -1859,7 +2068,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Cadiz_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/tOzm1T6E",
       "pos": 140737490157568
     },
@@ -1871,7 +2082,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Carnaval_de_Cadiz_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/KZfqmH19",
       "pos": 140737490173952
     },
@@ -1883,7 +2096,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Cordoba1_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/wJWUxjIr",
       "pos": 140737490190336
     },
@@ -1895,7 +2110,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Cordoba2_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/RKNiLexI",
       "pos": 140737490206720
     },
@@ -1907,7 +2124,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Cordoba4_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/NFbeBPVW",
       "pos": 140737490223104
     },
@@ -1919,7 +2138,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Los_Escobazos_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/s3Dl5FSj",
       "pos": 140737490239488
     },
@@ -1931,7 +2152,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Madrid1_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/Apbt2Amx",
       "pos": 140737490255872
     },
@@ -1943,7 +2166,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Madrid2_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/rvipmhVN",
       "pos": 140737490272256
     },
@@ -1955,7 +2180,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Madrid3_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/Z84LzItx",
       "pos": 140737490288640
     },
@@ -1967,7 +2194,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Montserrat_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/H4JxPT6K",
       "pos": 140737490305024
     },
@@ -1979,7 +2208,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Sevilla1_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/itv8zOY0",
       "pos": 140737490321408
     },
@@ -1991,7 +2222,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Sevilla2_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/x38jRswn",
       "pos": 140737490337792
     },
@@ -2003,7 +2236,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Sevilla3_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/1tdcBE37",
       "pos": 140737490354176
     },
@@ -2015,7 +2250,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Tossa_de_Mar_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/cAiS9OWE",
       "pos": 140737490370560
     },
@@ -2027,7 +2264,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Valencia1_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/0wbYHPz5",
       "pos": 140737490386944
     },
@@ -2039,7 +2278,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Valencia2_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/RFzcNQMJ",
       "pos": 140737490403328
     },
@@ -2051,7 +2292,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Girona_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/RFwyl0wy",
       "pos": 140737490419712
     },
@@ -2063,7 +2306,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Salvador_Dali_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/J6xtifcU",
       "pos": 140737490436096
     },
@@ -2075,7 +2320,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Sant_Felíu_de_Guíxols_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/BKJBD0Fg",
       "pos": 140737490452480
     },
@@ -2087,7 +2334,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Valencia3_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/MExGiYmY",
       "pos": 140737490468864
     },
@@ -2099,7 +2348,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Valencia4_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/sYkhC4BO",
       "pos": 140737490485248
     },
@@ -2111,7 +2362,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Zaragoza1_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/NqkLQrMw",
       "pos": 140737490501632
     },
@@ -2123,7 +2376,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Zaragoza2_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/fHvCv0Rw",
       "pos": 140737490518016
     },
@@ -2135,7 +2390,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Zaragoza3_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/x0hfGU2U",
       "pos": 140737490534400
     },
@@ -2147,7 +2404,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Sevilla4_B1_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/IcNlW2yo",
       "pos": 140737490550784
     },
@@ -2159,7 +2418,9 @@
       "voice": "martin",
       "gender": "male",
       "title": "Sevilla5_B1_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/9qOT6oHK",
       "pos": 140737490567168
     },
@@ -2171,7 +2432,9 @@
       "voice": "sebastien",
       "gender": "male",
       "title": "Cassis_Calanques_A12_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/rWz0Bbsw",
       "pos": 140737490583552
     },
@@ -2183,7 +2446,9 @@
       "voice": "",
       "gender": "",
       "title": "Andorra_Pirineos_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/zKvgFcR1",
       "pos": 140737490599936
     },
@@ -2195,7 +2460,9 @@
       "voice": "",
       "gender": "",
       "title": "Bilbao2_Guggenheim_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/olMXADc8",
       "pos": 140737490616320
     },
@@ -2207,7 +2474,9 @@
       "voice": "",
       "gender": "",
       "title": "Bilbao1_LaRia_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/82nGwNut",
       "pos": 140737490632704
     },
@@ -2219,7 +2488,9 @@
       "voice": "",
       "gender": "",
       "title": "Bilbao1_LaRia_B1_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/82nGwNut",
       "pos": 140737490632704
     },
@@ -2231,7 +2502,9 @@
       "voice": "",
       "gender": "",
       "title": "Cordoba_CascoHistorico_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/sIeM6RFL",
       "pos": 140737490649088
     },
@@ -2243,7 +2516,9 @@
       "voice": "",
       "gender": "",
       "title": "Cuevas_Altamira_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/qrZLzgEe",
       "pos": 140737490665472
     },
@@ -2255,7 +2530,9 @@
       "voice": "",
       "gender": "",
       "title": "Jerez_CascoAntiguo_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/jhHSMkAP",
       "pos": 140737490681856
     },
@@ -2267,7 +2544,9 @@
       "voice": "Sara",
       "gender": "female",
       "title": "Jerez_CascoAntiguo_B1_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/jhHSMkAP",
       "pos": 140737490681856
     },
@@ -2279,7 +2558,9 @@
       "voice": "",
       "gender": "",
       "title": "LasFallas2019_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/RBvGTPyC",
       "pos": 140737490698240
     },
@@ -2291,7 +2572,9 @@
       "voice": "",
       "gender": "",
       "title": "LosPirineos_Aventura_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/nB9QALtD",
       "pos": 140737490714624
     },
@@ -2303,7 +2586,9 @@
       "voice": "",
       "gender": "",
       "title": "Merida3_Anfiteatro_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/EVkZ7Aqn",
       "pos": 140737490731008
     },
@@ -2315,7 +2600,9 @@
       "voice": "",
       "gender": "",
       "title": "Merida3_Anfiteatro_B1_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/EVkZ7Aqn",
       "pos": 140737490731008
     },
@@ -2327,7 +2614,9 @@
       "voice": "",
       "gender": "",
       "title": "Merida2_Acueducto_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/C1mkUNFl",
       "pos": 140737490747392
     },
@@ -2339,7 +2628,9 @@
       "voice": "",
       "gender": "",
       "title": "Merida2_Acueducto_B1_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/C1mkUNFl",
       "pos": 140737490747392
     },
@@ -2351,7 +2642,9 @@
       "voice": "",
       "gender": "",
       "title": "Merida1_PuenteYAlcazaba_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/CBAMt96p",
       "pos": 140737490763776
     },
@@ -2363,7 +2656,9 @@
       "voice": "",
       "gender": "",
       "title": "Merida1_PuenteYAlcazaba_B1_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/CBAMt96p",
       "pos": 140737490763776
     },
@@ -2375,7 +2670,9 @@
       "voice": "",
       "gender": "",
       "title": "Salamanca2_Catedrales_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/Yr0KX0jh",
       "pos": 140737490780160
     },
@@ -2387,7 +2684,9 @@
       "voice": "",
       "gender": "",
       "title": "Salamanca2_Catedrales_B1_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/Yr0KX0jh",
       "pos": 140737490780160
     },
@@ -2399,7 +2698,9 @@
       "voice": "",
       "gender": "",
       "title": "Salamanca1_Universidad_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/6ee03YGc",
       "pos": 140737490796544
     },
@@ -2411,7 +2712,9 @@
       "voice": "",
       "gender": "",
       "title": "SanSebastian2_ParteVieja_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/s4mresBI",
       "pos": 140737490812928
     },
@@ -2423,7 +2726,9 @@
       "voice": "",
       "gender": "",
       "title": "SanSebastian1_LaConcha_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/GNfpM5Ze",
       "pos": 140737490829312
     },
@@ -2435,7 +2740,9 @@
       "voice": "",
       "gender": "",
       "title": "Santiago3_Catedral_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/hJaa8bVu",
       "pos": 140737490845696
     },
@@ -2447,7 +2754,9 @@
       "voice": "",
       "gender": "",
       "title": "Santiago3_Catedral_B1_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/hJaa8bVu",
       "pos": 140737490845696
     },
@@ -2459,7 +2768,9 @@
       "voice": "",
       "gender": "",
       "title": "Santiago2_Patrimonio_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/sJmFS24S",
       "pos": 140737490862080
     },
@@ -2471,7 +2782,9 @@
       "voice": "",
       "gender": "",
       "title": "Santiago2_Patrimonio_B1_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/sJmFS24S",
       "pos": 140737490862080
     },
@@ -2483,7 +2796,9 @@
       "voice": "",
       "gender": "",
       "title": "Santiago1_CiudadVieja_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/4cspCnOd",
       "pos": 140737490878464
     },
@@ -2495,7 +2810,9 @@
       "voice": "",
       "gender": "",
       "title": "Tenerife3_SantaCruz_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/uoRvHRq6",
       "pos": 140737490894848
     },
@@ -2507,7 +2824,9 @@
       "voice": "",
       "gender": "",
       "title": "Tenerife3_SantaCruz_B1_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/uoRvHRq6",
       "pos": 140737490894848
     },
@@ -2519,7 +2838,9 @@
       "voice": "",
       "gender": "",
       "title": "Tenerife2_Teno_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/Lu4Gt6UO",
       "pos": 140737490911232
     },
@@ -2531,7 +2852,9 @@
       "voice": "",
       "gender": "",
       "title": "Tenerife2_Teno_B1_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/Lu4Gt6UO",
       "pos": 140737490911232
     },
@@ -2543,7 +2866,9 @@
       "voice": "",
       "gender": "",
       "title": "Tenerife4_Volcanes_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/AzxOLeF1",
       "pos": 140737490927616
     },
@@ -2555,7 +2880,9 @@
       "voice": "",
       "gender": "",
       "title": "Tenerife1_ElTeide_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/VtEKnPdg",
       "pos": 140737490944000
     },
@@ -2567,7 +2894,9 @@
       "voice": "",
       "gender": "",
       "title": "Tenerife1_ElTeide_B1_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/VtEKnPdg",
       "pos": 140737490944000
     },
@@ -2579,7 +2908,9 @@
       "voice": "",
       "gender": "",
       "title": "Tenerife5_Anaga_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/dIs4volN",
       "pos": 140737490960384
     },
@@ -2591,7 +2922,9 @@
       "voice": "",
       "gender": "",
       "title": "Tenerife5_Anaga_B1_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/dIs4volN",
       "pos": 140737490960384
     },
@@ -2603,7 +2936,9 @@
       "voice": "",
       "gender": "",
       "title": "VitoriaGasteiz_CascoMedieval_A12_ES",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/XpiTBBEg",
       "pos": 140737490976768
     },
@@ -2615,7 +2950,9 @@
       "voice": "sebastien",
       "gender": "male",
       "title": "Monaco1_Beg_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/7MMuTozA",
       "pos": 140737488289792
     },
@@ -2627,7 +2964,9 @@
       "voice": "sebastien",
       "gender": "male",
       "title": "Monaco1_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/7MMuTozA",
       "pos": 140737488289792
     },
@@ -2639,7 +2978,9 @@
       "voice": "sebastien",
       "gender": "male",
       "title": "Monaco2_Beg_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/9JlJR6Gc",
       "pos": 140737488322560
     },
@@ -2651,99 +2992,11 @@
       "voice": "sebastien",
       "gender": "male",
       "title": "Monaco2_FR",
-      "labels": [],
+      "labels": [
+        "France"
+      ],
       "card_url": "https://trello.com/c/9JlJR6Gc",
       "pos": 140737488322560
-    },
-    {
-      "trip_id": "Jedburgh1_TownAbbey_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Jedburgh1_TownAbbey",
-      "voice": "isla",
-      "gender": "female",
-      "title": "Jedburgh1_TownAbbey_A12_EN",
-      "labels": [
-        "EN",
-        "Trip"
-      ],
-      "card_url": "https://trello.com/c/pabZS5gO",
-      "pos": 140737488359424
-    },
-    {
-      "trip_id": "Jedburgh1_TownAbbey_B1_EN",
-      "lane": "7",
-      "level": "B1",
-      "family": "Jedburgh1_TownAbbey",
-      "voice": "isla",
-      "gender": "female",
-      "title": "Jedburgh1_TownAbbey_B1_EN",
-      "labels": [
-        "EN",
-        "Trip"
-      ],
-      "card_url": "https://trello.com/c/pabZS5gO",
-      "pos": 140737488359424
-    },
-    {
-      "trip_id": "Jedburgh1_TownAbbey_EN",
-      "lane": "7",
-      "level": "EN",
-      "family": "Jedburgh1_TownAbbey",
-      "voice": "isla",
-      "gender": "female",
-      "title": "Jedburgh1_TownAbbey_EN",
-      "labels": [
-        "EN",
-        "Trip"
-      ],
-      "card_url": "https://trello.com/c/pabZS5gO",
-      "pos": 140737488359424
-    },
-    {
-      "trip_id": "Jedburgh2_CastleJail_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Jedburgh2_CastleJail",
-      "voice": "isla",
-      "gender": "female",
-      "title": "Jedburgh2_CastleJail_A12_EN",
-      "labels": [
-        "EN",
-        "Trip"
-      ],
-      "card_url": "https://trello.com/c/5TEAaTMo",
-      "pos": 140737488363520
-    },
-    {
-      "trip_id": "Jedburgh2_CastleJail_B1_EN",
-      "lane": "7",
-      "level": "B1",
-      "family": "Jedburgh2_CastleJail",
-      "voice": "isla",
-      "gender": "female",
-      "title": "Jedburgh2_CastleJail_B1_EN",
-      "labels": [
-        "EN",
-        "Trip"
-      ],
-      "card_url": "https://trello.com/c/5TEAaTMo",
-      "pos": 140737488363520
-    },
-    {
-      "trip_id": "Jedburgh2_CastleJail_EN",
-      "lane": "7",
-      "level": "EN",
-      "family": "Jedburgh2_CastleJail",
-      "voice": "isla",
-      "gender": "female",
-      "title": "Jedburgh2_CastleJail_EN",
-      "labels": [
-        "EN",
-        "Trip"
-      ],
-      "card_url": "https://trello.com/c/5TEAaTMo",
-      "pos": 140737488363520
     },
     {
       "trip_id": "Taichung_EN",
@@ -2754,47 +3007,10 @@
       "gender": "male",
       "title": "Taichung_EN",
       "labels": [
-        "Trip",
-        "EN",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
+        "Taiwan"
       ],
       "card_url": "https://trello.com/c/Iu0gKxqs",
       "pos": 140737488363520
-    },
-    {
-      "trip_id": "KaohsiungLotusPond_EN",
-      "lane": "7",
-      "level": "EN",
-      "family": "KaohsiungLotusPond",
-      "voice": "andrea",
-      "gender": "female",
-      "title": "KaohsiungLotusPond_EN",
-      "labels": [
-        "Trip",
-        "EN",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/oMq4bChv",
-      "pos": 140737488379904
-    },
-    {
-      "trip_id": "Taipei101_EN",
-      "lane": "7",
-      "level": "EN",
-      "family": "Taipei101",
-      "voice": "andrea",
-      "gender": "female",
-      "title": "Taipei101_EN",
-      "labels": [
-        "EN",
-        "Trip",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
-      ],
-      "card_url": "https://trello.com/c/5fy4E76e",
-      "pos": 140737488388096
     },
     {
       "trip_id": "Melrose_A12_EN",
@@ -2805,8 +3021,7 @@
       "gender": "female",
       "title": "Melrose_A12_EN",
       "labels": [
-        "EN",
-        "Trip"
+        "UK"
       ],
       "card_url": "https://trello.com/c/LvllBus3",
       "pos": 140737488412672
@@ -2820,8 +3035,7 @@
       "gender": "female",
       "title": "Melrose_B1_EN",
       "labels": [
-        "EN",
-        "Trip"
+        "UK"
       ],
       "card_url": "https://trello.com/c/LvllBus3",
       "pos": 140737488412672
@@ -2835,8 +3049,7 @@
       "gender": "female",
       "title": "Melrose_EN",
       "labels": [
-        "EN",
-        "Trip"
+        "UK"
       ],
       "card_url": "https://trello.com/c/LvllBus3",
       "pos": 140737488412672
@@ -2850,10 +3063,7 @@
       "gender": "female",
       "title": "LunarNewYear_EN",
       "labels": [
-        "EN",
-        "Trip",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
+        "Taiwan"
       ],
       "card_url": "https://trello.com/c/wNOzg1YI",
       "pos": 140737488437248
@@ -2867,10 +3077,7 @@
       "gender": "female",
       "title": "SunYatSen_EN",
       "labels": [
-        "EN",
-        "Trip",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
+        "Taiwan"
       ],
       "card_url": "https://trello.com/c/8p14NP8M",
       "pos": 140737488453632
@@ -2884,10 +3091,7 @@
       "gender": "female",
       "title": "ChiangKaiShek_EN",
       "labels": [
-        "Trip",
-        "EN",
-        "ZH-HSK3",
-        "ZH-HSK1-2"
+        "Taiwan"
       ],
       "card_url": "https://trello.com/c/ggEEpTu0",
       "pos": 140737488470016
@@ -2901,7 +3105,7 @@
       "gender": "female",
       "title": "Plymouth_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/pJpHN58H",
       "pos": 140737488568320
@@ -2915,7 +3119,7 @@
       "gender": "female",
       "title": "Polperro_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/X4PLNk7r",
       "pos": 140737488584704
@@ -2929,7 +3133,7 @@
       "gender": "female",
       "title": "St Michaels Mount_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/fSlqjvBC",
       "pos": 140737488601088
@@ -2943,7 +3147,7 @@
       "gender": "female",
       "title": "Tintagel_Castle_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/IYdskkGQ",
       "pos": 140737488617472
@@ -2957,7 +3161,7 @@
       "gender": "male",
       "title": "Westminster_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/ftGbaQ1Z",
       "pos": 140737488633856
@@ -2971,10 +3175,7 @@
       "gender": "male",
       "title": "KochiCity_EN",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/qPuxApEa",
       "pos": 140737488650240
@@ -2988,7 +3189,7 @@
       "gender": "female",
       "title": "Abergavenny_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/MbCWcVIH",
       "pos": 140737488666624
@@ -3002,10 +3203,7 @@
       "gender": "male",
       "title": "KochiOutskirts_EN",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/7CucrI7U",
       "pos": 140737488666624
@@ -3019,7 +3217,7 @@
       "gender": "male",
       "title": "Alexandra_Palace_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/YtrMPkYS",
       "pos": 140737488683008
@@ -3033,10 +3231,7 @@
       "gender": "male",
       "title": "Shikoku_Karst_EN",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/IVts0t0L",
       "pos": 140737488683008
@@ -3050,7 +3245,7 @@
       "gender": "male",
       "title": "Battle_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/oEkkGJg4",
       "pos": 140737488699392
@@ -3064,10 +3259,7 @@
       "gender": "male",
       "title": "Yusuhara_EN",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/kBensxAN",
       "pos": 140737488699392
@@ -3081,7 +3273,7 @@
       "gender": "female",
       "title": "Bude_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/7jVceRMG",
       "pos": 140737488715776
@@ -3095,10 +3287,7 @@
       "gender": "male",
       "title": "Tokyo_06_HieShrine_EN",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/Jw0RVsPV",
       "pos": 140737488715776
@@ -3112,7 +3301,7 @@
       "gender": "male",
       "title": "Camden_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/h9VZFEO5",
       "pos": 140737488732160
@@ -3126,10 +3315,7 @@
       "gender": "male",
       "title": "Tokyo_08_ImperialPalace_EN",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/cKylO0ar",
       "pos": 140737488732160
@@ -3143,7 +3329,7 @@
       "gender": "male",
       "title": "Canary_Wharf_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/BckUinjR",
       "pos": 140737488748544
@@ -3157,10 +3343,7 @@
       "gender": "female",
       "title": "Hida_Festival_EN",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/4CEMxQiC",
       "pos": 140737488748544
@@ -3174,7 +3357,7 @@
       "gender": "female",
       "title": "Canterbury_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/CHEhXJA6",
       "pos": 140737488764928
@@ -3188,10 +3371,7 @@
       "gender": "male",
       "title": "Tokyo_10_Zojoji_EN",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/rBy1dZpj",
       "pos": 140737488764928
@@ -3205,7 +3385,7 @@
       "gender": "female",
       "title": "Cardiff_II_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/gWlwXNQd",
       "pos": 140737488781312
@@ -3219,10 +3399,7 @@
       "gender": "male",
       "title": "Tokyo_09_Yasukuni_EN",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/rFJvBVza",
       "pos": 140737488781312
@@ -3236,7 +3413,7 @@
       "gender": "female",
       "title": "Cardiff_I_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/uyJntPyc",
       "pos": 140737488797696
@@ -3250,10 +3427,7 @@
       "gender": "male",
       "title": "Tokyo_07_Olympic_EN",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/nSwVQ51a",
       "pos": 140737488797696
@@ -3267,10 +3441,7 @@
       "gender": "female",
       "title": "Hida_EN",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/MFisgS94",
       "pos": 140737488814080
@@ -3284,7 +3455,7 @@
       "gender": "female",
       "title": "Dartmoor_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/G6WYQ5sX",
       "pos": 140737488830464
@@ -3298,10 +3469,7 @@
       "gender": "female",
       "title": "Takayama_EN",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/YgW6nJe7",
       "pos": 140737488830464
@@ -3315,7 +3483,7 @@
       "gender": "female",
       "title": "Dartmouth_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/q3tqgeKd",
       "pos": 140737488846848
@@ -3329,10 +3497,7 @@
       "gender": "female",
       "title": "HidaNoSato_EN",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/Aar8uP1X",
       "pos": 140737488846848
@@ -3346,7 +3511,7 @@
       "gender": "female",
       "title": "Dover_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/7VHdNoU8",
       "pos": 140737488863232
@@ -3360,10 +3525,7 @@
       "gender": "female",
       "title": "Takayama_Jinya_EN",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/LU9isgHn",
       "pos": 140737488863232
@@ -3377,7 +3539,7 @@
       "gender": "female",
       "title": "Ely_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/bYeKSfeJ",
       "pos": 140737488879616
@@ -3391,10 +3553,7 @@
       "gender": "female",
       "title": "Shirakawago_EN",
       "labels": [
-        "EN",
-        "Trip",
-        "JP-N5",
-        "JP-N4"
+        "Japan"
       ],
       "card_url": "https://trello.com/c/lde6zVso",
       "pos": 140737488879616
@@ -3407,7 +3566,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Ainsa_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/tEeI4LZp",
       "pos": 140737488896000
     },
@@ -3420,7 +3581,7 @@
       "gender": "female",
       "title": "Falmouth_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/74Lhf6AI",
       "pos": 140737488896000
@@ -3434,7 +3595,7 @@
       "gender": "male",
       "title": "Greenwich_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/s0HVotr4",
       "pos": 140737488912384
@@ -3448,7 +3609,7 @@
       "gender": "male",
       "title": "Hampstead_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/J8umLww9",
       "pos": 140737488928768
@@ -3461,7 +3622,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Cordoba3_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/P0WI2e2R",
       "pos": 140737488945152
     },
@@ -3474,7 +3637,7 @@
       "gender": "female",
       "title": "Hay-on-Wye_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/o0vOz61D",
       "pos": 140737488945152
@@ -3488,7 +3651,7 @@
       "gender": "female",
       "title": "IronBridge_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/lyzddSQV",
       "pos": 140737488961536
@@ -3502,7 +3665,7 @@
       "gender": "male",
       "title": "Kensington_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/Ah7XM58w",
       "pos": 140737488977920
@@ -3516,7 +3679,7 @@
       "gender": "female",
       "title": "Kent_Coastline I_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/DwcKCzA7",
       "pos": 140737488994304
@@ -3530,7 +3693,7 @@
       "gender": "male",
       "title": "Lake_District1_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/aQ9uq6D3",
       "pos": 140737489010688
@@ -3544,7 +3707,7 @@
       "gender": "male",
       "title": "Lake_District2_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/zMTToDY1",
       "pos": 140737489027072
@@ -3558,7 +3721,7 @@
       "gender": "female",
       "title": "Lands End_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/FjmDQpYJ",
       "pos": 140737489043456
@@ -3572,7 +3735,7 @@
       "gender": "female",
       "title": "Lincoln_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/aQEbyv1x",
       "pos": 140737489059840
@@ -3586,7 +3749,7 @@
       "gender": "male",
       "title": "Little_Venice Notting Hill_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/eooZf6i5",
       "pos": 140737489076224
@@ -3600,7 +3763,7 @@
       "gender": "male",
       "title": "Liverpool_III_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/WoF6iLLX",
       "pos": 140737489092608
@@ -3614,7 +3777,7 @@
       "gender": "male",
       "title": "Liverpool_II_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/CngibEF9",
       "pos": 140737489108992
@@ -3628,7 +3791,7 @@
       "gender": "male",
       "title": "Liverpool_I_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/MtsMRUus",
       "pos": 140737489125376
@@ -3642,7 +3805,7 @@
       "gender": "female",
       "title": "Looe_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/PnCNVq5E",
       "pos": 140737489141760
@@ -3656,7 +3819,7 @@
       "gender": "female",
       "title": "Manchester_I_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/QpG96a61",
       "pos": 140737489158144
@@ -3670,7 +3833,7 @@
       "gender": "female",
       "title": "Newquay_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/UczeP6zL",
       "pos": 140737489174528
@@ -3684,7 +3847,7 @@
       "gender": "male",
       "title": "Notting_Hill Carnival_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/M4ujA6ag",
       "pos": 140737489190912
@@ -3698,7 +3861,7 @@
       "gender": "female",
       "title": "Port Isaac_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/chDF4WmE",
       "pos": 140737489207296
@@ -3712,7 +3875,7 @@
       "gender": "male",
       "title": "Queen_Elizabeth II_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/jzOLZ1NZ",
       "pos": 140737489223680
@@ -3726,7 +3889,7 @@
       "gender": "male",
       "title": "Regent’s_Park_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/TvjPvizC",
       "pos": 140737489240064
@@ -3740,7 +3903,7 @@
       "gender": "female",
       "title": "Rye_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/QI7YiwT5",
       "pos": 140737489256448
@@ -3754,7 +3917,7 @@
       "gender": "female",
       "title": "Salcombe_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/7ll7dSHZ",
       "pos": 140737489272832
@@ -3768,7 +3931,7 @@
       "gender": "female",
       "title": "St Ives_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/eD2ep906",
       "pos": 140737489289216
@@ -3782,7 +3945,7 @@
       "gender": "male",
       "title": "St_Albans_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/NHov6Hb0",
       "pos": 140737489305600
@@ -3796,7 +3959,7 @@
       "gender": "male",
       "title": "St_Pauls and the City of London_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/nFI4xlo7",
       "pos": 140737489321984
@@ -3810,7 +3973,7 @@
       "gender": "male",
       "title": "Stonehenge_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/nVsFeami",
       "pos": 140737489338368
@@ -3824,7 +3987,7 @@
       "gender": "male",
       "title": "Stratford_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/IyxLShVG",
       "pos": 140737489354752
@@ -3838,7 +4001,7 @@
       "gender": "male",
       "title": "The_South Bank to Southwark_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/F3IsawnO",
       "pos": 140737489371136
@@ -3852,7 +4015,7 @@
       "gender": "male",
       "title": "The_West End_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/Qd9BW8vx",
       "pos": 140737489387520
@@ -3866,7 +4029,7 @@
       "gender": "female",
       "title": "Torquay_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/OZFGHgC3",
       "pos": 140737489403904
@@ -3880,7 +4043,7 @@
       "gender": "male",
       "title": "Tower_Bridge_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/exHG9bS2",
       "pos": 140737489420288
@@ -3894,7 +4057,7 @@
       "gender": "female",
       "title": "West Cornwall_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/fx0Er8gR",
       "pos": 140737489436672
@@ -3908,7 +4071,7 @@
       "gender": "male",
       "title": "Westminster_II Buckingham Palace_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/VSZ5k9TE",
       "pos": 140737489453056
@@ -3922,7 +4085,7 @@
       "gender": "female",
       "title": "York_II Minster_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/v0Ge4Vle",
       "pos": 140737489469440
@@ -3936,7 +4099,7 @@
       "gender": "female",
       "title": "York_III_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/yW1IsTXC",
       "pos": 140737489485824
@@ -3950,7 +4113,7 @@
       "gender": "female",
       "title": "York_I_A12_EN",
       "labels": [
-        "EN"
+        "UK"
       ],
       "card_url": "https://trello.com/c/5UyAj6vG",
       "pos": 140737489502208
@@ -3963,7 +4126,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "ElCamino_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/iOSXBIX6",
       "pos": 140737489879040
     },
@@ -3975,7 +4140,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "El_Planeta_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/2QXkkBIE",
       "pos": 140737489895424
     },
@@ -3987,7 +4154,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Ingenio_Humano1_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/FP84NjLh",
       "pos": 140737489911808
     },
@@ -3999,7 +4168,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Ingenio_Humano2_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/HwV9AFja",
       "pos": 140737489928192
     },
@@ -4011,7 +4182,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Mercados_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/DT97MUXc",
       "pos": 140737489944576
     },
@@ -4023,7 +4196,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Moros_y_Cristianos_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/pseFq89n",
       "pos": 140737489960960
     },
@@ -4035,7 +4210,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Org_Social1_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/vkE1x7pW",
       "pos": 140737489977344
     },
@@ -4047,7 +4224,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Org_Social2_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/oKvEKhlA",
       "pos": 140737489993728
     },
@@ -4059,7 +4238,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Sanguesa_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/dNhGLqCb",
       "pos": 140737490010112
     },
@@ -4071,7 +4252,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Segovia_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/L7dOBjRc",
       "pos": 140737490026496
     },
@@ -4083,7 +4266,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "UrbanoRural_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/NJBFxFv1",
       "pos": 140737490042880
     },
@@ -4095,7 +4280,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Vic_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/S9YIQgUv",
       "pos": 140737490141184
     },
@@ -4107,7 +4294,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Cadiz_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/tOzm1T6E",
       "pos": 140737490157568
     },
@@ -4119,7 +4308,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Carnaval_de_Cadiz_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/KZfqmH19",
       "pos": 140737490173952
     },
@@ -4131,7 +4322,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Cordoba1_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/wJWUxjIr",
       "pos": 140737490190336
     },
@@ -4143,7 +4336,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Cordoba2_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/RKNiLexI",
       "pos": 140737490206720
     },
@@ -4155,7 +4350,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Cordoba4_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/NFbeBPVW",
       "pos": 140737490223104
     },
@@ -4167,7 +4364,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Los_Escobazos_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/s3Dl5FSj",
       "pos": 140737490239488
     },
@@ -4179,7 +4378,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Madrid1_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/Apbt2Amx",
       "pos": 140737490255872
     },
@@ -4191,7 +4392,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Madrid2_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/rvipmhVN",
       "pos": 140737490272256
     },
@@ -4203,7 +4406,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Madrid3_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/Z84LzItx",
       "pos": 140737490288640
     },
@@ -4215,7 +4420,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Montserrat_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/H4JxPT6K",
       "pos": 140737490305024
     },
@@ -4227,7 +4434,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Sevilla1_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/itv8zOY0",
       "pos": 140737490321408
     },
@@ -4239,7 +4448,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Sevilla2_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/x38jRswn",
       "pos": 140737490337792
     },
@@ -4251,7 +4462,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Sevilla3_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/1tdcBE37",
       "pos": 140737490354176
     },
@@ -4263,7 +4476,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Valencia1_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/0wbYHPz5",
       "pos": 140737490386944
     },
@@ -4275,7 +4490,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Valencia2_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/RFzcNQMJ",
       "pos": 140737490403328
     },
@@ -4287,7 +4504,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Valencia3_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/MExGiYmY",
       "pos": 140737490468864
     },
@@ -4299,7 +4518,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Valencia4_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/sYkhC4BO",
       "pos": 140737490485248
     },
@@ -4311,7 +4532,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Zaragoza1_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/NqkLQrMw",
       "pos": 140737490501632
     },
@@ -4323,7 +4546,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Zaragoza2_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/fHvCv0Rw",
       "pos": 140737490518016
     },
@@ -4335,7 +4560,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Zaragoza3_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/x0hfGU2U",
       "pos": 140737490534400
     },
@@ -4347,7 +4574,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Sevilla4_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/IcNlW2yo",
       "pos": 140737490550784
     },
@@ -4359,7 +4588,9 @@
       "voice": "harry",
       "gender": "male",
       "title": "Sevilla5_EN",
-      "labels": [],
+      "labels": [
+        "Spain"
+      ],
       "card_url": "https://trello.com/c/9qOT6oHK",
       "pos": 140737490567168
     }
