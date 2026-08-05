@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-05T12:11:34+01:00",
+  "generated_at": "2026-08-05T23:21:47+01:00",
   "source": "trello 6,7",
   "trips": [
     {
@@ -33,6 +33,186 @@
       "duration_sec": 239.83
     },
     {
+      "trip_id": "Busan_Oryukdo_TPK1_KO",
+      "lane": "6",
+      "level": "TPK1",
+      "family": "Busan_Oryukdo",
+      "voice": "annakim",
+      "gender": "female",
+      "title": "Busan_Oryukdo_TPK1_KO",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/W5lTYJy5",
+      "pos": 140737488306944,
+      "duration_sec": 131.89
+    },
+    {
+      "trip_id": "Busan_Oryukdo_TPK2_KO",
+      "lane": "6",
+      "level": "TPK2",
+      "family": "Busan_Oryukdo",
+      "voice": "annakim",
+      "gender": "female",
+      "title": "Busan_Oryukdo_TPK2_KO",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/W5lTYJy5",
+      "pos": 140737488306944,
+      "duration_sec": 238.71
+    },
+    {
+      "trip_id": "Busan_Oryukdo_TPK3_KO",
+      "lane": "6",
+      "level": "TPK3",
+      "family": "Busan_Oryukdo",
+      "voice": "annakim",
+      "gender": "female",
+      "title": "Busan_Oryukdo_TPK3_KO",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/W5lTYJy5",
+      "pos": 140737488306944,
+      "duration_sec": 328.07
+    },
+    {
+      "trip_id": "Busan_UNMemorial_TPK1_KO",
+      "lane": "6",
+      "level": "TPK1",
+      "family": "Busan_UNMemorial",
+      "voice": "hyuk",
+      "gender": "male",
+      "title": "Busan_UNMemorial_TPK1_KO",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/LAJbPylG",
+      "pos": 140737488307200,
+      "duration_sec": 263.6
+    },
+    {
+      "trip_id": "Busan_UNMemorial_TPK2_KO",
+      "lane": "6",
+      "level": "TPK2",
+      "family": "Busan_UNMemorial",
+      "voice": "hyuk",
+      "gender": "male",
+      "title": "Busan_UNMemorial_TPK2_KO",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/LAJbPylG",
+      "pos": 140737488307200,
+      "duration_sec": 392.78
+    },
+    {
+      "trip_id": "Busan_UNMemorial_TPK4_KO",
+      "lane": "6",
+      "level": "TPK4",
+      "family": "Busan_UNMemorial",
+      "voice": "hyuk",
+      "gender": "male",
+      "title": "Busan_UNMemorial_TPK4_KO",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/LAJbPylG",
+      "pos": 140737488307200,
+      "duration_sec": 806.19
+    },
+    {
+      "trip_id": "Busan_Dadaepo1_Beach_TPK1_KO",
+      "lane": "6",
+      "level": "TPK1",
+      "family": "Busan_Dadaepo1_Beach",
+      "voice": "hyuk",
+      "gender": "male",
+      "title": "Busan_Dadaepo1_Beach_TPK1_KO",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/IU0PFUDm",
+      "pos": 140737488307712,
+      "duration_sec": 112.88
+    },
+    {
+      "trip_id": "Busan_Dadaepo1_Beach_TPK2_KO",
+      "lane": "6",
+      "level": "TPK2",
+      "family": "Busan_Dadaepo1_Beach",
+      "voice": "hyuk",
+      "gender": "male",
+      "title": "Busan_Dadaepo1_Beach_TPK2_KO",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/IU0PFUDm",
+      "pos": 140737488307712,
+      "duration_sec": 228.1
+    },
+    {
+      "trip_id": "Busan_Dadaepo1_Beach_TPK3_KO",
+      "lane": "6",
+      "level": "TPK3",
+      "family": "Busan_Dadaepo1_Beach",
+      "voice": "hyuk",
+      "gender": "male",
+      "title": "Busan_Dadaepo1_Beach_TPK3_KO",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/IU0PFUDm",
+      "pos": 140737488307712,
+      "duration_sec": 381.31
+    },
+    {
+      "trip_id": "Busan_Songdo1_Beach_TPK1_KO",
+      "lane": "6",
+      "level": "TPK1",
+      "family": "Busan_Songdo1_Beach",
+      "voice": "annakim",
+      "gender": "female",
+      "title": "Busan_Songdo1_Beach_TPK1_KO",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/dPlm4EfA",
+      "pos": 140737488314880,
+      "duration_sec": 82.89
+    },
+    {
+      "trip_id": "Busan_Songdo1_Beach_TPK2_KO",
+      "lane": "6",
+      "level": "TPK2",
+      "family": "Busan_Songdo1_Beach",
+      "voice": "annakim",
+      "gender": "female",
+      "title": "Busan_Songdo1_Beach_TPK2_KO",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/dPlm4EfA",
+      "pos": 140737488314880,
+      "duration_sec": 129.33
+    },
+    {
+      "trip_id": "Busan_Songdo1_Beach_TPK3_KO",
+      "lane": "6",
+      "level": "TPK3",
+      "family": "Busan_Songdo1_Beach",
+      "voice": "annakim",
+      "gender": "female",
+      "title": "Busan_Songdo1_Beach_TPK3_KO",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/dPlm4EfA",
+      "pos": 140737488314880,
+      "duration_sec": 218.41
+    },
+    {
       "trip_id": "Monaco2_A12_FR",
       "lane": "6",
       "level": "FR-A12",
@@ -48,6 +228,96 @@
       "duration_sec": 213.16
     },
     {
+      "trip_id": "Busan_Songdo2_SkyPark_TPK1_KO",
+      "lane": "6",
+      "level": "TPK1",
+      "family": "Busan_Songdo2_SkyPark",
+      "voice": "hyuk",
+      "gender": "male",
+      "title": "Busan_Songdo2_SkyPark_TPK1_KO",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/VCBhTHYR",
+      "pos": 140737488323072,
+      "duration_sec": 163.81
+    },
+    {
+      "trip_id": "Busan_Songdo2_SkyPark_TPK2_KO",
+      "lane": "6",
+      "level": "TPK2",
+      "family": "Busan_Songdo2_SkyPark",
+      "voice": "hyuk",
+      "gender": "male",
+      "title": "Busan_Songdo2_SkyPark_TPK2_KO",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/VCBhTHYR",
+      "pos": 140737488323072,
+      "duration_sec": 276.51
+    },
+    {
+      "trip_id": "Busan_Songdo2_SkyPark_TPK3_KO",
+      "lane": "6",
+      "level": "TPK3",
+      "family": "Busan_Songdo2_SkyPark",
+      "voice": "hyuk",
+      "gender": "male",
+      "title": "Busan_Songdo2_SkyPark_TPK3_KO",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/VCBhTHYR",
+      "pos": 140737488323072,
+      "duration_sec": 398.37
+    },
+    {
+      "trip_id": "Jinhae1_CherryBlossomFestival_TPK1_KO",
+      "lane": "6",
+      "level": "TPK1",
+      "family": "Jinhae1_CherryBlossomFestival",
+      "voice": "annakim",
+      "gender": "female",
+      "title": "Jinhae1_CherryBlossomFestival_TPK1_KO",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/qsmadn69",
+      "pos": 140737488331264,
+      "duration_sec": 239.57
+    },
+    {
+      "trip_id": "Jinhae1_CherryBlossomFestival_TPK2_KO",
+      "lane": "6",
+      "level": "TPK2",
+      "family": "Jinhae1_CherryBlossomFestival",
+      "voice": "annakim",
+      "gender": "female",
+      "title": "Jinhae1_CherryBlossomFestival_TPK2_KO",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/qsmadn69",
+      "pos": 140737488331264,
+      "duration_sec": 469.94
+    },
+    {
+      "trip_id": "Jinhae1_CherryBlossomFestival_TPK4_KO",
+      "lane": "6",
+      "level": "TPK4",
+      "family": "Jinhae1_CherryBlossomFestival",
+      "voice": "annakim",
+      "gender": "female",
+      "title": "Jinhae1_CherryBlossomFestival_TPK4_KO",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/qsmadn69",
+      "pos": 140737488331264,
+      "duration_sec": 743.68
+    },
+    {
       "trip_id": "Monaco2_A12_IT",
       "lane": "6",
       "level": "IT-A12",
@@ -61,6 +331,96 @@
       "card_url": "https://trello.com/c/1hzuxQE0",
       "pos": 140737488338944,
       "duration_sec": 256.94
+    },
+    {
+      "trip_id": "Busan_Gamcheon1_CultureVillage_TPK1_KO",
+      "lane": "6",
+      "level": "TPK1",
+      "family": "Busan_Gamcheon1_CultureVillage",
+      "voice": "annakim",
+      "gender": "female",
+      "title": "Busan_Gamcheon1_CultureVillage_TPK1_KO",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/uWLO61QG",
+      "pos": 140737488351488,
+      "duration_sec": 231.81
+    },
+    {
+      "trip_id": "Busan_Gamcheon1_CultureVillage_TPK2_KO",
+      "lane": "6",
+      "level": "TPK2",
+      "family": "Busan_Gamcheon1_CultureVillage",
+      "voice": "annakim",
+      "gender": "female",
+      "title": "Busan_Gamcheon1_CultureVillage_TPK2_KO",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/uWLO61QG",
+      "pos": 140737488351488,
+      "duration_sec": 460.98
+    },
+    {
+      "trip_id": "Busan_Gamcheon1_CultureVillage_TPK4_KO",
+      "lane": "6",
+      "level": "TPK4",
+      "family": "Busan_Gamcheon1_CultureVillage",
+      "voice": "annakim",
+      "gender": "female",
+      "title": "Busan_Gamcheon1_CultureVillage_TPK4_KO",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/uWLO61QG",
+      "pos": 140737488351488,
+      "duration_sec": 702.72
+    },
+    {
+      "trip_id": "Gyeongju1_Bulguksa_TPK1_KO",
+      "lane": "6",
+      "level": "TPK1",
+      "family": "Gyeongju1_Bulguksa",
+      "voice": "hyuk",
+      "gender": "male",
+      "title": "Gyeongju1_Bulguksa_TPK1_KO",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/WCebNjtx",
+      "pos": 140737488355328,
+      "duration_sec": 187.53
+    },
+    {
+      "trip_id": "Gyeongju1_Bulguksa_TPK2_KO",
+      "lane": "6",
+      "level": "TPK2",
+      "family": "Gyeongju1_Bulguksa",
+      "voice": "hyuk",
+      "gender": "male",
+      "title": "Gyeongju1_Bulguksa_TPK2_KO",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/WCebNjtx",
+      "pos": 140737488355328,
+      "duration_sec": 279.51
+    },
+    {
+      "trip_id": "Gyeongju1_Bulguksa_TPK3_KO",
+      "lane": "6",
+      "level": "TPK3",
+      "family": "Gyeongju1_Bulguksa",
+      "voice": "hyuk",
+      "gender": "male",
+      "title": "Gyeongju1_Bulguksa_TPK3_KO",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/WCebNjtx",
+      "pos": 140737488355328,
+      "duration_sec": 437.92
     },
     {
       "trip_id": "Taichung_HSK12_ZH",
@@ -3183,6 +3543,66 @@
       "duration_sec": 585.59
     },
     {
+      "trip_id": "Busan_Oryukdo_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Busan_Oryukdo",
+      "voice": "harry",
+      "gender": "male",
+      "title": "Busan_Oryukdo_EN",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/W5lTYJy5",
+      "pos": 140737488306944,
+      "duration_sec": 298.08
+    },
+    {
+      "trip_id": "Busan_UNMemorial_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Busan_UNMemorial",
+      "voice": "harry",
+      "gender": "male",
+      "title": "Busan_UNMemorial_EN",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/LAJbPylG",
+      "pos": 140737488307200,
+      "duration_sec": 649.09
+    },
+    {
+      "trip_id": "Busan_Dadaepo1_Beach_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Busan_Dadaepo1_Beach",
+      "voice": "harry",
+      "gender": "male",
+      "title": "Busan_Dadaepo1_Beach_EN",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/IU0PFUDm",
+      "pos": 140737488307712,
+      "duration_sec": 441.91
+    },
+    {
+      "trip_id": "Busan_Songdo1_Beach_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Busan_Songdo1_Beach",
+      "voice": "harry",
+      "gender": "male",
+      "title": "Busan_Songdo1_Beach_EN",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/dPlm4EfA",
+      "pos": 140737488314880,
+      "duration_sec": 210.86
+    },
+    {
       "trip_id": "Monaco2_Beg_FR",
       "lane": "7",
       "level": "FR-Beg",
@@ -3213,6 +3633,66 @@
       "duration_sec": 560.56
     },
     {
+      "trip_id": "Busan_Songdo2_SkyPark_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Busan_Songdo2_SkyPark",
+      "voice": "harry",
+      "gender": "male",
+      "title": "Busan_Songdo2_SkyPark_EN",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/VCBhTHYR",
+      "pos": 140737488323072,
+      "duration_sec": 371.93
+    },
+    {
+      "trip_id": "Jinhae1_CherryBlossomFestival_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Jinhae1_CherryBlossomFestival",
+      "voice": "harry",
+      "gender": "male",
+      "title": "Jinhae1_CherryBlossomFestival_EN",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/qsmadn69",
+      "pos": 140737488331264,
+      "duration_sec": 595.46
+    },
+    {
+      "trip_id": "Busan_Gamcheon1_CultureVillage_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Busan_Gamcheon1_CultureVillage",
+      "voice": "harry",
+      "gender": "male",
+      "title": "Busan_Gamcheon1_CultureVillage_EN",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/uWLO61QG",
+      "pos": 140737488351488,
+      "duration_sec": 568.71
+    },
+    {
+      "trip_id": "Gyeongju1_Bulguksa_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Gyeongju1_Bulguksa",
+      "voice": "harry",
+      "gender": "male",
+      "title": "Gyeongju1_Bulguksa_EN",
+      "labels": [
+        "Korea"
+      ],
+      "card_url": "https://trello.com/c/WCebNjtx",
+      "pos": 140737488355328,
+      "duration_sec": 698.78
+    },
+    {
       "trip_id": "Taichung_EN",
       "lane": "7",
       "level": "EN",
@@ -3226,51 +3706,6 @@
       "card_url": "https://trello.com/c/Iu0gKxqs",
       "pos": 140737488363520,
       "duration_sec": 438.02
-    },
-    {
-      "trip_id": "Melrose_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Melrose",
-      "voice": "isla",
-      "gender": "female",
-      "title": "Melrose_A12_EN",
-      "labels": [
-        "UK"
-      ],
-      "card_url": "https://trello.com/c/LvllBus3",
-      "pos": 140737488412672,
-      "duration_sec": 246.44
-    },
-    {
-      "trip_id": "Melrose_B1_EN",
-      "lane": "7",
-      "level": "B1",
-      "family": "Melrose",
-      "voice": "isla",
-      "gender": "female",
-      "title": "Melrose_B1_EN",
-      "labels": [
-        "UK"
-      ],
-      "card_url": "https://trello.com/c/LvllBus3",
-      "pos": 140737488412672,
-      "duration_sec": 535.85
-    },
-    {
-      "trip_id": "Melrose_EN",
-      "lane": "7",
-      "level": "EN",
-      "family": "Melrose",
-      "voice": "isla",
-      "gender": "female",
-      "title": "Melrose_EN",
-      "labels": [
-        "UK"
-      ],
-      "card_url": "https://trello.com/c/LvllBus3",
-      "pos": 140737488412672,
-      "duration_sec": 669.68
     },
     {
       "trip_id": "LunarNewYear_EN",

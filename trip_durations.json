@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-08-05T12:11:34+01:00",
-  "total_hms": "26h 59m",
-  "total_sec": 97181.3,
+  "generated_at": "2026-08-05T23:21:47+01:00",
+  "total_hms": "29h 51m",
+  "total_sec": 107470.7,
   "unmeasured": [
     "Taichung_HSK3_ZH",
     "Andorra_Pirineos_A12_ES",
@@ -55,16 +55,160 @@
       "duration_hms": "4:00"
     },
     {
+      "trip_id": "Busan_Oryukdo_TPK1_KO",
+      "lane": "6",
+      "duration_sec": 131.89,
+      "duration_hms": "2:12"
+    },
+    {
+      "trip_id": "Busan_Oryukdo_TPK2_KO",
+      "lane": "6",
+      "duration_sec": 238.71,
+      "duration_hms": "3:59"
+    },
+    {
+      "trip_id": "Busan_Oryukdo_TPK3_KO",
+      "lane": "6",
+      "duration_sec": 328.07,
+      "duration_hms": "5:28"
+    },
+    {
+      "trip_id": "Busan_UNMemorial_TPK1_KO",
+      "lane": "6",
+      "duration_sec": 263.6,
+      "duration_hms": "4:24"
+    },
+    {
+      "trip_id": "Busan_UNMemorial_TPK2_KO",
+      "lane": "6",
+      "duration_sec": 392.78,
+      "duration_hms": "6:33"
+    },
+    {
+      "trip_id": "Busan_UNMemorial_TPK4_KO",
+      "lane": "6",
+      "duration_sec": 806.19,
+      "duration_hms": "13:26"
+    },
+    {
+      "trip_id": "Busan_Dadaepo1_Beach_TPK1_KO",
+      "lane": "6",
+      "duration_sec": 112.88,
+      "duration_hms": "1:53"
+    },
+    {
+      "trip_id": "Busan_Dadaepo1_Beach_TPK2_KO",
+      "lane": "6",
+      "duration_sec": 228.1,
+      "duration_hms": "3:48"
+    },
+    {
+      "trip_id": "Busan_Dadaepo1_Beach_TPK3_KO",
+      "lane": "6",
+      "duration_sec": 381.31,
+      "duration_hms": "6:21"
+    },
+    {
+      "trip_id": "Busan_Songdo1_Beach_TPK1_KO",
+      "lane": "6",
+      "duration_sec": 82.89,
+      "duration_hms": "1:23"
+    },
+    {
+      "trip_id": "Busan_Songdo1_Beach_TPK2_KO",
+      "lane": "6",
+      "duration_sec": 129.33,
+      "duration_hms": "2:09"
+    },
+    {
+      "trip_id": "Busan_Songdo1_Beach_TPK3_KO",
+      "lane": "6",
+      "duration_sec": 218.41,
+      "duration_hms": "3:38"
+    },
+    {
       "trip_id": "Monaco2_A12_FR",
       "lane": "6",
       "duration_sec": 213.16,
       "duration_hms": "3:33"
     },
     {
+      "trip_id": "Busan_Songdo2_SkyPark_TPK1_KO",
+      "lane": "6",
+      "duration_sec": 163.81,
+      "duration_hms": "2:44"
+    },
+    {
+      "trip_id": "Busan_Songdo2_SkyPark_TPK2_KO",
+      "lane": "6",
+      "duration_sec": 276.51,
+      "duration_hms": "4:37"
+    },
+    {
+      "trip_id": "Busan_Songdo2_SkyPark_TPK3_KO",
+      "lane": "6",
+      "duration_sec": 398.37,
+      "duration_hms": "6:38"
+    },
+    {
+      "trip_id": "Jinhae1_CherryBlossomFestival_TPK1_KO",
+      "lane": "6",
+      "duration_sec": 239.57,
+      "duration_hms": "4:00"
+    },
+    {
+      "trip_id": "Jinhae1_CherryBlossomFestival_TPK2_KO",
+      "lane": "6",
+      "duration_sec": 469.94,
+      "duration_hms": "7:50"
+    },
+    {
+      "trip_id": "Jinhae1_CherryBlossomFestival_TPK4_KO",
+      "lane": "6",
+      "duration_sec": 743.68,
+      "duration_hms": "12:24"
+    },
+    {
       "trip_id": "Monaco2_A12_IT",
       "lane": "6",
       "duration_sec": 256.94,
       "duration_hms": "4:17"
+    },
+    {
+      "trip_id": "Busan_Gamcheon1_CultureVillage_TPK1_KO",
+      "lane": "6",
+      "duration_sec": 231.81,
+      "duration_hms": "3:52"
+    },
+    {
+      "trip_id": "Busan_Gamcheon1_CultureVillage_TPK2_KO",
+      "lane": "6",
+      "duration_sec": 460.98,
+      "duration_hms": "7:41"
+    },
+    {
+      "trip_id": "Busan_Gamcheon1_CultureVillage_TPK4_KO",
+      "lane": "6",
+      "duration_sec": 702.72,
+      "duration_hms": "11:43"
+    },
+    {
+      "trip_id": "Gyeongju1_Bulguksa_TPK1_KO",
+      "lane": "6",
+      "duration_sec": 187.53,
+      "duration_hms": "3:08"
+    },
+    {
+      "trip_id": "Gyeongju1_Bulguksa_TPK2_KO",
+      "lane": "6",
+      "duration_sec": 279.51,
+      "duration_hms": "4:40"
+    },
+    {
+      "trip_id": "Gyeongju1_Bulguksa_TPK3_KO",
+      "lane": "6",
+      "duration_sec": 437.92,
+      "duration_hms": "7:18"
     },
     {
       "trip_id": "Taichung_HSK12_ZH",
@@ -1099,6 +1243,30 @@
       "duration_hms": "9:46"
     },
     {
+      "trip_id": "Busan_Oryukdo_EN",
+      "lane": "7",
+      "duration_sec": 298.08,
+      "duration_hms": "4:58"
+    },
+    {
+      "trip_id": "Busan_UNMemorial_EN",
+      "lane": "7",
+      "duration_sec": 649.09,
+      "duration_hms": "10:49"
+    },
+    {
+      "trip_id": "Busan_Dadaepo1_Beach_EN",
+      "lane": "7",
+      "duration_sec": 441.91,
+      "duration_hms": "7:22"
+    },
+    {
+      "trip_id": "Busan_Songdo1_Beach_EN",
+      "lane": "7",
+      "duration_sec": 210.86,
+      "duration_hms": "3:31"
+    },
+    {
       "trip_id": "Monaco2_Beg_FR",
       "lane": "7",
       "duration_sec": 276.92,
@@ -1111,28 +1279,34 @@
       "duration_hms": "9:21"
     },
     {
+      "trip_id": "Busan_Songdo2_SkyPark_EN",
+      "lane": "7",
+      "duration_sec": 371.93,
+      "duration_hms": "6:12"
+    },
+    {
+      "trip_id": "Jinhae1_CherryBlossomFestival_EN",
+      "lane": "7",
+      "duration_sec": 595.46,
+      "duration_hms": "9:55"
+    },
+    {
+      "trip_id": "Busan_Gamcheon1_CultureVillage_EN",
+      "lane": "7",
+      "duration_sec": 568.71,
+      "duration_hms": "9:29"
+    },
+    {
+      "trip_id": "Gyeongju1_Bulguksa_EN",
+      "lane": "7",
+      "duration_sec": 698.78,
+      "duration_hms": "11:39"
+    },
+    {
       "trip_id": "Taichung_EN",
       "lane": "7",
       "duration_sec": 438.02,
       "duration_hms": "7:18"
-    },
-    {
-      "trip_id": "Melrose_A12_EN",
-      "lane": "7",
-      "duration_sec": 246.44,
-      "duration_hms": "4:06"
-    },
-    {
-      "trip_id": "Melrose_B1_EN",
-      "lane": "7",
-      "duration_sec": 535.85,
-      "duration_hms": "8:56"
-    },
-    {
-      "trip_id": "Melrose_EN",
-      "lane": "7",
-      "duration_sec": 669.68,
-      "duration_hms": "11:10"
     },
     {
       "trip_id": "LunarNewYear_EN",
