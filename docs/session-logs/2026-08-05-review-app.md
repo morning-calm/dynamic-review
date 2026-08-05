@@ -156,3 +156,23 @@ long-lived `claude setup-token`. The CLI does not read that from disk — it mus
   `submitted`).
 ⚠️ When the token is rotated/revoked, update `~/.claude/cron-oauth-token` — the cron
 env var is the ONLY auth the headless CLI sees.
+
+## 18:30 — wrap-up: toshifumi email + the dead nav "AI review" button
+
+- **`toshifumi` email set** to tosh.kawashita@gmail.com (`manage.py set-email`, live DB).
+  Set AFTER his Tokyo_03 findings were ingested, so those were watermarked past with no
+  email — badge only; future findings will email him. Still unset: `admin`, `john`, the
+  four EU-language accounts.
+- **Nav "AI review" did nothing for the admin** (`c1c7c38`, DEPLOYED — FE-only, no
+  restart): with >1 `ai_review` session (Tokyo_03 + Monaco1_A12_FR + Monaco1_Beg_FR) the
+  badge linked to `/`, a no-op from the trip list. Now: 1 session → direct link
+  (unchanged); several → a popout picker (trip · submitter · open-count → `/review/{sid}`);
+  the mobile menu lists one row per waiting trip. Verified the public site serves the new
+  bundle (`index-BOS_6toh.js`).
+
+### Session verified-state at close
+Live laptop on `c1c7c38`, both services active, public 200, Gate-2 cron authenticated
+via the token file and ticking clean. All six original asks + the notifier fix + the nav
+fix are deployed. Open for next session: BACKLOG 3c/3d (red-team deferrals), 0h (john's
+email), the auto-review redesign decisions (`docs/auto-review-redesign.md` items 5–6),
+and the `french` reviewer's 4 open Monaco findings.
