@@ -133,4 +133,26 @@ never invalidates → BACKLOG 3d (cosmetic; manifest value papers over it).
 `Field(allow_inf_nan=False)` + verified rejection.
 
 Gates re-run by me after all of the above: backend import ok, **47 passed**, tsc/eslint
-clean, `npm run build` green; Scripts ruff clean. Deployed the addendum to the laptop.
+clean, `npm run build` green; Scripts ruff clean. Deployed the addendum to the laptop
+(`28a48a9`; pull → build → restart in an idle window — both services active, public 200,
+zero journal errors).
+
+## 17:45 — Gate 2 RESTORED (long-lived token wired)
+
+Dave's interactive `/login` didn't persist for `dynamic-languages`, so he minted a
+long-lived `claude setup-token`. The CLI does not read that from disk — it must arrive as
+`CLAUDE_CODE_OAUTH_TOKEN`. Wiring (all verified live):
+- Token moved to **`~/.claude/cron-oauth-token`** (chmod 600; originally dropped in
+  ~/Documents world-readable — moved, not copied).
+- The Gate-2 crontab line now prefixes
+  `CLAUDE_CODE_OAUTH_TOKEN=$(cat ~/.claude/cron-oauth-token | tr -d "[:space:]")`
+  (backup of the old crontab at /tmp/cron.bak).
+- Headless smoke call answered; then a forced `claude_review.py --sid sess_928f51fd60fd`
+  reviewed **Tokyo_03_Beg_N4_JP in 62 s: 7 ok, 2 warnings, 0 needs_human** — the two
+  warnings are titleKey edits giving a more specific JP building name without the EN
+  caption updated. 2 findings ingested; session bounced to `ai_review` for Toshifumi
+  (nav badge only — he still has no email set, BACKLOG 0h/0c class).
+- Subsequent cron ticks clean ("nothing to review" — correct, the session left
+  `submitted`).
+⚠️ When the token is rotated/revoked, update `~/.claude/cron-oauth-token` — the cron
+env var is the ONLY auth the headless CLI sees.
