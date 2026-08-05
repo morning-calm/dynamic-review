@@ -101,11 +101,36 @@ old heuristic. Third misattribution of this class — presence is the first *exa
   (seed cache is local there) — slightly slow single listing, then cached.
 
 ## Next steps
-1. Commit + push both repos (review-app; dynamic-content: review_block/export/.gitignore).
-2. Run the real `export_review_trips.py` (stamps durations into the manifest +
-   `trip_durations.json`).
-3. Deploy to the laptop in an idle window: pull, `npm run build`, restart
-   `review-app.service`, check uvicorn AND `review-tunnel.service`; migration
-   (trip_priority.score, trip_durations) runs on first connect. The notifier +
-   claude_review fixes need no restart (cron re-execs them).
-4. Dave: `claude /login` on the laptop.
+1. ~~Commit + push both repos~~ — DONE (`d4c5d62` review-app, `8edd03f4` dynamic-content).
+2. ~~Run the real export~~ — DONE (26h 59m across 291 measured trips; 37 R2-only).
+3. ~~Deploy to the laptop~~ — DONE (idle window; both services active, public 200,
+   migrations applied, journal clean).
+4. Dave: laptop `claude` login — first attempt didn't persist for `dynamic-languages`
+   (credentials file unchanged, token `expiresAt=0`); dave then minted a long-lived
+   `setup-token`, which the CLI does NOT read from disk — being wired as
+   `CLAUDE_CODE_OAUTH_TOKEN` in the Gate-2 cron (dave saves the token to
+   `~/.claude/cron-oauth-token`, chmod 600; I update the crontab + verify).
+
+## 17:00 — red-opus pass + my verification
+
+**Its real find: the revert-flush fix missed `pages/ReviewPage.tsx`** — the reviewer-facing
+trip-header `contentTitleKey`/`tripgroup_description` FlagControls had no
+`flushRef`/`beforeRevert` (every other mount was wired; my call-site list came from an
+explorer sweep of `components/` and I never re-checked `pages/`). Its fix mirrors
+AdminInlineEdit exactly (refs in the top hook block, `_ZH` branch already covered via
+ZhFieldBlock) — hand-verified. Same failure scenario as Jedburgh, on the header surface.
+
+**Its other edits, all verified:** API_CONTRACT regenerate row scoped correctly (the
+`400 selection_required` is ENGLISH-only — the CJK branch whole-regenerates instead; I
+applied the same scoping to CLAUDE.md, which had my imprecise wording); `import
+subprocess` hoisted in review_block.py; a NaN-comparator "why" comment in TripListPage.
+
+**Findings triaged:** (1) CJK alt-no-range whole-voices the alt — pre-existing,
+FE-unreachable → BACKLOG 3c. (2) `selection_required` raised late (after clean +
+transcription) — left, changing it reorders the fb_orig outcome. (3) `trip_durations`
+never invalidates → BACKLOG 3d (cosmetic; manifest value papers over it).
+(4) `TripPriority.score` accepted Infinity/NaN via Python's json parser — applied
+`Field(allow_inf_nan=False)` + verified rejection.
+
+Gates re-run by me after all of the above: backend import ok, **47 passed**, tsc/eslint
+clean, `npm run build` green; Scripts ruff clean. Deployed the addendum to the laptop.

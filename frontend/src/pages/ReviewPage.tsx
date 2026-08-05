@@ -60,6 +60,12 @@ const ReviewBody = () => {
   const [sceneFields, setSceneFields] = useState<Field[][]>([]);
   const [submitting, setSubmitting] = useState(false);
   const locRef = useRef<Map<number, FieldLocation>>(new Map());
+  // Awaitable autosave flushes for the two non-`_ZH` trip-header editors, so Revert can
+  // drain a pending/in-flight save first (see FlagControl.beforeRevert — without it a
+  // debounced save lands AFTER the revert and writes the reverted-away text back). The
+  // `_ZH` branch gets the same via ZhFieldBlock's own flushRef.
+  const titleFlushRef = useRef<(() => Promise<void>) | null>(null);
+  const descFlushRef = useRef<(() => Promise<void>) | null>(null);
 
   // Every reviewable field across trip header + scenes, for the all-done gate.
   const allFields = useMemo(
@@ -339,8 +345,15 @@ const ReviewBody = () => {
               />
             ) : (
               <div className="space-y-2" inert={!editable}>
-                <EditableField field={contentTitleKey} sid={session.id} onFieldUpdate={updateField} label="Display title (contentTitleKey)" singleLine />
-                <FlagControl field={contentTitleKey} sid={session.id} onFieldUpdate={updateField} />
+                <EditableField field={contentTitleKey} sid={session.id} onFieldUpdate={updateField} label="Display title (contentTitleKey)" singleLine flushRef={titleFlushRef} />
+                <FlagControl
+                  field={contentTitleKey}
+                  sid={session.id}
+                  onFieldUpdate={updateField}
+                  beforeRevert={async () => {
+                    await titleFlushRef.current?.();
+                  }}
+                />
               </div>
             )
           )}
@@ -362,8 +375,16 @@ const ReviewBody = () => {
                   onFieldUpdate={updateField}
                   label="TripGroup description"
                   rows={4}
+                  flushRef={descFlushRef}
                 />
-                <FlagControl field={tripDescription} sid={session.id} onFieldUpdate={updateField} />
+                <FlagControl
+                  field={tripDescription}
+                  sid={session.id}
+                  onFieldUpdate={updateField}
+                  beforeRevert={async () => {
+                    await descFlushRef.current?.();
+                  }}
+                />
               </div>
             )
           )}

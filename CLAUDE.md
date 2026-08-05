@@ -149,9 +149,10 @@ Completed status is never reset. First real batch: 12 A12 quiz-variety manifests
   spot, so it was removed end-to-end (FE button + `models.Regenerate` Literal + the
   `sessions.regenerate` branches; `plan_segment`'s no-span path remains as shared code).
   A text edit is voiced by **highlighting the changed words → Regenerate highlighted**,
-  or Regenerate All, or the waveform/Create-new path. A SceneDesc highlight/alt with no
-  selection → `400 selection_required`; `spoken_line_unchanged` (the CJK segment guard)
-  is gone with the branch. Help guides + quick-reference updated to match.
+  or Regenerate All, or the waveform/Create-new path. An ENGLISH SceneDesc highlight/alt
+  with no selection → `400 selection_required` (the CJK branch is reached first and
+  whole-regenerates instead — pre-existing shape); `spoken_line_unchanged` (the CJK
+  segment guard) is gone with the branch. Help guides + quick-reference updated to match.
 - **Splice engine (English)** `audio_splice.py` (SceneDesc only; Q&A + "whole" = full regen).
   The hard-won correctness points (DON'T regress — two red-teams): cut times from **raw Whisper
   `word.start/end`** via SequenceMatcher (NOT `subtitles.token_timeline`); **non-Latin /

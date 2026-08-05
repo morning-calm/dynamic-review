@@ -228,6 +228,19 @@ runners, run `py -3.12 upload_review_audio_r2.py --manifest`.
 
 ## P2 — Correctness / cleanup (batch into the same restart)
 
+### 3c. CJK `mode="alt"` with no range voices the alt as the whole field (added 2026-08-05, red-team)
+Pre-existing, API-only (the FE always sends a range with alt): in `sessions.regenerate`'s
+CJK branch, `elif alt_text and alt_text.strip():` → `plan_whole(alt_text…)` — contradicting
+the engine's own invariant ("NEVER voice the alt as the whole field"). Now that the English
+branch has a `400 selection_required` guard the asymmetry is sharper. Fix = mirror the
+guard in the CJK branch (small behaviour change to an unreachable-from-FE path).
+
+### 3d. `trip_durations` cache has no invalidation (added 2026-08-05, red-team)
+Keyed on trip_id only — after a pipeline re-upload + reseed, the trip-list 🎧 chip keeps
+the old length. The Scripts-side cache DOES use a byte-size signature; the manifest value
+(refreshed each export) papers over it for measured trips. Close it by clearing the row in
+`scripts/refresh_trips.py clear`/`reseed`, or adding a signature column. Cosmetic today.
+
 ### 3. Stamp `user_id` on `field_edits`
 **What:** add a `user_id` column, stamp it at edit time from the request's auth session.
 **Why:** start/break attribution is currently inferred from login watermarks + token liveness

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Login(BaseModel):
@@ -157,8 +157,10 @@ class RegenRange(BaseModel):
 
 
 class TripPriority(BaseModel):
-    """Admin priority score for a trip: higher = review sooner; null clears it."""
-    score: Optional[float] = None
+    """Admin priority score for a trip: higher = review sooner; null clears it.
+    allow_inf_nan: Python's json parser accepts Infinity/NaN literals, and a NaN score
+    would sort unpredictably — reject them at the boundary."""
+    score: Optional[float] = Field(default=None, allow_inf_nan=False)
 
 
 class Regenerate(BaseModel):

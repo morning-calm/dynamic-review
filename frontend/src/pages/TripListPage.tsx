@@ -213,6 +213,8 @@ const TripListPage = () => {
         family,
         items: [...items].sort(
           (a, b) =>
+            // Both unscored → -Inf − -Inf = NaN, which is falsy, so the `||` chain moves
+            // on to the pin/level tie-breaks. (One scored → ±Infinity, i.e. it wins.)
             (b.priority ?? Number.NEGATIVE_INFINITY) - (a.priority ?? Number.NEGATIVE_INFINITY) ||
             Number(b.pinned) - Number(a.pinned) ||
             levelRank(a.level) - levelRank(b.level) ||
