@@ -5012,6 +5012,12 @@ _IMAGE_BASE_RES = [
     # a folder that does not exist, leaving every scene image null in the review card.
     (re.compile(r"^(?P<b>.+)_N3_JP$"), ("{b}_Beg_JP", "{b}_EN")),
     (re.compile(r"^(?P<b>.+)_Beg_JP$"), ("{b}_EN",)),
+    # The Korean rungs (TPK1/2/3/4) narrate the SAME scenes as their English parent and
+    # have no intermediate sibling with its own OGG tree, so they reduce straight to it
+    # — the HSK shape, not the JP one. Without a rule they hit exactly the failure the
+    # N3 note above records: no match means only their own id is searched, that folder
+    # does not exist, and every scene image in the review card is null.
+    (re.compile(r"^(?P<b>.+)_TPK\d+_KO$"), ("{b}_EN",)),
     (re.compile(r"^(?P<b>.+)_(?:A12|B1|B2)_EN$"), ("{b}_EN",)),
 ]
 

@@ -64,6 +64,22 @@ def test_fallback_voice_stays_in_language():
     assert audio_core.VOICE_REGISTRY[config.LANGUAGE_FALLBACK_VOICE["Korean"]]["language"] == "Korean"
 
 
+def test_korean_rungs_share_the_english_parents_images():
+    # A rung matching no _IMAGE_BASE_RES rule searches only its own id — a folder that
+    # does not exist — so every scene image in the review card comes back null. That is
+    # what happened to `_N3_JP`; the same shape would have hit all 24 Korean rungs.
+    from app import sessions
+
+    for cid in KO_RUNGS:
+        base = sessions._image_base_ids(cid)[-1]
+        assert base.endswith("_EN"), cid
+        assert base != cid, f"{cid} reduces to itself — no image rule matched"
+    # One R2 copy under the parent serves all four rungs of a family.
+    assert sessions._overlay_base("Gyeongju1_Bulguksa_TPK3_KO") == "Gyeongju1_Bulguksa_EN"
+    assert sessions._overlay_base("Busan_UNMemorial_TPK4_KO") == "Busan_UNMemorial_EN"
+    assert sessions._overlay_base("Gyeongju1_Bulguksa_EN") == "Gyeongju1_Bulguksa_EN"
+
+
 def test_speed_is_1x_on_every_rung():
     # Korean generates on v3 at 1.0x for every rung (topik_config.AUDIO_SPEED_BY_LEVEL);
     # a regenerated clip must match the take it splices into.
