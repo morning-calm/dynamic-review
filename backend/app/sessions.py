@@ -1485,7 +1485,8 @@ def _whisper_paths(sid: str, frow) -> tuple[Path, Path, Path] | None:
 # highlight of one sentence re-voicing the next sentence too. CJK trips normally use
 # the MMS aligner, but map them honestly anyway.
 _WHISPER_LANGS = {"English": "en", "Spanish": "es", "French": "fr",
-                  "German": "de", "Italian": "it", "Japanese": "ja", "Mandarin": "zh"}
+                  "German": "de", "Italian": "it", "Japanese": "ja", "Mandarin": "zh",
+                  "Korean": "ko"}
 
 
 def _whisper_lang(trip_id: str) -> str:

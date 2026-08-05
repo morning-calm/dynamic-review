@@ -115,6 +115,20 @@ VOICE_REGISTRY = {
                 "settings": {"speed": 1.0, "stability": 0.5, "similarity_boost": 0.75},
                 "model": "eleven_v3",
                 "gender": "female", "language": "Japanese", "country": "Japan"},
+    # Korean — eleven_v3 (speed ignored by the API; kept at 1.0). Chosen by the native
+    # reviewer 2026-08-04 from a six-clip audition; both ids confirmed against the
+    # ElevenLabs API. A family's three TOPIK rungs share ONE narrator (a learner
+    # climbing TPK1 → TPK2 → TPK3/4 must not change guide), so the voice is chosen per
+    # FAMILY, not per rung — Scripts/Research and Writing/Korean TOPIK/ko_families.py
+    # is where that 4/4 split lives, and it reaches here via the manifest `voice` field.
+    "annakim": {"voice_id": "uyVNoMrnUku1dZyVEXwD",
+                "settings": {"speed": 1.0, "stability": 0.5, "similarity_boost": 0.75},
+                "model": "eleven_v3",
+                "gender": "female", "language": "Korean", "country": "Korea"},
+    "hyuk":    {"voice_id": "ZJCNdZEjYwkOElxugmW2",
+                "settings": {"speed": 1.0, "stability": 0.5, "similarity_boost": 0.75},
+                "model": "eleven_v3",
+                "gender": "male", "language": "Korean", "country": "Korea"},
 }
 
 # Back-compat view used by the splice/session code: {name: (voice_id, voice_settings)}.
@@ -131,7 +145,7 @@ def model_for_voice(name: str) -> str:
 
 def display_name(name: str) -> str:
     n = (name or "").strip().lower()
-    return {"annasu": "Anna-Su"}.get(n, n.capitalize())
+    return {"annasu": "Anna-Su", "annakim": "Anna Kim"}.get(n, n.capitalize())
 
 
 def registry_list() -> list[dict]:
@@ -147,13 +161,24 @@ _EU_LANG_SUFFIXES = {"_ES": "Spanish", "_FR": "French", "_DE": "German", "_IT": 
 
 
 def language_of(trip_id: str) -> str:
-    """Narration language inferred from the trip-id suffix (`_JP`/`_ZH`/`_ES`/`_FR`/
-    `_DE`/`_IT`; anything else — including `_EN` — is English)."""
+    """Narration language inferred from the trip-id suffix (`_JP`/`_ZH`/`_KO`/`_ES`/
+    `_FR`/`_DE`/`_IT`; anything else — including `_EN` — is English).
+
+    ⚠ This is the single point that decides FOUR things, so an unmapped suffix fails
+    quietly in four places at once: the reviewer language ACL (`auth.language_allowed`
+    — an unmapped language reads "English", so the target-language reviewer is 403'd
+    and only an admin can open the trip), the Whisper transcription language
+    (`sessions._whisper_lang` — an unmapped trip is transcribed as English, which
+    silently wrecks the splice anchors), the fallback narrator, and the trip list's
+    language column. `_KO` was unmapped until 2026-08-05, when the first 24 Korean
+    rungs reached the queue."""
     t = (trip_id or "").upper()
     if t.endswith("_JP"):
         return "Japanese"
     if t.endswith("_ZH"):
         return "Mandarin"
+    if t.endswith("_KO"):
+        return "Korean"
     for suf, lang in _EU_LANG_SUFFIXES.items():
         if t.endswith(suf):
             return lang
@@ -174,6 +199,8 @@ def voice_for_gender(language: str, country: str, gender: str) -> str | None:
         if g == "female":
             return "annasu"
         return "yu" if c == "Taiwan" else "jason"
+    if language == "Korean":
+        return "hyuk" if g == "male" else "annakim"
     if language == "Spanish":
         return "martin" if g == "male" else "sara"
     if language == "French":

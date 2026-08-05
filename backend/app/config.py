@@ -220,4 +220,7 @@ LANGUAGE_FALLBACK_VOICE = {
     "French": "yvonne",
     "German": "dana",
     "Italian": "linda",
+    # Korean (2026-08-05): Anna Kim is the native reviewer's first choice overall, so
+    # she is the safer blind fallback of the two approved narrators.
+    "Korean": "annakim",
 }
