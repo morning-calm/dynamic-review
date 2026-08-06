@@ -435,3 +435,53 @@ BEFORE restart (the gate that caught the AttributeError earlier), restarted 00:3
 correct, zero tracebacks.
 
 **Session closed.** The reported bug is fixed, verified on 316 real scenes, and live.
+
+---
+
+## 00:55 — Follow-up: is the zh/jp passthrough also a gap in the Scripts repo?
+
+**Question (dave):** why aren't ZH and JP cleaned, and is that a gap on the Scripts side too?
+
+**Answer: no — Scripts is fine. The gap is entirely app-side, and it is older and wider than
+number cleaning.** My earlier note called the passthrough "by design"; that was under-stated
+and I have corrected it in `audio_core._NO_CLEAN_LANGS` and `CLAUDE.md`.
+
+**The pipeline cleans all three CJK languages before TTS** (verified in `dynamic-content`):
+- **zh** — the three `multiple_documents_*_ZH.py` voice templates `from mandarin_number_clean
+  import clean_field`.
+- **jp** — the six JP templates carry their own `clean_text`/`validate_and_clean` over
+  `build_prompt("jp", …)` + `needs_number_clean` + `clean_similarity`, and the call order is
+  `process_text()` (take the last/kana line) **then** `validate_and_clean` on it — i.e. the
+  pipeline cleans *exactly the string this app voices*.
+- **ko** — `multiple_documents_Korean_KO.py` → `korean_number_clean.clean_field`. The app
+  matches this one (`ko` is not in `_NO_CLEAN_LANGS`).
+
+**So a CJK master was voiced from CLEANED text and an app regenerate voices RAW text.**
+`sessions.regenerate` sends zh/jp through `_cjk_spoken` → `plan_whole(cjk_new)` and never
+calls `validate_and_clean` at all — so this is NOT something the 2026-08-06 work introduced;
+the only CJK path that ever reached the cleaner was `fallback()`, and until yesterday it was
+being handed the **English** prompt. That part did get strictly better.
+
+**Second, larger half of the same bypass: pronunciation overrides.** `apply_overrides` is
+applied in exactly ONE place in the whole backend — `audio_core.validate_and_clean:548`. So a
+`_ZH` regenerate also drops the trip's pinned spoken forms. `Taipei101_HSK3_ZH` pins
+`台北101 → 台北一〇一` and is hit by both halves at once.
+
+**Measured exposure** (audio-bearing fields whose SPOKEN line carries digits — kana line for
+jp, Hans for zh):
+
+| | audio fields | exposed | trips |
+|---|---|---|---|
+| jp | 208 | **32** | Tokyo_03_Beg_N4, Tokyo_04_Beg_N4, KochiCity_N3, Yusuhara_Beg_N4 |
+| zh | 330 | **19** | Taipei101_HSK3, Taipei101_HSK12 (all `台北101`) |
+
+Real examples: 「せかいでも3ばんめにたかくて、たかさは634めーとるも…」, 「100めーとるぐらいです。」
+
+**Why I did not fix it tonight.** It is not a flag flip. `cjk_splice` char-diffs OLD→NEW and
+reads cut times from the forced aligner against the real audio, so OLD (`working_hans` / the
+stored kana) and NEW would both have to live in cleaned space, with `working_text` /
+`working_hans` re-baselined there — otherwise every surgical CJK splice mis-locates its cuts.
+It also needs the zh year-duplication fixed upstream first, or zh would voice the date twice.
+Filed as **BACKLOG 0q** with the measurement and a suggested order of work.
+
+Docs corrected, tests still 120 green, ruff clean. No behaviour change in this follow-up.

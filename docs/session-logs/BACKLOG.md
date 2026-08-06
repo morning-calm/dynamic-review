@@ -37,6 +37,35 @@ All found while wiring the review app to the shared cleaner; none blocks anythin
    pronunciation-override *reinforcement* is silently dropped for fr/de/es/it. The
    `apply_overrides` text substitution still happens, so this is degradation, not breakage.
 
+### 0q. ⚠ CJK regenerate bypasses BOTH number-cleaning and pronunciation overrides (added 2026-08-07)
+**The Scripts repo is fine — this is entirely app-side, and it pre-dates the 2026-08-06
+shared-cleaner work.** Verified in `dynamic-content`: the pipeline cleans all three CJK
+languages before TTS — zh via `mandarin_number_clean.clean_field` (the three
+`multiple_documents_*_ZH.py` templates), jp via each template's own `validate_and_clean` on
+`build_prompt("jp",…)` applied to the kana line **after** `process_text()` extracts it (i.e.
+the exact string the app voices), ko via `korean_number_clean.clean_field`.
+
+The app's `sessions.regenerate` routes zh/jp through `_cjk_spoken` → `plan_whole(cjk_new)`
+and **never calls `validate_and_clean`**. Two consequences:
+1. **No number cleaning.** The master was voiced from cleaned text; a regenerate sends raw.
+   Measured on the live DB, audio-bearing fields whose SPOKEN line contains digits:
+   **jp 32 fields / 4 trips** (`Tokyo_03_Beg_N4_JP` 「634めーとる」「3ばんめ」,
+   `Tokyo_04_Beg_N4_JP`, `KochiCity_N3_JP`, `Yusuhara_Beg_N4_JP`);
+   **zh 19 fields / 2 trips** (`Taipei101_HSK3_ZH`, `Taipei101_HSK12_ZH` — all `台北101`).
+2. **No pronunciation overrides.** `apply_overrides` is applied in exactly ONE place in the
+   whole backend (`audio_core.validate_and_clean:548`), so `Taipei101_HSK3_ZH`'s pinned
+   `台北101 → 台北一〇一` never reaches ElevenLabs on a `_ZH` regenerate. Taipei101 is hit by
+   both halves at once.
+
+**Not a flag flip.** `cjk_splice` char-diffs OLD→NEW and reads cut times from the forced
+aligner against the REAL audio, so OLD (`localization.working_hans`, or the stored kana line)
+and NEW must both live in *cleaned* space, and `working_text`/`working_hans` must be
+re-baselined there — otherwise every surgical splice mis-locates. Precondition: fix the zh
+year duplication first (0n.1), or zh would voice the date twice.
+Suggested order: (a) fix zh duplication upstream; (b) clean at the `_cjk_spoken` boundary so
+OLD and NEW are produced in the same space; (c) re-baseline `working_hans` on combine;
+(d) re-run the CJK splice regression on `Tokyo_08` / `Taipei101`.
+
 ### 0p. Number-clean: four items triaged and deliberately left (added 2026-08-06)
 From the Fable red-team of the shared-cleaner wiring. None is a live defect; each is a
 judgment call recorded so it isn't rediscovered cold.

@@ -152,10 +152,20 @@ Whisper around every number. **Do not port these prompts back in here.**
   `_LANG_CODES` (⚠ enumerated set — a language in `language_of` with no entry here is NOT
   silently English; it disables cleaning and warns). **ko** → `korean_number_clean.clean_field`
   (deterministic `sino_year` + acronym pre-expansion: the model dropped a 百 from 1963 and read
-  KBS as **BTS**). **zh/jp** → NOT cleaned, by design: `regenerate` voices their spoken line raw
-  via `_cjk_spoken`, so cleaning only on the `fallback()` path would make the reference clip
-  disagree with the working take — *and* the zh harness currently emits the year twice
-  (`1999年` → `一九九九年（一九九九年）`, reproducible; its numeral-stripped guard can't see it).
+  KBS as **BTS**). **zh/jp** → NOT cleaned — ⚠ this matches the rest of the app but NOT the
+  pipeline, and is a **known open gap** (BACKLOG 0q), not a correctness claim. The pipeline
+  cleans all three CJK languages at generation time (zh via `mandarin_number_clean`, jp via
+  `build_prompt("jp",…)` applied to the kana line *after* `process_text()` extracts it — the
+  exact string this app voices, ko via `korean_number_clean`), so a CJK master was voiced from
+  CLEANED text while an app regenerate voices RAW text. It stays off because `regenerate`
+  routes zh/jp through `_cjk_spoken` → `plan_whole(cjk_new)` and never calls
+  `validate_and_clean` at all — cleaning on the `fallback()` path alone would make the
+  reference clip disagree with the working take — because closing it properly means putting
+  `cjk_splice`'s OLD/NEW char-diff and `working_hans` into cleaned space, and because the zh
+  harness currently emits the year twice (`1999年` → `一九九九年（一九九九年）`, reproducible).
+  ⚠ Same bypass costs the CJK path its **pronunciation overrides**: `apply_overrides` is
+  applied in exactly one place in the backend (`validate_and_clean`), so `台北101` reaches
+  ElevenLabs unconverted on a `_ZH` regenerate even though the trip pins `台北一〇一`.
 - **The accept/reject guard (`clean_accepted`)**: where Scripts has a numeral inventory for the
   language (`similarity_basis` — today it/jp) that comparison is authoritative. Everywhere else
   a plain word ratio **rejects correct work** — measured against the 0.80 bar on four perfect

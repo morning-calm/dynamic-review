@@ -298,18 +298,35 @@ def _own_harness(lang: str):
     return {"ko": _ko_clean}.get(lang)
 
 
-#: ⚠ zh/jp are NOT number-cleaned here, deliberately.
-#: 1. CONSISTENCY. `sessions.regenerate` routes them through `_cjk_spoken`, which voices
-#:    the Hans/kana line RAW and never calls this function. `fallback()` is the only path
-#:    that reaches us, so cleaning here would make the reference clip say something the
-#:    working take does not — and it is the working take the splice engine diffs against.
-#: 2. The zh harness is currently emitting the year TWICE. Measured 2026-08-06, three
-#:    identical runs: 「1999年」 → 「一九九九年（一九九九年）」. Its own guard cannot see it
-#:    (both sides strip to nothing once numerals are removed — the blind spot its own
-#:    `sino_year` docstring describes). Voicing that would read the date twice.
-#: What they must NOT do is what they did until today: fall through to the ENGLISH prompt.
-#: Revisit when the zh duplication is fixed on the Scripts side and CJK cleaning is wanted
-#: on both paths at once, not just this one.
+#: ⚠ zh/jp are not number-cleaned here. This MATCHES the rest of the app — it does NOT
+#: match the pipeline, and that difference is a known open gap, not a correctness claim.
+#:
+#: THE PIPELINE DOES CLEAN CJK (verified 2026-08-07 in the Scripts repo):
+#:   zh — the three `multiple_documents_*_ZH.py` voice templates call
+#:        `mandarin_number_clean.clean_field`
+#:   jp — the six JP templates run their own `validate_and_clean` on `build_prompt("jp",…)`,
+#:        applied to the kana line AFTER `process_text()` extracts it — i.e. to exactly the
+#:        string this app voices
+#:   ko — `multiple_documents_Korean_KO.py` calls `korean_number_clean.clean_field` (and the
+#:        app matches it: `ko` is NOT in this set)
+#: So a CJK master was voiced from CLEANED text, and an app regenerate voices RAW text.
+#:
+#: Why it is still not switched on here:
+#: 1. `sessions.regenerate` routes zh/jp through `_cjk_spoken` → `plan_whole(cjk_new)` and
+#:    never calls this function at all; `fallback()` is the only path that reaches us.
+#:    Cleaning on that one path would make the reference clip disagree with the working
+#:    take, which is what the splice engine diffs against — strictly worse than the gap.
+#: 2. Closing it properly is a CJK-splice change, not a flag flip. `cjk_splice` char-diffs
+#:    OLD→NEW and reads cut times from the forced aligner against the REAL audio, so OLD
+#:    (`localization.working_hans` / the stored kana) and NEW would both have to live in
+#:    cleaned space, and `working_text`/`working_hans` re-baselined there too.
+#: 3. The zh harness currently emits the year TWICE — 「1999年」 → 「一九九九年（一九九九年）」,
+#:    three identical runs, invisible to its own numeral-stripped guard. Turning zh on today
+#:    would voice the date twice.
+#: Measured exposure on the live DB (audio-bearing fields whose SPOKEN line has digits):
+#: jp 32 fields / 4 trips, zh 19 fields / 2 trips. See BACKLOG 0q.
+#: What they must NOT do is what they did until 2026-08-06: fall through to the ENGLISH
+#: prompt.
 _NO_CLEAN_LANGS = {"zh", "jp"}
 
 
