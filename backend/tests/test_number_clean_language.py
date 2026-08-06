@@ -114,6 +114,28 @@ def test_korean_leftover_digits_report_fallback(monkeypatch):
     assert fb is True
 
 
+def test_korean_missing_key_degrades_instead_of_crashing(monkeypatch):
+    """`korean_number_clean` is a CLI-shaped Scripts module: its missing-DeepSeek-key path
+    is `raise SystemExit`, a BaseException that `except Exception` lets straight through.
+    On a host in the key-missing DEGRADED state (the one _startup warns about) every
+    Korean clean would have crashed the request instead of falling back."""
+    def die(*a, **k):
+        raise SystemExit("Missing DeepSeek_API_KEY / DEEPSEEK_API_KEY in .env")
+
+    monkeypatch.setattr(audio_core._ko_clean, "clean_field", die)
+    out, fb = audio_core.validate_and_clean("1963년", "Busan1_TPK2_KO", 0)
+    assert (out, fb) == ("1963년", True)
+
+
+def test_korean_empty_clean_reports_fallback(monkeypatch):
+    """The harness's own guard scores "" a perfect match when the input strips to pure
+    numerals (a year-only quiz option), so it CAN hand back empty as accepted — and the
+    leftover-digit probe sees nothing numeric in "". Must fall back, never voice it."""
+    monkeypatch.setattr(audio_core._ko_clean, "clean_field", lambda t, d=None, **k: "")
+    out, fb = audio_core.validate_and_clean("1963년", "Busan1_TPK2_KO", 0)
+    assert (out, fb) == ("1963년", True)
+
+
 # --------------------------------------------------------------------------- #
 # The guard
 # --------------------------------------------------------------------------- #
@@ -165,6 +187,12 @@ def test_accent_repair_does_not_cost_a_clean():
                        "walk the full circuit of its walls, admiring the views across the "
                        "valley and the rooftops of the old town beyond."),
     ("empty", "It was built in 1642.", ""),
+    # ⚠ All-convertible input is the empty guard's ONLY real job: with no prose skeleton,
+    # recall is vacuously 1.0 and an empty output is inside the growth budget — and the
+    # Scripts strippers reduce both sides to "" (score 1.0) the same way. A year-only quiz
+    # option + DeepSeek returning empty content (seen in production) would otherwise be
+    # accepted and voiced as silence.
+    ("empty on an all-numeric field", "1868.", ""),
 ])
 def test_hallucinations_are_rejected(name, pre, cleaned):
     assert not audio_core.clean_accepted("en", pre, cleaned), f"guard let through: {name}"
@@ -181,9 +209,34 @@ def test_common_words_are_not_read_as_numerals(token):
     assert not audio_core._is_convertible(token)
 
 
-@pytest.mark.parametrize("token", ["1868", "XIV", "V", "XIXe", "XVIII.", "£5", "50%", "2°C", "km", "kg"])
+@pytest.mark.parametrize("token", ["1868", "XIV", "V", "XIXe", "XVIII.", "£5", "50%", "2°C",
+                                   "km", "kg", "Ier", "Ière", "1er"])
 def test_convertible_tokens(token):
     assert audio_core._is_convertible(token)
+
+
+def test_french_first_ordinal_does_not_cost_a_clean():
+    """`Albert Ier` → `Albert premier`. Four real occurrences on the live Monaco trips; they
+    passed at recall 0.944–0.987, i.e. one skeleton word down, so a SHORTER sentence carrying
+    `Ier` would have dropped under the bar. Whole-token match — `LIVRE` and `Le` must not
+    become convertible on the way (the Romance-article trap)."""
+    assert audio_core._is_convertible("Ier")
+    for safe in ("LIVRE", "Le", "de", "Iberia", "hier", "premier", "ier"):
+        assert not audio_core._is_convertible(safe), safe
+    pre = "Le prince Albert Ier a construit le musée en 1910."
+    cleaned = "Le prince Albert premier a construit le musée en mille neuf cent dix."
+    recall, growth_ok = audio_core._prose_survival(pre, cleaned)
+    assert recall == 1.0 and growth_ok
+    assert audio_core.clean_accepted("fr", pre, cleaned)
+
+
+def test_cleaner_status_does_not_claim_zh_jp_are_cleaned():
+    """The startup line is the operator's first diagnostic; listing a passthrough language
+    among the cleaned ones sends them looking in the wrong place."""
+    st = audio_core.cleaner_status()
+    assert set(st["not_cleaned"]) == audio_core._NO_CLEAN_LANGS
+    assert not (set(st["languages"]) & audio_core._NO_CLEAN_LANGS)
+    assert set(st["languages"]) | set(st["not_cleaned"]) == set(audio_core._LANG_CODES.values())
 
 
 def test_growth_is_what_catches_insertion():
@@ -221,6 +274,20 @@ def test_survives_a_scripts_checkout_without_the_inventory(monkeypatch):
         "Fu costruito nel milletrecentoquarantotto da Carlo quarto.")
     assert not audio_core.clean_accepted(
         "it", "Fu costruito nel 1348 da Carlo IV.", "It was built in thirteen forty eight.")
+
+
+def test_survives_similarity_basis_without_clean_similarity(monkeypatch):
+    """The two inventory attrs shipped together, but nothing holds them together: the
+    guard must detect the attribute it CALLS (`clean_similarity`), not just its sibling.
+    Detecting only `similarity_basis` left an AttributeError live for any checkout that
+    ever carries one without the other — the exact class dc31260 fixed."""
+    monkeypatch.delattr(audio_core._shared, "clean_similarity", raising=False)
+    for lang, pre, cleaned in CORRECT_CLEANS:
+        assert audio_core.clean_accepted(lang, pre, cleaned)
+    # Italian normally defers to Scripts; it must degrade to _prose_survival, not raise.
+    assert audio_core.clean_accepted(
+        "it", "Fu costruito nel 1348 da Carlo IV.",
+        "Fu costruito nel milletrecentoquarantotto da Carlo quarto.")
 
 
 def test_italian_accepted_by_either_route():
@@ -262,13 +329,18 @@ def test_unmapped_language_disables_cleaning_rather_than_defaulting(monkeypatch)
     assert (out, fb) == ("Louis XIV en 1668", True)
 
 
-def test_cleaner_version_is_in_the_cache_key():
+def test_cleaner_version_is_in_the_cache_key(monkeypatch):
     """`sessions._cleaned_orig` caches "what the working audio says". When the cleaner
     changes, the same raw text yields different words and a stale entry becomes a lie the
     splice engine diffs against — sessions seeded before today hold English-numbered
-    baselines for FR/ES/DE/IT/KO trips."""
-    import inspect
-
+    baselines for FR/ES/DE/IT/KO trips. Bumping CLEANER_VERSION must change the key.
+    (Pinned on the extracted `_cleaned_cache_key`, not on source inspection — the old
+    source-string assert passed as long as a COMMENT mentioned the constant.)"""
     from app import sessions
-    src = inspect.getsource(sessions._cleaned_orig)
-    assert "CLEANER_VERSION" in src
+
+    text = "Louis XIV en 1668"
+    before = sessions._cleaned_cache_key(text)
+    assert sessions._cleaned_cache_key("other text") != before
+    monkeypatch.setattr(audio_core, "CLEANER_VERSION",
+                        audio_core.CLEANER_VERSION + "-bumped")
+    assert sessions._cleaned_cache_key(text) != before

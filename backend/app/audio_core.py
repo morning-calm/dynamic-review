@@ -364,6 +364,18 @@ PROSE_RECALL_THRESHOLD = 0.9
 _UNIT_TOKENS = {"km", "cm", "mm", "m", "kg", "g", "l", "ml", "ha", "ft", "mi",
                 "h", "min", "sec", "s", "°c", "°f"}
 
+#: The French FIRST-ordinal regnal forms, matched as WHOLE TOKENS.
+#: `Albert Ier` → `Albert premier` costs a skeleton word otherwise, because `Ier` survives
+#: neither the Roman-numeral test (not all-uppercase) nor the ordinal-suffix strip (`r` is
+#: not in it). Measured on the live corpus: four occurrences, all on the Monaco trips, all
+#: still passing but at recall 0.944–0.987 — a shorter sentence carrying `Ier` would drop
+#: under the 0.9 bar and lose a correct clean.
+#: ⚠ Whole-token equality, NOT a suffix rule. Extending the strip set to `r` would make
+#: `LIVRE`→`LIV` convertible, and any "roman core + lowercase suffix" rule reads `Le`→`L`
+#: and `de`→`D` — the Romance-article trap this function already guards against. `1er`/`1re`
+#: need no entry: they carry a digit and are caught above.
+_FRENCH_FIRST_ORDINALS = {"Ier", "Iers", "Ière", "Ières", "Iere"}
+
 
 def _is_convertible(token: str) -> bool:
     """True if the cleaner is licensed to rewrite this INPUT token — a digit, a currency
@@ -379,6 +391,8 @@ def _is_convertible(token: str) -> bool:
         return False
     if _CONVERTIBLE_TOKEN_RE.search(t):
         return True
+    if t in _FRENCH_FIRST_ORDINALS:
+        return True                                      # François Ier, Albert Ier
     core = t.rstrip("eèᵉ.")
     if len(core) >= 2 and core.isupper() and _ROMAN_RE.match(core):
         return True                                      # XIXe siècle, XVIII., XIV
@@ -432,8 +446,21 @@ def clean_accepted(lang: str, pre: str, cleaned: str) -> bool:
     """Is ``cleaned`` a trustworthy rendering of ``pre``? Uses the Scripts per-language
     numeral-stripped comparison where that language has an inventory registered AND this
     checkout provides it, and the vocabulary-free recall+growth pair otherwise."""
-    if _shared is not None and _scripts_inventory_basis(lang, pre) is not None:
-        return _shared.clean_similarity(lang, pre, cleaned) >= NUMBER_CLEAN_THRESHOLD
+    if not (cleaned or "").strip():
+        # An empty render is never a trustworthy clean — and neither comparison arm can
+        # say so on its own when ``pre`` is ALL-convertible (a year-only quiz option like
+        # "1868."): the prose skeleton is empty so recall is vacuously 1.0 with an empty
+        # output inside budget, and the Scripts strippers reduce both sides to "" (score
+        # 1.0 — the numerals-strip blind spot the zh harness's own docs describe).
+        # DeepSeek HAS returned empty content in production (whole token budget spent on
+        # reasoning), so this input is real, not hypothetical.
+        return False
+    # Detect the attribute we CALL, not just its sibling: `similarity_basis` and
+    # `clean_similarity` shipped together, but a lagging Scripts checkout owes us neither
+    # (see _scripts_inventory_basis for the outage this guard exists to prevent).
+    cmp_fn = getattr(_shared, "clean_similarity", None) if _shared is not None else None
+    if cmp_fn is not None and _scripts_inventory_basis(lang, pre) is not None:
+        return cmp_fn(lang, pre, cleaned) >= NUMBER_CLEAN_THRESHOLD
     recall, growth_ok = _prose_survival(pre, cleaned)
     return growth_ok and recall >= PROSE_RECALL_THRESHOLD
 
@@ -456,13 +483,17 @@ def cleaner_status() -> dict:
     """Startup/health probe — see `main._startup`. `ok=False` means every clean will be
     skipped and flagged `edit_required`, which is visible but degraded; the fix is a
     Scripts checkout at REVIEW_APP_SCRIPTS_ROOT with `Audio Generation/` present."""
+    codes = set(_LANG_CODES.values())
     return {
         "ok": _shared is not None,
         "error": _CLEANER_ERROR,
         "model": getattr(_shared, "DEEPSEEK_MODEL", None),
         "api_key_set": bool(getattr(_shared, "_API_KEY", "")),
         "version": CLEANER_VERSION,
-        "languages": sorted(set(_LANG_CODES.values())),
+        # Split, so the startup line cannot tell an operator that zh/jp are being cleaned
+        # when they are deliberately passed through (see _NO_CLEAN_LANGS).
+        "languages": sorted(codes - _NO_CLEAN_LANGS),
+        "not_cleaned": sorted(codes & _NO_CLEAN_LANGS),
     }
 
 
@@ -537,11 +568,20 @@ def validate_and_clean(text: str, doc_id: str, scene_index) -> tuple[str, bool]:
     if harness is not None:
         try:
             cleaned = harness.clean_field(text, doc_id)
-        except Exception as e:  # noqa: BLE001
+        except (Exception, SystemExit) as e:  # noqa: BLE001
+            # SystemExit too: the harness is a CLI-shaped Scripts module whose missing-
+            # API-key path is `raise SystemExit` — a BaseException that `except Exception`
+            # lets straight through. Exactly the degraded state _startup warns about must
+            # fall back like every other language, not crash the request.
             _warn_once(f"harness:{lang}", f"WARN {lang} number-clean failed: {e}")
             return pre, True
+        # An empty answer is a FAILED clean, not a clean. The harness's own guard scores
+        # "" a perfect match when the input strips to pure numerals (a year-only quiz
+        # option), so it can hand one back as accepted — never voice it.
+        if not (cleaned or "").strip():
+            return pre, True
         # Both harnesses fall back to their input silently; leftover digits say they did.
-        return cleaned, bool(_LEFTOVER_NUMERIC_RE.search(cleaned or ""))
+        return cleaned, bool(_LEFTOVER_NUMERIC_RE.search(cleaned))
 
     # Nothing convertible → return unchanged WITHOUT an API call. Not just a saving: a
     # cleaner handed prose with no numbers in it can only do harm, and was measured doing

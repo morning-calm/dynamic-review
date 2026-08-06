@@ -350,8 +350,11 @@ month forms** the translator pack added: `6월 → 유월` (not 육월), `10월 
   `1950 → nineteen fifty` expanded), and the `prompt_rule` reinforcement block is present in
   the EN prompt. On non-EN the substitution still applies (verified `ang-pau → 昂包`).
 - **Live service**: health 200, `/api/trips` without a token 401, **zero tracebacks /
-  AttributeErrors / 500s** in the journal since restart, and a reviewer was polling the app
-  throughout without error.
+  AttributeErrors / 500s** in the journal since restart, and an authenticated client kept
+  polling the nav endpoints (`bug-reports/count`, `presence`, `recall-requests/count`)
+  throughout without error. NB that is a tab left open, not someone reviewing — `french`'s
+  presence heartbeat stopped at 23:26:17 and the restart was 23:57, so no reviewer was
+  interrupted.
 - **Suite**: 111 green against the production Scripts revision; both inventory branches
   (`test_registered_inventory_defers_to_scripts`, `..._without_the_inventory`) run and pass.
 

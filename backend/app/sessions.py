@@ -1450,20 +1450,26 @@ def _can_accept_text_as_voiced(trip_id: str, frow, cur_kind: str) -> bool:
             and _text_ahead_of_audio(trip_id, frow))
 
 
-def _cleaned_orig(srow, frow) -> tuple[str, bool]:
-    """Cleaned text of the CURRENT working audio — the base a segment/highlight splice
-    diffs against, so successive edits accumulate on the combined take. Re-cleans
-    whenever the working text changes (cache keyed on its hash).
+def _cleaned_cache_key(base: str) -> str:
+    """Cache key for one field's cleaned working text (see `_cleaned_orig`).
 
-    ⚠ The key mixes in ``audio_core.CLEANER_VERSION``, not just the text. A cached entry
-    is an ASSERTION about what the working audio says; when the cleaner itself changes,
-    the same raw text yields different words and the old entry becomes a lie the splice
+    ⚠ Mixes in ``audio_core.CLEANER_VERSION``, not just the text. A cached entry is an
+    ASSERTION about what the working audio says; when the cleaner itself changes, the
+    same raw text yields different words and the old entry becomes a lie the splice
     engine then diffs against. Sessions seeded before 2026-08-06 hold English-numbered
     baselines for French/Spanish/German/Italian/Korean trips — bumping the version is what
     makes them re-clean on resume instead of producing phantom diffs around every number."""
-    base = _working_base_raw(frow)
-    h = hashlib.sha1(
+    return hashlib.sha1(
         f"{audio_core.CLEANER_VERSION}\0{base}".encode("utf-8")).hexdigest()[:12]
+
+
+def _cleaned_orig(srow, frow) -> tuple[str, bool]:
+    """Cleaned text of the CURRENT working audio — the base a segment/highlight splice
+    diffs against, so successive edits accumulate on the combined take. Re-cleans
+    whenever the working text changes — or the cleaner itself does (`_cleaned_cache_key`
+    mixes ``CLEANER_VERSION`` into the hash)."""
+    base = _working_base_raw(frow)
+    h = _cleaned_cache_key(base)
     cache = json.loads(srow["cleaned_orig_json"] or "{}")
     key = str(frow["id"])
     c = cache.get(key)
