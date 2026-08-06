@@ -12,6 +12,38 @@ code changes need a `systemctl restart review-app.service` in an idle window, FE
 
 ## P0 — Waiting on dave (added 2026-07-13)
 
+### 0m. Push the `dynamic-content` Scripts commits (added 2026-08-06)
+`c3b87eea` "Number cleaning: translator-reported TTS fixes across JP/KO/EU" is committed on
+the **workstation** but not on origin, so the laptop pulled only as far as `b88cd55` and is
+running the **pre-translator-pack** prompts. The review app imports these prompts now
+(2026-08-06) and works against either revision — feature-detected — but the reviewers are
+not getting the refined FR/IT/KO/ES rules the translator pack came back with. One `git push`
+in GitHub Desktop, then on the laptop: `cd ~/Desktop/Server/Scripts && git pull` +
+`sudo -n /usr/bin/systemctl restart review-app.service`.
+
+### 0n. Three number-clean follow-ups on the Scripts side (added 2026-08-06)
+All found while wiring the review app to the shared cleaner; none blocks anything today.
+1. **zh emits the year twice** — `1999年` → `一九九九年（一九九九年）`, reproducible over three
+   identical runs of `mandarin_number_clean.clean_field`. Its numeral-stripped guard cannot
+   see it (both sides strip to nothing). This is why `audio_core._NO_CLEAN_LANGS` still
+   holds `zh`; fixing it is the precondition for cleaning CJK in the app at all.
+2. **Register `fr`/`de`/`es` in `tts_number_clean._STRIPPERS`.** Without an inventory,
+   `clean_similarity` degrades to a word ratio that REJECTS correct expansions — measured
+   against the 0.80 bar on four perfect cleans: en 0.62, fr 0.71, es 0.40, de 0.47. The
+   pipeline's own templates use the same measure, so they are discarding correct work too.
+   The review app works around it (`audio_core._prose_survival`); doing it properly upstream
+   would let that arm be retired.
+3. **Non-EN prompt templates have no `{extra}` slot** (only en/zh/jp/ko do), so per-trip
+   pronunciation-override *reinforcement* is silently dropped for fr/de/es/it. The
+   `apply_overrides` text substitution still happens, so this is degradation, not breakage.
+
+### 0o. `scripts/backup_review_db.py` aborts on the laptop (added 2026-08-06)
+Run over ssh it prints "R2 creds missing (Cloudfare_* in the Scripts .env) — aborting",
+although that `.env` holds 5 `Cloudfare_*` keys — so it is an env-loading/cwd issue, not
+absent credentials. **review.db is the only copy of review state** and the daily backup job
+is a *Windows* Task Scheduler entry, so the live host may have no working backup path at
+all. Worth confirming before the next migration.
+
 ### 0l. refresh_review_app.py deferred hardening (added 2026-07-30, from the red-opus pass)
 Four judgment calls the red-team reported but did not change, all fail-safe today:
 (a) `stage9.completed.load_completed()` falls back to the stale workstation

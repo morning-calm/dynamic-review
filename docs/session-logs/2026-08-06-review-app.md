@@ -162,3 +162,105 @@ Proposal delivered to dave (4 options: wire to the shared module / re-port the p
 language-lock the existing Gemini prompt / skip cleaning for non-EN). Recommendation: skip-for-
 non-EN as a same-day hotfix, then wire to the shared module properly. Awaiting his call — **no
 code changed this session.**
+
+---
+
+## Later still — Option A built, tested and DEPLOYED (`462209b`, `dc31260`)
+
+**Goal (dave):** "Build A" — wire the review app to the shared Scripts number-clean
+prompts instead of its own English-only copy.
+
+### What I did
+
+**The wiring.** `config.py` puts `Scripts/Audio Generation/` on `sys.path`; `audio_core`
+imports `gemini_number_clean_prompts.build_prompt` + `tts_number_clean` (DeepSeek
+transport) + `korean_number_clean`, and its ~50-line hard-coded English Gemini prompt is
+gone. `validate_and_clean` derives the language from `doc_id` (already the trip id — no
+signature change) via `clean_lang_code` → `_LANG_CODES`. An unmapped language **disables**
+cleaning and warns rather than defaulting to English.
+
+- **ko** → `korean_number_clean.clean_field` (deterministic `sino_year` + acronym
+  pre-expansion, its own Hangul-numeral guard).
+- **zh/jp** → **not cleaned, by design.** `regenerate` voices their spoken line raw via
+  `_cjk_spoken`, so cleaning only on the `fallback()` path would desync the reference clip
+  from the working take. Also: the zh harness emits the year TWICE — `1999年` →
+  `一九九九年（一九九九年）`, three identical runs — and its numeral-stripped guard can't see
+  it. What they no longer do is fall through to the ENGLISH prompt.
+- Pronunciation overrides reach the model for **en only**: non-EN prompts are
+  target-language-only by Scripts design, `prompt_rule` is English prose, and fr/de/it/es
+  have no `{extra}` slot anyway. `apply_overrides` (the load-bearing half) still runs for
+  all — verified live, `Taipei101_HSK3_ZH` still substitutes `101`→`一〇一`.
+
+**The guard had to change with it (unplanned, forced by measurement).** The first live run
+came back with FR/EN/ES/DE all falling back. The model was right every time; the guard was
+throwing the work away. Measured against the 0.80 bar on four *perfect* cleans: **en 0.62,
+fr 0.71, es 0.40, de 0.47.** This is not new and not the DeepSeek move — the old
+English-only path used the same word ratio, so **number-dense ENGLISH scenes have been
+silently falling back to raw digits all along.** Scripts fixes this per language by
+stripping numeral vocabulary from both sides, but only it/jp are registered. So
+`clean_accepted` now defers to that inventory where it exists and otherwise uses two
+vocabulary-free arms that must BOTH pass: **recall** of the non-convertible prose skeleton
+(≥0.9 — number words the model added can't lower it) and a **growth** budget (≤8 words per
+convertible token — recall alone scores an added paragraph 1.0). Comparison is
+accent/case/punctuation-folded: one `recorrio`→`recorrió` repair had dropped a correct
+Spanish clean to 0.667.
+
+**Three defects found while building, all fixed:**
+1. `_shared.needs_number_clean` counts "any Latin token of 2+ letters" as convertible —
+   right for the CJK text it was written for, but on a Latin-script language every word
+   matches and the gate never fires. Replaced with `_is_convertible`, the same predicate
+   the skeleton is built from.
+2. My first `_is_convertible` case-folded Roman numerals, so `de`→`D`, `Le`→`L`, `me`→`M`
+   after stripping an ordinal suffix — the commonest words in the Romance corpus would
+   have read as regnal numerals, hollowing out the skeleton AND handing the growth budget
+   8 free words per article. Roman numerals are now matched only when UPPERCASE.
+3. API failure now reports `used_fallback=True`. The old port returned the *input* on
+   error, which scored 1.0 against itself and was reported as a **successful** clean — so
+   the `edit_required` routing its own docstring promised could only ever fire on a
+   similarity miss, never on an outage.
+
+**Cache-key bump.** `sessions._cleaned_orig` mixes `audio_core.CLEANER_VERSION` into its
+hash. A cached entry asserts what the working audio *says*; sessions seeded before today
+hold English-numbered baselines for FR/ES/DE/IT/KO trips and must re-clean on resume
+rather than feed the splice engine phantom diffs around every number.
+
+**Startup visibility.** `main._startup` logs `audio_core.cleaner_status()`. A missing
+`Audio Generation/` degrades to "no cleaning + edit_required", loudly — this is the
+dependency class that failed silently for jieba (07-08) and opencc (07-29).
+
+### ⚠ The one that nearly went to production
+The pre-restart smoke test on the laptop caught it: that checkout was **30 commits behind**
+and its `tts_number_clean` has `build_prompt` and all nine prompts but **no
+`similarity_basis` / `clean_similarity`**. `clean_accepted` reached for them unguarded, so
+every regenerate on the live host would have raised `AttributeError`. Fixed in `dc31260` —
+the inventory is feature-detected and is an upgrade, never a dependency. *Run the app's own
+code against the laptop's checkout before restarting, not after.*
+
+### Verified
+- Backend suite **111 green** on the workstation (31 new in
+  `tests/test_number_clean_language.py`, incl. adversarial guard cases and a test that
+  simulates the older Scripts checkout).
+- **Live DeepSeek, all 8 languages, on the workstation AND again on the laptop's own
+  checkout** — fr/en/es/it/de/ko all correct in-language; fr with no numbers makes no API
+  call; zh/jp untouched.
+- Laptop: `review-app` @ `dc31260`, `Scripts` pulled (`6988ee0`→`b88cd55`), service
+  restarted, `systemctl is-active` = active, `api/health` 200, **uvicorn AND cloudflared
+  both up**, tunnel re-registered (lhr13/lhr21). Startup line reads
+  `[startup] number-clean OK: deepseek-v4-flash (de, en, es, fr, it, jp, ko, zh)`.
+
+### Open / carried forward
+- ⚠ **dave: push the workstation's `dynamic-content` commits.** `c3b87eea` ("Number
+  cleaning: translator-reported TTS fixes across JP/KO/EU") is committed locally but NOT on
+  origin, so the laptop is running the pre-translator-pack prompts. The app works on either;
+  pushing gets the reviewers the refined ones.
+- **zh harness emits the year twice** (`一九九九年（一九九九年）`) — Scripts-side, reproducible,
+  invisible to its own guard. Blocks turning zh cleaning on.
+- **Register fr/de/es in `tts_number_clean._STRIPPERS`** — would let `clean_accepted` defer
+  to Scripts everywhere and retire our recall/growth arm; also fixes the same rejected-clean
+  bug in the pipeline's own templates.
+- **Non-EN prompt templates have no `{extra}` slot** (only en/zh/jp/ko do), so per-trip
+  pronunciation-override *reinforcement* is dropped for fr/de/es/it. Degradation, not
+  breakage — `apply_overrides` still substitutes the text.
+- `scripts/backup_review_db.py` **aborts on the laptop**: "R2 creds missing" although
+  `.env` holds 5 `Cloudfare_*` keys — an env-loading path issue, not absent creds. review.db
+  is the only copy of review state; worth a look.
