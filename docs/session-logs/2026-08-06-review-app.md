@@ -362,3 +362,76 @@ month forms** the translator pack added: `6월 → 유월` (not 육월), `10월 
 zh year duplication (`一九九九年（一九九九年）`), fr/de/es strippers not registered upstream,
 no `{extra}` slot in non-EN templates, `backup_review_db.py` aborting on the laptop.
 All in BACKLOG 0n/0o.
+
+---
+
+## 00:40 — Fable red-team, fixes, redeploy (`e91ab38`) — SESSION CLOSE
+
+**Goal (dave):** "red fable code changes, tell me what time the french reviewer stopped
+working, then commit and close out session."
+
+### French reviewer's stop time
+**23:26 on Thu 6 Aug.** Last text edit 23:26:06 (`Reims3_A12_FR`), session submitted
+23:26:13, presence heartbeat 23:26:17 ("viewing changes"). Their day: `Monaco2_Beg_FR` 13:33
+→ `Monaco2_A12_FR` 13:34 → `Monaco2_FR` 15:02 → `Hyeres_A12_FR` 20:05 → `Reims3_A12_FR`
+23:26. Nothing in review.db touched since. **Both of tonight's restarts (23:57, 00:38) were
+after they stopped — nobody was interrupted.** Note the last trip they submitted,
+`Reims3_A12_FR`, is the one whose cached baseline read *"commencé en seventeen eighty nine"*.
+
+### Red-team (fresh clean-context Fable agent) — 3 real bugs, all in code written today
+All three verified by me against the pre-fix logic before accepting the fix; gates re-run
+myself (**120 passed**, ruff clean on the changed files); its diff read in full and confirmed
+in scope.
+
+1. **An EMPTY model response was accepted as a successful clean** when the input was
+   all-convertible (a year-only quiz option, `"1868."`). Empty skeleton ⇒ recall vacuously
+   1.0, empty output inside the growth budget; the Scripts it/jp arm has the same hole (both
+   sides strip to `""` → 1.0). Reproduced against the pre-fix code verbatim:
+   `clean_accepted('en','1868.','')` → **True**, likewise it/fr/`5 km`. DeepSeek returning
+   empty content is documented upstream (token budget spent on reasoning). Now rejected;
+   confirmed it rejects nothing it should accept.
+2. **Same hole in the Korean branch**, which never reaches `clean_accepted` —
+   `_LEFTOVER_NUMERIC_RE` finds nothing numeric in `""`, so empty was returned as
+   `("", False)`, i.e. a success, against the function's own contract.
+3. **`SystemExit` escaped `except Exception`.** `korean_number_clean._deepseek` raises
+   `SystemExit` on a missing key (I confirmed the literal line in the Scripts module) — a
+   BaseException. On a host in exactly the degraded state `_startup` warns about, every
+   Korean clean would have **crashed the request** instead of falling back. Same
+   laptop-env-gap class as jieba/opencc.
+
+Plus its hardening: `clean_accepted` now feature-detects **`clean_similarity`** (the attribute
+it *calls*), not only `similarity_basis` — `dc31260` guarded the sibling and then called the
+other unguarded, which could have re-created the very AttributeError it was written to prevent.
+
+**It also caught a vacuous test of mine**: `test_cleaner_version_is_in_the_cache_key` asserted
+the constant appeared in `inspect.getsource(_cleaned_orig)` — and the *docstring* names it, so
+it stayed green with the code reverted. Now pinned on an extracted `sessions._cleaned_cache_key`
+with a monkeypatched version. I verified the extraction hashes **identically** to what was
+already deployed (`e8452f483ca1`), so there is no second re-clean wave.
+
+### Two fixes of my own, from triaging what it reported but left alone
+- **`Ier`** (François/Albert Ier) was not convertible — it survives neither the uppercase-Roman
+  test nor the ordinal-suffix strip. **Four occurrences in the live corpus, all on the Monaco
+  trips the French reviewer is working**, all passing but at recall 0.944–0.987 (one skeleton
+  word down), so a shorter sentence carrying it would have lost a correct clean. Fixed as
+  whole-token equality, never a suffix rule — extending the strip set to `r` makes `LIVRE`
+  convertible, and any "roman core + lowercase suffix" rule reads `Le`→`L`, `de`→`D`.
+- **`cleaner_status()` listed zh/jp among the cleaned languages**, so the startup line told an
+  operator they were being cleaned when they are deliberately passed through. Split into
+  `languages` / `not_cleaned`; the line now reads
+  `cleaning de, en, es, fr, it, ko; passthrough jp, zh`.
+
+### Triaged, deliberately NOT changed (in BACKLOG 0p)
+Retry amplification (3 × 4 attempts on a hard DeepSeek outage), the dead `scene_index`
+param, `_is_convertible`'s remaining marginals (standalone `I`/`M.`, all-caps acronyms —
+all conservative-direction), and the twin regexes `_LEFTOVER_NUMERIC_RE` /
+`_CONVERTIBLE_TOKEN_RE` (identical character class, different roles — do not let anyone
+"deduplicate" one without reading both comments).
+
+### Verified + deployed
+120 tests green; ruff clean on changed files; laptop pulled to `e91ab38`, imports checked
+BEFORE restart (the gate that caught the AttributeError earlier), restarted 00:38,
+`is-active` active, health 200, uvicorn + cloudflared + tunnel all up, new startup line
+correct, zero tracebacks.
+
+**Session closed.** The reported bug is fixed, verified on 316 real scenes, and live.

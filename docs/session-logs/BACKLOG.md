@@ -37,6 +37,25 @@ All found while wiring the review app to the shared cleaner; none blocks anythin
    pronunciation-override *reinforcement* is silently dropped for fr/de/es/it. The
    `apply_overrides` text substitution still happens, so this is degradation, not breakage.
 
+### 0p. Number-clean: four items triaged and deliberately left (added 2026-08-06)
+From the Fable red-team of the shared-cleaner wiring. None is a live defect; each is a
+judgment call recorded so it isn't rediscovered cold.
+1. **Retry amplification.** `NUMBER_CLEAN_MAX_RETRIES` (3) × `complete_prompt`'s own retry
+   loop (4, exponential backoff, 120 s timeout each) = up to 12 API attempts for one field
+   during a hard DeepSeek outage. Not a regression (the old Gemini path had the same shape),
+   but a reviewer would sit there. Changing the counts is a behaviour change — decide
+   deliberately, don't drift into it.
+2. **`validate_and_clean(text, doc_id, scene_index)` — `scene_index` is dead** and was dead
+   in the original port too. Removing it touches four call sites in `sessions.py`.
+3. **`_is_convertible` marginals**, all conservative-direction (they cost a clean, never
+   mis-voice): standalone `I` / `M.` and all-caps Roman-lettered acronyms (`CD`, `DVD`, `MIX`)
+   count as convertible; curly quotes are not in the edge-strip sets. `Ier` WAS fixed
+   (2026-08-06) because it occurs four times in the live Monaco corpus.
+4. ⚠ **`_LEFTOVER_NUMERIC_RE` and `_CONVERTIBLE_TOKEN_RE` are the identical character class
+   but are NOT duplicates** — one is a post-condition on a harness's output, the other decides
+   what the guard's skeleton excludes. Both comments are load-bearing. Do not "deduplicate"
+   them without reading both.
+
 ### 0o. `scripts/backup_review_db.py` aborts on the laptop (added 2026-08-06)
 Run over ssh it prints "R2 creds missing (Cloudfare_* in the Scripts .env) — aborting",
 although that `.env` holds 5 `Cloudfare_*` keys — so it is an env-loading/cwd issue, not
