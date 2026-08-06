@@ -412,11 +412,27 @@ def _prose_survival(pre: str, cleaned: str) -> tuple[float, bool]:
     return matched / len(skeleton), growth_ok
 
 
+def _scripts_inventory_basis(lang: str, text: str):
+    """`tts_number_clean.similarity_basis(lang, text)`, or None if this checkout predates
+    it.
+
+    ⚠ Feature-DETECTED, never assumed. The live laptop is a separate checkout of the
+    Scripts repo that can sit behind this one — on the day this shipped it was 30 commits
+    back, with `build_prompt` and all nine language prompts present but `similarity_basis`
+    and `clean_similarity` not yet written. A bare attribute access here would have raised
+    AttributeError inside every regenerate on the live host. Same failure class as the
+    jieba (07-08) and opencc (07-29) outages: an optional Scripts capability treated as
+    guaranteed. `_prose_survival` needs no vocabulary and covers every language, so the
+    inventory is an upgrade, not a dependency."""
+    fn = getattr(_shared, "similarity_basis", None)
+    return fn(lang, text) if fn else None
+
+
 def clean_accepted(lang: str, pre: str, cleaned: str) -> bool:
     """Is ``cleaned`` a trustworthy rendering of ``pre``? Uses the Scripts per-language
-    numeral-stripped comparison where that language has an inventory registered, and the
-    vocabulary-free recall+growth pair where it does not."""
-    if _shared is not None and _shared.similarity_basis(lang, pre) is not None:
+    numeral-stripped comparison where that language has an inventory registered AND this
+    checkout provides it, and the vocabulary-free recall+growth pair otherwise."""
+    if _shared is not None and _scripts_inventory_basis(lang, pre) is not None:
         return _shared.clean_similarity(lang, pre, cleaned) >= NUMBER_CLEAN_THRESHOLD
     recall, growth_ok = _prose_survival(pre, cleaned)
     return growth_ok and recall >= PROSE_RECALL_THRESHOLD

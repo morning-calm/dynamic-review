@@ -196,11 +196,34 @@ def test_growth_is_what_catches_insertion():
     assert growth_ok is False
 
 
+@pytest.mark.skipif(not hasattr(audio_core._shared, "similarity_basis"),
+                    reason="Scripts checkout predates similarity_basis")
 def test_registered_inventory_defers_to_scripts():
     """Where Scripts HAS a numeral inventory (it/jp) its comparison is authoritative —
     we only supply our own where it would otherwise degrade to the word ratio."""
-    assert audio_core._shared.similarity_basis("it", "nel 1348") is not None
-    assert audio_core._shared.similarity_basis("fr", "en 1668") is None
+    assert audio_core._scripts_inventory_basis("it", "nel 1348") is not None
+    assert audio_core._scripts_inventory_basis("fr", "en 1668") is None
+
+
+def test_survives_a_scripts_checkout_without_the_inventory(monkeypatch):
+    """⚠ The live laptop is a SEPARATE Scripts checkout and was 30 commits behind on the
+    day this shipped: `build_prompt` and all nine prompts present, `similarity_basis` and
+    `clean_similarity` not yet written. Accessing them unguarded raised AttributeError
+    inside every regenerate on the live host. An optional Scripts capability must never be
+    a hard dependency — the same shape as the jieba and opencc outages."""
+    monkeypatch.delattr(audio_core._shared, "similarity_basis", raising=False)
+    monkeypatch.delattr(audio_core._shared, "clean_similarity", raising=False)
+    for lang, pre, cleaned in CORRECT_CLEANS:
+        assert audio_core.clean_accepted(lang, pre, cleaned)
+    # Italian normally defers to Scripts; with the inventory gone it must still be judged.
+    assert audio_core.clean_accepted(
+        "it", "Fu costruito nel 1348 da Carlo IV.",
+        "Fu costruito nel milletrecentoquarantotto da Carlo quarto.")
+    assert not audio_core.clean_accepted(
+        "it", "Fu costruito nel 1348 da Carlo IV.", "It was built in thirteen forty eight.")
+
+
+def test_italian_accepted_by_either_route():
     assert audio_core.clean_accepted(
         "it", "Fu costruito nel 1348 da Carlo IV.",
         "Fu costruito nel milletrecentoquarantotto da Carlo quarto.")
