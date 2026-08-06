@@ -93,3 +93,72 @@ code. Docs/memory changes are in this repo only.
 2. Watch the first Korean session for splice behaviour — Korean has never run through the
    splice engine live; `_whisper_lang` is right, but no Korean audio has been spliced yet.
 3. English VR check (lane 4b) and the GE renders remain dave's calls on the Scripts side.
+
+---
+
+## Later — French reviewer: "numbers go back to English on regenerate" (investigation, no code changed)
+
+**Goal:** French reviewer reports that fixing pronunciation / regenerating a whole sentence
+sometimes makes numbers (dates, regnal numerals) come out in ENGLISH. Question asked: does the
+review app use the Scripts-repo number-clean prompts (recently moved Gemini → DeepSeek, with
+per-language prompts), and has the laptop pulled?
+
+### Findings (measured)
+
+1. **The review app has never used the Scripts prompts.** `backend/app/audio_core.py:267-326`
+   holds its OWN hard-coded, **English-only** prompt, still on **`gemini-2.5-flash`** — a 2026
+   port of `RegenerateSceneAudio-EditMe.py`. Nothing in `backend/` imports
+   `tts_number_clean` or `gemini_number_clean_prompts` (grepped). So the DeepSeek switch and the
+   new per-language prompts never reached the app, and no amount of pulling would have changed
+   that.
+2. **Laptop git state:** `review-app` is current (`abc1118` = workstation HEAD, clean).
+   **`Scripts` is 30 commits behind** — HEAD `6988ee0`, last fetch 2026-08-05 12:53 — missing
+   `c3b87eea` "Number cleaning: translator-reported TTS fixes across JP/KO/EU". Secondary: the
+   app doesn't call those modules anyway.
+3. **Why it's the ENGLISH prompt for a French trip:** `validate_and_clean` is called with no
+   language argument at all (`sessions.py:1464, 2382, 2396, 2662`). `audio_core.language_of()`
+   exists and is correct, it is simply never consulted here. The prompt's own rules — "1868 →
+   eighteen sixty eight", "Louis XIV → Louis the Fourteenth", "km becomes kilometres" — are then
+   applied verbatim to French text.
+4. **Why "sometimes" (the guard, measured):** `validate_and_clean` accepts a clean at word-ratio
+   ≥ 0.80. A long French sentence with ONE year scores 0.93 → **accepted → English numbers get
+   voiced**. A short or number-dense one scores 0.59–0.72 → rejected → falls back to raw digits,
+   which ElevenLabs v2 usually reads correctly in French. Same trip, different sentences,
+   different outcome — exactly the reported intermittency.
+5. **Blast radius: 167 of 357 queued trips** (ES 83, FR 31, **KO 24**, DE 15, IT 14). ZH/JP are
+   safe — `sessions._cjk_spoken` routes them past the cleaner entirely (the comment at
+   `sessions.py:2321` literally says "the number-speller is English-only"). **Korean is NOT in
+   that branch** (`_cjk_spoken` handles Mandarin + Japanese only), so the 24 `_KO` rungs that
+   went live yesterday are exposed.
+6. **Second, unreported symptom:** `_cleaned_orig` (`sessions.py:1453`) is the splice engine's
+   diff baseline. On an EU trip it produces English number words while Whisper transcribes the
+   master's actual French ones — so the anchors disagree around every number. This degrades
+   highlight/alt splices on EU trips, not just whole-regen.
+7. **The shared module works and is reachable.** Smoke-tested on the laptop venv against the
+   OLD checked-out revision: `clean_once("fr", "…sous Louis XIV en 1668…")` →
+   *"sous Louis quatorze en mille six cent soixante-huit"*. `DeepSeek_API_KEY` is present in the
+   laptop `.env`; `deepseek-v4-flash` resolves. `tts_number_clean` self-loads that `.env`.
+8. **Two gaps found in the Scripts side while there:** the non-EN prompt templates have no
+   `{extra}` placeholder (only `en` does), so per-trip pronunciation-override *reinforcement* is
+   silently dropped for fr/de/es/it — the `apply_overrides` text substitution still happens, so
+   this is a degradation, not a break. And `Scripts/Audio Generation` is not on the review app's
+   `sys.path` (`config.py:28-30` adds only SCRIPTS_ROOT + RW_STAGES).
+
+### Verified
+- Grep: zero references to the shared cleaner anywhere in `backend/`.
+- `git log 6988ee0..HEAD` on the workstation Scripts repo = 30 commits.
+- Similarity-ratio arithmetic reproduced locally on three representative French sentences.
+- Live DeepSeek call from the laptop venv returned correct French.
+- Laptop is up (uvicorn + cloudflared both running).
+
+### Migration gotcha for whichever fix lands
+`_cleaned_orig` caches into `sessions.cleaned_orig_json` keyed **only on a hash of the raw text**
+— no cleaner-version component. Changing the cleaner leaves existing EU sessions resuming against
+an English-numbered cached baseline → phantom diffs. The fix must bump that cache key (add a
+`CLEANER_VERSION` to the hash) or clear the column for affected sessions.
+
+### Next steps
+Proposal delivered to dave (4 options: wire to the shared module / re-port the prompts /
+language-lock the existing Gemini prompt / skip cleaning for non-EN). Recommendation: skip-for-
+non-EN as a same-day hotfix, then wire to the shared module properly. Awaiting his call — **no
+code changed this session.**

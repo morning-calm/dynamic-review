@@ -24,8 +24,8 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from . import (auth, db, review_audio, routes_admin, routes_audio, routes_bugs,
-               routes_help, routes_sessions)
+from . import (audio_core, auth, db, review_audio, routes_admin, routes_audio,
+               routes_bugs, routes_help, routes_sessions)
 from .config import CORS_ORIGINS, FRONTEND_DIST, HOST, PORT, SERVE_FRONTEND
 
 app = FastAPI(title="review-app backend", version="1.0",
@@ -89,6 +89,20 @@ async def unhandled(_: Request, exc: Exception):
 @app.on_event("startup")
 def _startup():
     db.init()
+    # The number cleaner is imported from the Scripts repo, so it is exactly the class of
+    # dependency that has failed SILENTLY on the live laptop before (jieba 2026-07-08,
+    # opencc 2026-07-29 — checks that had never once run in production). Say on every boot
+    # whether it loaded, so "why is this trip flagged edit_required" is one journal line
+    # away rather than a day of guessing.
+    st = audio_core.cleaner_status()
+    if st["ok"] and st["api_key_set"]:
+        print(f"[startup] number-clean OK: {st['model']} "
+              f"({', '.join(st['languages'])}) v{st['version']}", flush=True)
+    else:
+        print(f"[startup] WARN number-clean DEGRADED — cleaning disabled, every field "
+              f"will be voiced as written and flagged edit_required. "
+              f"import={'ok' if st['ok'] else st['error']} "
+              f"DeepSeek_API_KEY={'set' if st['api_key_set'] else 'MISSING'}", flush=True)
 
 
 @app.on_event("shutdown")

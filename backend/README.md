@@ -17,24 +17,37 @@ REVIEW_APP_TOKEN=dev-token py -3.12 -m uvicorn app.main:app --host 127.0.0.1 --p
   header `X-Review-Token: <REVIEW_APP_TOKEN>` (dev default `dev-token`).
 - `/audio/*` and `/overlays/*` are token-exempt: browser `<audio>`/`<img>` elements
   cannot set custom headers, and the localhost-only bind is the control there.
-- Reads `D:\Dynamic Languages\Scripts\.env` for `ELEVENLABS_API_KEY` / `GEMINI_API_KEY`
+- Reads `D:\Dynamic Languages\Scripts\.env` for `ELEVENLABS_API_KEY` / `DeepSeek_API_KEY`
   and uses `firebase_staging_key.json` there via the reused `stage9.common.db()`.
+  (`GEMINI_API_KEY` is no longer used — the number cleaner moved to DeepSeek with the
+  rest of the pipeline on 2026-08-06.)
 
 ## How it reuses the Scripts codebase
 
-`app/config.py` puts `D:\Dynamic Languages\Scripts` (and `…/Research and Writing/stages`)
-on `sys.path` and loads that `.env` — import it first. Then:
+`app/config.py` puts `D:\Dynamic Languages\Scripts` (and `…/Research and Writing/stages`
+and `…/Audio Generation`) on `sys.path` and loads that `.env` — import it first. Then:
 
 | Reused | From | How |
 |---|---|---|
 | `db`, `get_trip`, `paths_for`, `COUNTRY_CFG` | `stage9.common` | imported as-is |
 | `transcribe_words` | `stage9.whisper_timing` | imported; serialized behind one GPU lock |
 | `load_overrides`/`apply_overrides`/`prompt_rule` | `pronunciation_overrides` | imported |
-| `VOICES`, `clean_text`, `validate_and_clean`, `generate_audio`, `strip_url_lines` | `RegenerateSceneAudio-EditMe.py` | **ported** into `app/audio_core.py` (hyphenated filename + import side effects) |
+| `VOICES`, `generate_audio`, `strip_url_lines` | `RegenerateSceneAudio-EditMe.py` | **ported** into `app/audio_core.py` (hyphenated filename + import side effects) |
+| `build_prompt` (the per-language number/date/unit prompts) | `gemini_number_clean_prompts` | **imported** — see below |
+| `complete_prompt`, `clean_similarity`, `similarity_basis` | `tts_number_clean` | **imported** (DeepSeek transport + guard) |
+| `clean_field` (Korean) | `korean_number_clean` | **imported** (sino-year + acronym pre-expansion) |
 | `trip_categories_from_description` | `09_gdoc_to_firebase.py` | **ported** into `app/staging.py` (that module pulls google_auth at import) |
 | `generate_with_timestamps` | — | **new** (`/with-timestamps` EL endpoint + char→word aggregation) |
 
 Never modifies the Scripts repo; the master MP3 tree is read-only until `/submit`.
+
+⚠ **The number-clean prompts are IMPORTED, never ported.** `audio_core` used to carry
+its own English-only copy on gemini-2.5-flash and applied it to every language, so a
+French trip was voiced "Louis the Fourteenth … eighteen sixty eight" while the pipeline's
+own master said "Louis quatorze … mille huit cent soixante-huit" (2026-08-06; 167 of 357
+queued trips exposed). A second copy of a prompt cannot be kept in step and fails
+silently. `audio_core.validate_and_clean` dispatches on `language_of(trip_id)`;
+`cleaner_status()` is logged at startup so a missing checkout is one journal line away.
 
 ## Layout
 

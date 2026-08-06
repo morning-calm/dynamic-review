@@ -24,12 +24,17 @@ from pathlib import Path
 # cloned even if the source audio trees themselves aren't synced.
 SCRIPTS_ROOT = Path(os.environ.get("REVIEW_APP_SCRIPTS_ROOT", r"D:\Dynamic Languages\Scripts"))
 RW_STAGES = SCRIPTS_ROOT / "Research and Writing" / "stages"
+# `Audio Generation/` holds the SHARED number/date/unit cleaner the app voices through —
+# tts_number_clean + gemini_number_clean_prompts + the zh/ko harnesses (see
+# audio_core.validate_and_clean). Those modules live in a directory with a space in its
+# name, so they can only be imported with it on sys.path.
+_AUDIO_GEN = SCRIPTS_ROOT / "Audio Generation"
 
-for p in (str(SCRIPTS_ROOT), str(RW_STAGES)):
+for p in (str(SCRIPTS_ROOT), str(RW_STAGES), str(_AUDIO_GEN)):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-# Load API keys (ELEVENLABS_API_KEY, GEMINI_API_KEY) from the Scripts .env.
+# Load API keys (ELEVENLABS_API_KEY, DeepSeek_API_KEY) from the Scripts .env.
 try:
     from dotenv import load_dotenv
 

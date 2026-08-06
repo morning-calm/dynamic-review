@@ -1,7 +1,7 @@
 """Session + field REST endpoints (everything under /api except health/trips list).
 
 Route handlers are sync ``def`` so FastAPI runs them in its worker threadpool — the
-blocking work (requests to ElevenLabs/Gemini, ffmpeg, Whisper) never blocks the event
+blocking work (requests to ElevenLabs/DeepSeek, ffmpeg, Whisper) never blocks the event
 loop, and Whisper is additionally serialised behind WHISPER_LOCK inside sessions.py."""
 
 from __future__ import annotations

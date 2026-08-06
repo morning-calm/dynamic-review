@@ -136,6 +136,44 @@ consumed**, the Scripts-side signal) and bumps `completed_at` (Stage-9 re-finali
 Completed status is never reset. First real batch: 12 A12 quiz-variety manifests,
 2026-07-22/23.
 
+## Number cleaning is SHARED with the pipeline (2026-08-06) — never re-port it
+Before ElevenLabs sees a line, numbers/years/regnal numerals/units are spelled out. Those
+prompts live in **`Scripts/Audio Generation/`** (`gemini_number_clean_prompts.build_prompt`
++ `tts_number_clean` transport, **DeepSeek** `deepseek-v4-flash`) and the app **imports**
+them — `config.py` puts `Audio Generation/` on `sys.path`.
+⚠ **This was a duplicate for a year and the duplicate was English-only.** `audio_core`
+carried its own ported gemini-2.5-flash prompt and applied it to *every* language with no
+dispatch, so a French trip was voiced *"Louis the Fourteenth … eighteen sixty eight"* while
+the pipeline's own master said *"Louis quatorze … mille huit cent soixante-huit"* (French
+reviewer, 2026-08-06; **167 of 357 queued trips** exposed — ES/FR/KO/DE/IT). It also poisoned
+`_cleaned_orig`, the splice engine's diff baseline, so EU highlight/alt anchors disagreed with
+Whisper around every number. **Do not port these prompts back in here.**
+- `validate_and_clean(text, doc_id, …)` dispatches on `audio_core.language_of(doc_id)` via
+  `_LANG_CODES` (⚠ enumerated set — a language in `language_of` with no entry here is NOT
+  silently English; it disables cleaning and warns). **ko** → `korean_number_clean.clean_field`
+  (deterministic `sino_year` + acronym pre-expansion: the model dropped a 百 from 1963 and read
+  KBS as **BTS**). **zh/jp** → NOT cleaned, by design: `regenerate` voices their spoken line raw
+  via `_cjk_spoken`, so cleaning only on the `fallback()` path would make the reference clip
+  disagree with the working take — *and* the zh harness currently emits the year twice
+  (`1999年` → `一九九九年（一九九九年）`, reproducible; its numeral-stripped guard can't see it).
+- **The accept/reject guard (`clean_accepted`)**: where Scripts has a numeral inventory for the
+  language (`similarity_basis` — today it/jp) that comparison is authoritative. Everywhere else
+  a plain word ratio **rejects correct work** — measured against the 0.80 bar on four perfect
+  cleans: en 0.62, fr 0.71, es 0.40, de 0.47, so number-dense **English** scenes had been
+  falling back to raw digits all along. Replaced with two vocabulary-free arms that must both
+  pass: **recall** of the non-convertible prose skeleton (≥0.9; inserted number words can't
+  lower it) and a **growth** budget (≤8 words per convertible token — recall alone scores an
+  added paragraph 1.0). Registering fr/de/es in `tts_number_clean._STRIPPERS` would let us drop
+  our arm and defer to Scripts everywhere.
+- API failure now reports `used_fallback=True` → `edit_required`. The old port returned the
+  *input* on an error, which scored 1.0 against itself and was reported as a **successful**
+  clean, so that routing could only ever fire on a similarity miss, never on an outage.
+- `CLEANER_VERSION` is mixed into `sessions._cleaned_orig`'s cache key — a cached entry asserts
+  what the working audio *says*, and changing the cleaner makes stale entries lie.
+- Startup logs `audio_core.cleaner_status()` (model, languages, key present). A missing
+  `Audio Generation/` degrades to "no cleaning + edit_required", loudly — this is the same
+  dependency class that failed silently for jieba (07-08) and opencc (07-29).
+
 ## Audio (MP3 end-to-end)
 - **Sources** (`sessions.resolve_audio_dir`): Quicktrips masters
   (`stage9.common.paths_for`) → `Audio Generation/<trip>/` (England A12/B1) →
@@ -156,7 +194,7 @@ Completed status is never reset. First real batch: 12 A12 quiz-variety manifests
 - **Splice engine (English)** `audio_splice.py` (SceneDesc only; Q&A + "whole" = full regen).
   The hard-won correctness points (DON'T regress — two red-teams): cut times from **raw Whisper
   `word.start/end`** via SequenceMatcher (NOT `subtitles.token_timeline`); **non-Latin /
-  Gemini-fallback → `edit_required`**; **pause-aligned cuts anchored in REAL silence at plan
+  cleaner-fallback → `edit_required`**; **pause-aligned cuts anchored in REAL silence at plan
   time** (edit_required if no pause within cap); **level-match the candidate to the kept context
   before the cut**; **boundary cuts are NOT energy-refined** (they'd truncate the new audio);
   splice in **mp3-PCM, peak-limit only the insert**; the human listen is load-bearing. Every
@@ -326,7 +364,8 @@ Completed status is never reset. First real batch: 12 A12 quiz-variety manifests
 `main.py` (token mw, Range audio, CORS) · `config.py` (paths, R2 buckets/domains, DSP
 constants) · `db.py` (SQLite/WAL) · `staging.py` (Firebase read + targeted submit) ·
 `sessions.py` (seed/resume, field ops, splice orchestration, submit, `resolve_audio_dir`,
-R2-upload hooks) · `audio_core.py` (EL TTS + Gemini clean + `speed_for_trip` + VOICES) ·
+R2-upload hooks) · `audio_core.py` (EL TTS + the SHARED per-language number clean +
+`speed_for_trip` + VOICES) ·
 `audio_splice.py` (English splice engine) · `cjk_splice.py` (`_ZH`/`_JP` surgical splice) ·
 `cjk_align.py` (client for the isolated MMS forced-aligner subprocess) · `audio_io.py`
 (ffmpeg/numpy DSP) · `thumbs.py` · `review_audio.py` · `bug_reports.py` (in-app problem reports +
@@ -419,7 +458,7 @@ the tunnel — uvicorn-only means they're locked out.
 **Path B — deploy (proper, the real lift):**
 1. **Frontend** → Vercel (mirrors library-app). Easy.
 2. **Backend** → a host — the substantive work; it depends on the **Scripts modules**,
-   **ffmpeg**, a **GPU** for Whisper (or slow CPU), the **Firebase key + EL/Gemini/R2
+   **ffmpeg**, a **GPU** for Whisper (or slow CPU), the **Firebase key + EL/DeepSeek/R2
    secrets**, and the **source audio**. *Audio-on-R2 helps:* change the backend to **fetch
    originals from `review-audio`** instead of needing local masters — removes the biggest
    local-file dependency.

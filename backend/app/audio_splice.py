@@ -18,7 +18,7 @@ Two phases, mirroring the API contract:
 Correctness points enforced (from two code reviews):
   C1  cut times come from raw Whisper word.start/.end, never interpolated timelines.
   S1  level match measured over the LONGEST retained original context, not one word.
-  S2  Gemini fallback (uncleaned) → edit_required (never align on drifted tokens).
+  S2  number-clean fallback (uncleaned) → edit_required (never align on drifted tokens).
   S3  cuts refined to true energy minima within ±120 ms.
   K3  non-Latin token in span/anchors → edit_required (advise whole-regen).
   +   numeric / regnal / override-phrase tokens are never used as anchors.
@@ -90,7 +90,7 @@ def plan_whole(cleaned_new: str, used_fallback: bool, voice_id: str,
     the segment-splice path. Same model + settings → same audio; only the response shape
     differs (both v2 and v3 support the endpoint — cjk_splice already relies on it).
 
-    S2: when the Gemini number-cleaner fell back to uncleaned text, the clip is voiced
+    S2: when the number-cleaner fell back to uncleaned text, the clip is voiced
     from raw numerals/abbreviations — still return the candidate so it can be auditioned,
     but flag edit_required so a human MUST listen before it is accepted."""
     mp3, cand_words = audio_core.generate_with_timestamps(
@@ -311,7 +311,7 @@ def plan_segment(doc_id: str, cleaned_orig: str, cleaned_new: str,
     verbatim in place of the changed words."""
     if used_fallback:
         return RegenPlan(edit_required=True,
-                         reason="Gemini cleaner fell back to uncleaned text — "
+                         reason="Number cleaner fell back to uncleaned text — "
                                 "diff unreliable; whole-regenerate advised.")
 
     orig_toks, new_toks = tokens(cleaned_orig), tokens(cleaned_new)
@@ -331,7 +331,7 @@ def plan_segment(doc_id: str, cleaned_orig: str, cleaned_new: str,
         # replace — widening the highlight to the op's full extent so both seams sit
         # in text the take actually contains. (Until 2026-07-29 this mapped only
         # through 'equal' ops, so highlighting any word the reviewer had edited — or
-        # any word a fresh Gemini re-clean happened to drift — failed as "not
+        # any word a fresh re-clean happened to drift — failed as "not
         # locatable".)
         oa = ob = None
         xlo, xhi = blo, bhi

@@ -1,0 +1,251 @@
+"""The number cleaner speaks the TRIP'S language — and the guard keeps correct work.
+
+Two defects are pinned here, both reported/measured 2026-08-06:
+
+  1. `validate_and_clean` applied an English-only prompt to every language, so a French
+     trip was voiced "Louis the Fourteenth ... eighteen sixty eight" while the pipeline's
+     own master said "Louis quatorze ... mille huit cent soixante-huit". 167 of the 357
+     queued trips were exposed (ES/FR/KO/DE/IT).
+  2. The accept/reject guard was a plain word ratio, which scores a PERFECT expansion at
+     0.40–0.71 against a bar of 0.80 — so even English number-dense scenes silently fell
+     back to raw digits. The denser the numbers, the more certain the rejection.
+
+No network: the transport is monkeypatched everywhere. What is being tested is the
+dispatch and the guard, not DeepSeek.
+"""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from app import audio_core  # noqa: E402
+
+pytestmark = pytest.mark.skipif(
+    audio_core._shared is None,
+    reason=f"shared Scripts cleaner unavailable: {audio_core._CLEANER_ERROR}")
+
+
+# --------------------------------------------------------------------------- #
+# Language dispatch
+# --------------------------------------------------------------------------- #
+def test_every_language_has_a_prompt():
+    """⚠ ENUMERATED SET (the recurring bug class in this app): adding a language to
+    `language_of` without adding it here is what produced the French bug in the first
+    place. Both directions are checked — a code that `build_prompt` would reject is just
+    as broken as a missing one."""
+    from gemini_number_clean_prompts import build_prompt
+
+    languages = {audio_core.language_of(t) for t in
+                 ("X_EN", "X_FR", "X_DE", "X_IT", "X_ES", "X_ZH", "X_JP", "X_KO", "X")}
+    assert languages == set(audio_core._LANG_CODES), (
+        "language_of() and _LANG_CODES have drifted apart")
+    for code in set(audio_core._LANG_CODES.values()):
+        build_prompt(code, "1868", strict=False)     # raises on an unsupported key
+
+
+@pytest.mark.parametrize("trip_id,code", [
+    ("Monaco1_FR", "fr"), ("Monaco1_Beg_FR", "fr"), ("Toledo_A12_ES", "es"),
+    ("Radda_SanGusme_A12_IT", "it"), ("Berlin1_B1_DE", "de"),
+    ("York_I_B2_EN", "en"), ("Busan1_UNMemorial_TPK2_KO", "ko"),
+    ("Taipei101_HSK3_ZH", "zh"), ("Tokyo_03_Beg_N4_JP", "jp"),
+])
+def test_clean_lang_code(trip_id, code):
+    assert audio_core.clean_lang_code(trip_id) == code
+
+
+def test_french_trip_gets_the_french_prompt(monkeypatch):
+    """The regression itself: a `_FR` trip must not be handed English rules."""
+    seen = {}
+
+    def fake(prompt, *, lang=None):
+        seen["prompt"], seen["lang"] = prompt, lang
+        return "Louis quatorze en mille six cent soixante-huit"
+
+    monkeypatch.setattr(audio_core._shared, "complete_prompt", fake)
+    audio_core.validate_and_clean("Louis XIV en 1668", "Monaco1_FR", 0)
+
+    assert seen["lang"] == "fr"
+    assert "français" in seen["prompt"], "not the French prompt"
+    # The exact English rules that were reaching French trips.
+    assert "King Charles the First" not in seen["prompt"]
+    assert "eighteen sixty eight" not in seen["prompt"]
+
+
+def test_english_trip_still_gets_english(monkeypatch):
+    seen = {}
+    monkeypatch.setattr(audio_core._shared, "complete_prompt",
+                        lambda p, *, lang=None: seen.update(p=p, lang=lang) or "x")
+    audio_core.validate_and_clean("Charles I in 1642", "York_B1_EN", 0)
+    assert seen["lang"] == "en"
+    assert "King Charles the First" in seen["p"]
+
+
+def test_zh_and_jp_are_not_cleaned(monkeypatch):
+    """By design — `sessions.regenerate` voices their spoken line raw, so cleaning only on
+    the `fallback()` path would make the reference clip disagree with the working take.
+    What must never happen again is the English prompt."""
+    monkeypatch.setattr(audio_core._shared, "complete_prompt",
+                        lambda *a, **k: pytest.fail("zh/jp must not call the cleaner"))
+    for trip, text in (("Taipei101_HSK3_ZH", "1999年开始"), ("Tokyo_03_Beg_N4_JP", "1868ねん")):
+        out, fb = audio_core.validate_and_clean(text, trip, 0)
+        assert (out, fb) == (text, False)
+
+
+def test_korean_uses_its_own_harness(monkeypatch):
+    """Korean must reach `korean_number_clean`, which pre-expands years and acronyms
+    deterministically — the model dropped a 百 from 1963 and read KBS as BTS."""
+    calls = {}
+    monkeypatch.setattr(audio_core._ko_clean, "clean_field",
+                        lambda t, d=None, **k: calls.update(text=t, doc=d) or "천구백육십삼 년")
+    out, fb = audio_core.validate_and_clean("1963년에", "Busan1_TPK2_KO", 0)
+    assert calls["doc"] == "Busan1_TPK2_KO"
+    assert (out, fb) == ("천구백육십삼 년", False)
+
+
+def test_korean_leftover_digits_report_fallback(monkeypatch):
+    """`clean_field` gives up by returning its input. Digits still in the output are how
+    we tell — the flag is what routes the clip to `edit_required`."""
+    monkeypatch.setattr(audio_core._ko_clean, "clean_field", lambda t, d=None, **k: "1963년에")
+    _, fb = audio_core.validate_and_clean("1963년에", "Busan1_TPK2_KO", 0)
+    assert fb is True
+
+
+# --------------------------------------------------------------------------- #
+# The guard
+# --------------------------------------------------------------------------- #
+#: Real DeepSeek output for real prompts, captured 2026-08-06. Every one is correct and
+#: every one was REJECTED by the old word ratio (its score is in the comment).
+CORRECT_CLEANS = [
+    ("en", "King Charles I fled in 1642, and the walls run for 5 km.",
+           "King Charles the First fled in sixteen forty two, and the walls run for "
+           "five kilometres."),                                              # was 0.62
+    ("fr", "Le château fut reconstruit sous Louis XIV en 1668, puis agrandi au XIXe siècle.",
+           "Le château fut reconstruit sous Louis quatorze en mille six cent soixante-huit, "
+           "puis agrandi au dix-neuvième siècle."),                          # was 0.71
+    ("es", "Carlos V llegó en 1526 y recorrió 12 km.",
+           "Carlos quinto llegó en mil quinientos veintiséis y recorrió doce kilómetros."),
+                                                                             # was 0.40
+    ("de", "Ludwig XIV kam 1868 mit 5 km Straße.",
+           "Ludwig der Vierzehnte kam achtzehnhundertachtundsechzig mit fünf Kilometer "
+           "Straße."),                                                       # was 0.47
+]
+
+
+@pytest.mark.parametrize("lang,pre,cleaned", CORRECT_CLEANS)
+def test_correct_expansions_are_accepted(lang, pre, cleaned):
+    assert audio_core.clean_accepted(lang, pre, cleaned), (
+        f"correct {lang} clean rejected — the guard is throwing away real work")
+
+
+def test_accent_repair_does_not_cost_a_clean():
+    """Measured: one "recorrio"→"recorrió" mismatch dropped a correct Spanish clean to
+    0.667. Orthography is not what the guard is for."""
+    assert audio_core.clean_accepted(
+        "es", "Carlos V llego en 1526 y recorrio 12 km.",
+        "Carlos quinto llegó en mil quinientos veintiséis y recorrió doce kilómetros.")
+
+
+@pytest.mark.parametrize("name,pre,cleaned", [
+    ("dropped clause", "King Charles I fled in 1642, and the walls run for 5 km.",
+                       "King Charles the First fled in sixteen forty two."),
+    ("rewrote prose",  "King Charles I fled in 1642, and the walls run for 5 km.",
+                       "The monarch departed in sixteen forty two and the fortifications "
+                       "extend five kilometres."),
+    ("answered in the wrong language",
+                       "Le château fut reconstruit sous Louis XIV en 1668.",
+                       "The castle was rebuilt under Louis the Fourteenth in sixteen "
+                       "sixty eight."),
+    ("added a paragraph", "It was built in 1642.",
+                       "It was built in sixteen forty two. The castle is a magnificent "
+                       "example of medieval military architecture, and visitors today can "
+                       "walk the full circuit of its walls, admiring the views across the "
+                       "valley and the rooftops of the old town beyond."),
+    ("empty", "It was built in 1642.", ""),
+])
+def test_hallucinations_are_rejected(name, pre, cleaned):
+    assert not audio_core.clean_accepted("en", pre, cleaned), f"guard let through: {name}"
+
+
+@pytest.mark.parametrize("token", [
+    # ⚠ Case-folding Roman numerals swallows the commonest words in the corpus: strip a
+    # French/Spanish/Italian ordinal suffix from `de`/`Le`/`me` and you are left with
+    # D/L/M. That would hollow out the skeleton AND hand the growth budget 8 free words
+    # per article — i.e. quietly disable both arms of the guard on Romance languages.
+    "de", "Le", "le", "me", "est", "et", "the", "and", "la", "di", "der", "el",
+])
+def test_common_words_are_not_read_as_numerals(token):
+    assert not audio_core._is_convertible(token)
+
+
+@pytest.mark.parametrize("token", ["1868", "XIV", "V", "XIXe", "XVIII.", "£5", "50%", "2°C", "km", "kg"])
+def test_convertible_tokens(token):
+    assert audio_core._is_convertible(token)
+
+
+def test_growth_is_what_catches_insertion():
+    """Recall alone cannot see added text — every original word is still there. The two
+    arms are not redundant; this pins which one does the work."""
+    pre = "It was built in 1642."
+    padded = "It was built in sixteen forty two. " + "and more prose " * 20
+    recall, growth_ok = audio_core._prose_survival(pre, padded)
+    assert recall == 1.0
+    assert growth_ok is False
+
+
+def test_registered_inventory_defers_to_scripts():
+    """Where Scripts HAS a numeral inventory (it/jp) its comparison is authoritative —
+    we only supply our own where it would otherwise degrade to the word ratio."""
+    assert audio_core._shared.similarity_basis("it", "nel 1348") is not None
+    assert audio_core._shared.similarity_basis("fr", "en 1668") is None
+    assert audio_core.clean_accepted(
+        "it", "Fu costruito nel 1348 da Carlo IV.",
+        "Fu costruito nel milletrecentoquarantotto da Carlo quarto.")
+
+
+# --------------------------------------------------------------------------- #
+# Failure modes stay visible
+# --------------------------------------------------------------------------- #
+def test_nothing_convertible_skips_the_api(monkeypatch):
+    """No numbers → no call. Not just a saving: a cleaner handed prose it cannot help
+    with has been measured DELETING a particle (JP, 2026-08-04)."""
+    monkeypatch.setattr(audio_core._shared, "complete_prompt",
+                        lambda *a, **k: pytest.fail("called with nothing to convert"))
+    text = "Le village est très calme et agréable."
+    assert audio_core.validate_and_clean(text, "Monaco1_FR", 0) == (text, False)
+
+
+def test_api_failure_reports_fallback(monkeypatch):
+    """⚠ The old port returned the INPUT on an API error, which then scored 1.0 against
+    itself and was reported as a successful clean — so the `edit_required` routing could
+    only ever fire on a similarity miss, never on an outage."""
+    def boom(*a, **k):
+        raise RuntimeError("DeepSeek down")
+
+    monkeypatch.setattr(audio_core._shared, "complete_prompt", boom)
+    out, fb = audio_core.validate_and_clean("Louis XIV en 1668", "Monaco1_FR", 0)
+    assert (out, fb) == ("Louis XIV en 1668", True)
+
+
+def test_unmapped_language_disables_cleaning_rather_than_defaulting(monkeypatch):
+    """An unknown language must NOT quietly become English — that is the whole bug."""
+    monkeypatch.setattr(audio_core, "language_of", lambda t: "Klingon")
+    monkeypatch.setattr(audio_core._shared, "complete_prompt",
+                        lambda *a, **k: pytest.fail("cleaned in the wrong language"))
+    out, fb = audio_core.validate_and_clean("Louis XIV en 1668", "X_TLH", 0)
+    assert (out, fb) == ("Louis XIV en 1668", True)
+
+
+def test_cleaner_version_is_in_the_cache_key():
+    """`sessions._cleaned_orig` caches "what the working audio says". When the cleaner
+    changes, the same raw text yields different words and a stale entry becomes a lie the
+    splice engine diffs against — sessions seeded before today hold English-numbered
+    baselines for FR/ES/DE/IT/KO trips."""
+    import inspect
+
+    from app import sessions
+    src = inspect.getsource(sessions._cleaned_orig)
+    assert "CLEANER_VERSION" in src

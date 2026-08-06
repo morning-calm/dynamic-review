@@ -1,12 +1,16 @@
 """
-Audio core — PORTED (not imported) from RegenerateSceneAudio-EditMe.py because that
-file has a hyphen in its name and module-level side effects (Firebase init, argparse).
+Audio core — the TTS half is PORTED from RegenerateSceneAudio-EditMe.py (that file has a
+hyphen in its name and module-level side effects: Firebase init, argparse). The NUMBER
+CLEANING is the opposite — imported from the Scripts repo, never copied; see the block
+comment above `clean_text` for the French bug that copying caused.
 
 Provides:
   VOICES                       voice_id + voice_settings for isla / harry / andrea
   strip_url_lines              drop bare URL lines from SceneDesc
-  clean_text                   Gemini number/regnal/unit speller (gemini-2.5-flash)
-  validate_and_clean           clean with a similarity guard; reports fallback
+  clean_text                   number/date/regnal/unit speller — the SHARED per-language
+                               prompts from the Scripts repo, run on DeepSeek
+  validate_and_clean           clean in the TRIP'S language, with a similarity guard;
+                               reports fallback (→ edit_required)
   generate_audio               ElevenLabs TTS  -> mp3 bytes
   generate_with_timestamps     ElevenLabs TTS  -> mp3 bytes + per-WORD alignment
   is_numberish / has_non_latin anchor-eligibility helpers for the splice engine
@@ -21,13 +25,12 @@ import base64
 import difflib
 import os
 import re
-import time
 import unicodedata
 
 import requests
-from google import genai
 
-from . import config  # noqa: F401  (ensures SCRIPTS_ROOT on sys.path) — keep first
+from . import config  # noqa: F401  (ensures SCRIPTS_ROOT + 'Audio Generation' on
+                      # sys.path, and loads the Scripts .env) — keep first
 from pronunciation_overrides import load_overrides, apply_overrides, prompt_rule
 
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
@@ -237,20 +240,214 @@ def speed_for_trip(trip_id: str) -> float:
             return 0.85
     return 1.0
 
-GEMINI_DELAY = 0.1
-GEMINI_MAX_RETRIES = 3
-GEMINI_RETRY_DELAY = 5
-GEMINI_SIMILARITY_THRESHOLD = 0.8
-GEMINI_MAX_CLEAN_RETRIES = 3
+# --------------------------------------------------------------------------- #
+# Number / date / unit cleaning — the SHARED pipeline prompt surface
+# --------------------------------------------------------------------------- #
+# ⚠ There is exactly ONE set of number-clean prompts and it lives in the Scripts repo
+# (`Audio Generation/`). This module used to carry its own PORTED copy — English-only,
+# on gemini-2.5-flash — applied to every language without dispatch. That is how a French
+# trip came to be voiced "Louis the Fourteenth ... eighteen sixty eight" while the
+# pipeline's own master said "Louis quatorze ... mille huit cent soixante-huit"
+# (reported by the French reviewer 2026-08-06; 167 of 357 queued trips were exposed —
+# ES/FR/KO/DE/IT). Do NOT re-port these prompts back in here: a second copy cannot be
+# kept in step, and the failure it produces is silent and language-shaped.
+#
+# The prompts also moved Gemini → DeepSeek on the Scripts side; importing rather than
+# copying is what makes that a non-event for this app.
+try:  # noqa: SIM105
+    import tts_number_clean as _shared            # transport + guard helpers
+    import korean_number_clean as _ko_clean       # ko: sino-year + acronym pre-expansion
+    from gemini_number_clean_prompts import build_prompt as _build_prompt
+    _CLEANER_ERROR: str | None = None
+except Exception as _e:  # noqa: BLE001
+    _shared = _ko_clean = _build_prompt = None    # type: ignore[assignment]
+    _CLEANER_ERROR = f"{type(_e).__name__}: {_e}"
 
-_client = None
+#: Accepted-clean bar for the languages where Scripts HAS a numeral inventory registered
+#: (`tts_number_clean.similarity_basis` — today it/jp), i.e. where a legitimate expansion
+#: is stripped from both sides and so scores ~1.0. Languages without one are judged by
+#: `_prose_survival` instead; see the guard block below for why the word ratio it would
+#: otherwise degrade to cannot be used. Registering fr/de/es in `_STRIPPERS` on the
+#: Scripts side would let this bar cover them too and retire our arm.
+NUMBER_CLEAN_THRESHOLD = 0.8
+NUMBER_CLEAN_MAX_RETRIES = 3
+
+#: Bumped whenever the cleaner's OUTPUT for identical input could change — backend swap,
+#: prompt-surface change, language dispatch. `sessions._cleaned_orig` mixes this into its
+#: cache key so a session seeded under an older cleaner RE-CLEANS instead of diffing the
+#: reviewer's new text against a stale (here: English-numbered) baseline.
+CLEANER_VERSION = "2-shared-deepseek"
+
+#: `language_of()` output → the `gemini_number_clean_prompts` language key.
+#: ⚠ ENUMERATED SET: every value `language_of` can return needs an entry here. An absent
+#: one does NOT fall back to English (that is the bug this whole change exists to kill) —
+#: it disables cleaning for that language, loudly. `test_number_clean_language.py` pins
+#: the two sets equal.
+_LANG_CODES = {
+    "English": "en", "French": "fr", "German": "de", "Italian": "it",
+    "Spanish": "es", "Mandarin": "zh", "Japanese": "jp", "Korean": "ko",
+}
+
+#: Korean cleans through its OWN Scripts harness rather than the generic build_prompt
+#: path: it carries deterministic pre-expansion (`sino_year` — the model dropped the 百
+#: from 1963; `expand_latin_acronyms` — it read KBS as BTS and the guard passed it) plus a
+#: Hangul-numeral-aware similarity check. It applies its own pronunciation overrides, so
+#: it gets the RAW text, not `pre`. Verified live 2026-08-06: 「1963년…21명」 →
+#: 「천구백육십삼 년…스물한 명」.
+def _own_harness(lang: str):
+    return {"ko": _ko_clean}.get(lang)
 
 
-def _gemini():
-    global _client
-    if _client is None:
-        _client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-    return _client
+#: ⚠ zh/jp are NOT number-cleaned here, deliberately.
+#: 1. CONSISTENCY. `sessions.regenerate` routes them through `_cjk_spoken`, which voices
+#:    the Hans/kana line RAW and never calls this function. `fallback()` is the only path
+#:    that reaches us, so cleaning here would make the reference clip say something the
+#:    working take does not — and it is the working take the splice engine diffs against.
+#: 2. The zh harness is currently emitting the year TWICE. Measured 2026-08-06, three
+#:    identical runs: 「1999年」 → 「一九九九年（一九九九年）」. Its own guard cannot see it
+#:    (both sides strip to nothing once numerals are removed — the blind spot its own
+#:    `sino_year` docstring describes). Voicing that would read the date twice.
+#: What they must NOT do is what they did until today: fall through to the ENGLISH prompt.
+#: Revisit when the zh duplication is fixed on the Scripts side and CJK cleaning is wanted
+#: on both paths at once, not just this one.
+_NO_CLEAN_LANGS = {"zh", "jp"}
+
+
+#: Post-condition on a self-guarding harness's output: a digit or currency/percent symbol
+#: still present means it gave up and handed back the original (both harnesses fall back
+#: silently), which is exactly the `used_fallback` signal the splice engine wants.
+_LEFTOVER_NUMERIC_RE = re.compile(r"[0-9０-９°%£¥€$₩]")
+
+
+# --------------------------------------------------------------------------- #
+# The accept/reject guard
+# --------------------------------------------------------------------------- #
+# ⚠ A PLAIN WORD RATIO REJECTS CORRECT WORK, and it does so hardest on exactly the
+# sentences the cleaner exists for. Measured 2026-08-06 against the bar of 0.80, on
+# cleans that are all four perfect:
+#     en  "King Charles I fled in 1642 … 5 km"      -> 0.62
+#     fr  "sous Louis XIV en 1668 … XIXe siecle"    -> 0.71
+#     es  "Carlos V llego en 1526 … 12 km"          -> 0.40
+#     de  "Ludwig XIV kam 1868 mit 5 km"            -> 0.47
+# The denser the numbers, the more certain the rejection. This is not new and is not
+# caused by the DeepSeek move — the old English-only Gemini path used the same measure,
+# so number-dense ENGLISH scenes have been silently falling back to raw digits all along.
+#
+# Scripts solves this per language by stripping the numeral vocabulary from both sides
+# (`tts_number_clean.similarity_basis`), but only it/jp are registered, and building a
+# numeral inventory for every language is a real piece of work. So where an inventory
+# EXISTS we defer to it, and where it does not we measure the thing the guard is actually
+# for, in a way that needs no vocabulary at all:
+#
+#   recall  — how much of the input's NON-CONVERTIBLE prose survived, in order. Number
+#             words the model legitimately added cannot lower this, because they are not
+#             in the skeleton being looked for. Rewritten or dropped prose does.
+#   growth  — how much longer the output got, budgeted against the number of convertible
+#             tokens. Recall alone cannot see an INSERTION (added sentences score 1.0),
+#             and "You MUST NOT add new sentences" is half of what we are enforcing.
+#
+# Both must pass. Together they accept every clean above and still reject a hallucination.
+_CONVERTIBLE_TOKEN_RE = re.compile(r"[0-9０-９£¥€$₩%°]")
+
+#: Words a single convertible token may legitimately become. Generous on purpose: German
+#: compounds a year into one word, French spends five on it ("mille huit cent soixante-huit"),
+#: and "2°C" becomes "two degrees celsius". Its job is to catch a model that started
+#: writing paragraphs, not to price expansions accurately.
+_WORDS_PER_CONVERTIBLE = 8
+
+PROSE_RECALL_THRESHOLD = 0.9
+
+
+#: Unit abbreviations an expansion turns into words. An explicit set, NOT "any short
+#: lowercase token" — that reading swallows `le`, `est`, `et`, `de`, `the`, `and`, which
+#: would both hollow out the skeleton and inflate the growth budget by 8 words apiece.
+_UNIT_TOKENS = {"km", "cm", "mm", "m", "kg", "g", "l", "ml", "ha", "ft", "mi",
+                "h", "min", "sec", "s", "°c", "°f"}
+
+
+def _is_convertible(token: str) -> bool:
+    """True if the cleaner is licensed to rewrite this INPUT token — a digit, a currency
+    or percent or degree symbol, a Roman numeral, or a unit abbreviation.
+
+    ⚠ Roman numerals are matched only when UPPERCASE. Case-folding first looks harmless
+    and is not: `de` → `D`, `Le` → `L`, `me` → `M` once a French/Spanish/Italian ordinal
+    suffix is stripped, so the three commonest words in the corpus would read as regnal
+    numerals. Distinct from `is_numberish`, which judges anchor eligibility on the OUTPUT
+    side and so also matches spelled-out ordinals."""
+    t = token.strip(".,;:!?\"'()«»").strip()
+    if not t:
+        return False
+    if _CONVERTIBLE_TOKEN_RE.search(t):
+        return True
+    core = t.rstrip("eèᵉ.")
+    if len(core) >= 2 and core.isupper() and _ROMAN_RE.match(core):
+        return True                                      # XIXe siècle, XVIII., XIV
+    if len(t) <= 6 and t.isupper() and _ROMAN_RE.match(t):
+        return True                                      # V, XIV
+    return t.lower() in _UNIT_TOKENS
+
+
+def _fold(word: str) -> str:
+    """Casing, accents and edge punctuation out — the comparison should measure whether
+    the PROSE survived, not its orthography. A model that tidies an accent while spelling
+    a number ("recorrio" → "recorrió") is doing its job, and must not cost us the clean:
+    that single mismatch dropped a correct Spanish expansion to 0.667 in testing."""
+    w = unicodedata.normalize("NFKD", word.lower())
+    return "".join(c for c in w if not unicodedata.combining(c)).strip(".,;:!?\"'()«»—–-")
+
+
+def _prose_survival(pre: str, cleaned: str) -> tuple[float, bool]:
+    """``(recall, growth_ok)`` — see the block comment above."""
+    pre_words = (pre or "").split()
+    n_convertible = sum(1 for w in pre_words if _is_convertible(w))
+    # Folding can empty a token entirely (a lone dash, stray quotes). Drop those from both
+    # sides — an empty string matching an empty string is not evidence of anything.
+    skeleton = [f for f in (_fold(w) for w in pre_words if not _is_convertible(w)) if f]
+    out_words = [f for f in (_fold(w) for w in (cleaned or "").split()) if f]
+    growth_ok = len(out_words) <= len(skeleton) + _WORDS_PER_CONVERTIBLE * n_convertible
+    if not skeleton:
+        return 1.0, growth_ok
+    matched = sum(b.size for b in
+                  difflib.SequenceMatcher(None, skeleton, out_words).get_matching_blocks())
+    return matched / len(skeleton), growth_ok
+
+
+def clean_accepted(lang: str, pre: str, cleaned: str) -> bool:
+    """Is ``cleaned`` a trustworthy rendering of ``pre``? Uses the Scripts per-language
+    numeral-stripped comparison where that language has an inventory registered, and the
+    vocabulary-free recall+growth pair where it does not."""
+    if _shared is not None and _shared.similarity_basis(lang, pre) is not None:
+        return _shared.clean_similarity(lang, pre, cleaned) >= NUMBER_CLEAN_THRESHOLD
+    recall, growth_ok = _prose_survival(pre, cleaned)
+    return growth_ok and recall >= PROSE_RECALL_THRESHOLD
+
+
+_warned: set[str] = set()
+
+
+def _warn_once(key: str, msg: str) -> None:
+    if key not in _warned:
+        _warned.add(key)
+        print(f"[audio_core] {msg}", flush=True)
+
+
+def clean_lang_code(trip_id: str) -> str | None:
+    """Trip id → number-clean language key, or None if the language has no prompt."""
+    return _LANG_CODES.get(language_of(trip_id))
+
+
+def cleaner_status() -> dict:
+    """Startup/health probe — see `main._startup`. `ok=False` means every clean will be
+    skipped and flagged `edit_required`, which is visible but degraded; the fix is a
+    Scripts checkout at REVIEW_APP_SCRIPTS_ROOT with `Audio Generation/` present."""
+    return {
+        "ok": _shared is not None,
+        "error": _CLEANER_ERROR,
+        "model": getattr(_shared, "DEEPSEEK_MODEL", None),
+        "api_key_set": bool(getattr(_shared, "_API_KEY", "")),
+        "version": CLEANER_VERSION,
+        "languages": sorted(set(_LANG_CODES.values())),
+    }
 
 
 _URL_LINE_RE = re.compile(r"^\s*https?://\S+\s*$", re.IGNORECASE)
@@ -264,81 +461,91 @@ def strip_url_lines(text: str) -> str:
     ).strip()
 
 
-def clean_text(text: str, strict: bool = False, overrides=None) -> str:
-    """Gemini speller. Returns rewritten text, or the input on any API failure."""
-    pron_block = prompt_rule(overrides)
-    extra_instruction = ""
-    if strict:
-        extra_instruction = """
-CRITICAL: You MUST NOT alter the meaning, word order, or structure of the text.
-You MUST NOT add new sentences, facts, or paragraphs.
-You MUST NOT expand or elaborate on the content in any way.
-You MUST NOT add information not present in the original text.
-Only apply the specific number/symbol conversions listed below. Nothing else.
-"""
+def clean_text(text: str, strict: bool = False, overrides=None, *,
+               lang: str = "en") -> str:
+    """Spell numbers/dates/regnal numerals/units for TTS in ``lang``, via the shared
+    Scripts prompt for that language.
 
-    prompt = f"""Rewrite the following text by applying ONLY these exact changes. Do not add, remove, or modify any content beyond these rules. Preserve the original wording, punctuation, and structure except where specified:
-{extra_instruction}{pron_block}1. ROMAN NUMERALS AFTER A NAME OR TITLE (kings, queens, popes, emperors, dukes, tsars etc.) are regnal numbers and MUST be converted to "the" + ordinal word, keeping any possessive 's:
-   - King Charles I → King Charles the First
-   - King Charles I's attempts → King Charles the First's attempts
-   - Elizabeth II → Elizabeth the Second
-   - Henry VIII → Henry the Eighth
-   - Pope Pius XII → Pope Pius the Twelfth
-   NEVER read a regnal numeral as a plain number ("King Charles one" is WRONG).
-   Roman numerals NOT after a person's name become the spoken form people actually use (usually a plain number): World War II → World War Two, Part III → Part Three, Act IV → Act Four.
+    ⚠ RAISES on transport failure — it does NOT hand back the input. The old Gemini port
+    returned ``text`` on any API error, which then scored a perfect 1.0 against itself and
+    was reported to the caller as a SUCCESSFUL clean: the ``used_fallback`` → ``edit_required``
+    routing the docstring promised could only ever fire on a similarity miss, never on an
+    outage. ``validate_and_clean`` is the only caller and turns the raise into that flag.
 
-2. YEARS (HIGHEST PRIORITY): Any 4-digit number from 1000-2099 must be treated as a YEAR and spoken naturally as two pairs of digits. Never treat years as ordinary numbers. Examples:
-   - 1868 → eighteen sixty eight (NOT one thousand eight hundred and sixty eight)
-   - 1172 → eleven seventy two
-   - 1603 → sixteen oh three
-   - 1512 → fifteen twelve
-   - 2026 → twenty twenty six
-   - 1900 → nineteen hundred
-   - 2000 → two thousand
-   - 2005 → two thousand and five
-   Only treat a 4-digit number as a regular number if the context makes it clearly a quantity (e.g., "1,500 soldiers", "cost 2000 yen").
-
-3. REGULAR NUMBERS: For all other numbers (not years), convert to full words. For numbers with 3 or more digits, include "and" before the final part (e.g., 150 becomes one hundred and fifty, 1507 becomes one thousand five hundred and seven). Always treat thousands and hundreds separately (do not use forms like fifteen hundred and seven).
-
-4. Convert all currency symbols, such as £5 or $10 to full words and place the unit after the number (e.g. five pounds or ten dollars).
-
-5. Convert temperatures to full words (e.g., 2°C becomes two degrees celsius, -5°F becomes minus five degrees fahrenheit).
-
-6. Expand any abbreviated units to their full forms (e.g., km becomes kilometres, cm becomes centimetres, kg becomes kilograms).
-
-Output only the rewritten text, nothing else.
-
-Text: {text}"""
-
-    time.sleep(GEMINI_DELAY)
-    for attempt in range(GEMINI_MAX_RETRIES + 1):
-        try:
-            response = _gemini().models.generate_content(
-                model="gemini-2.5-flash", contents=prompt)
-            return response.text.strip()
-        except Exception as e:  # noqa: BLE001
-            error_str = str(e)
-            if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
-                if attempt < GEMINI_MAX_RETRIES:
-                    time.sleep(GEMINI_RETRY_DELAY * (2 ** attempt))
-                    continue
-            return text
-    return text
+    ``overrides`` only reaches the model for English. Every non-English prompt is
+    target-language-only by design on the Scripts side (no English instruction leakage),
+    and `prompt_rule` is English prose; the load-bearing half — substituting the agreed
+    spoken forms INTO the text — has already happened in `apply_overrides`. fr/de/it/es
+    additionally have no `{extra}` slot in their templates at all.
+    """
+    if _shared is None or _build_prompt is None:
+        raise RuntimeError(f"shared number-cleaner unavailable ({_CLEANER_ERROR})")
+    extra = prompt_rule(overrides) if lang == "en" else ""
+    return _shared.complete_prompt(
+        _build_prompt(lang, text, strict=strict, extra=extra), lang=lang)
 
 
 def validate_and_clean(text: str, doc_id: str, scene_index) -> tuple[str, bool]:
-    """Clean with a word-similarity guard. Returns (cleaned, used_fallback).
+    """Clean with a similarity guard. Returns ``(cleaned, used_fallback)``.
 
-    PORT NOTE: the original silently returns the *uncleaned* text on failure. We
-    surface that as ``used_fallback=True`` so the splice engine can route the edit to
-    ``edit_required`` instead of aligning on drifted tokens (plan S2 / C1)."""
+    ``used_fallback=True`` means "this text was NOT cleaned" — the splice engine routes
+    that to ``edit_required`` rather than aligning on drifted tokens (plan S2 / C1), so
+    every failure mode below is visible to the reviewer instead of silently voiced.
+
+    The language comes from ``doc_id`` (the trip id) via `clean_lang_code`; there is no
+    default. An unmapped language disables cleaning rather than falling back to English —
+    English-by-default on a French trip is the exact defect this function was rewritten
+    to remove."""
+    lang = clean_lang_code(doc_id)
     overrides = load_overrides(doc_id)
     pre = apply_overrides(text, overrides)
-    for attempt in range(GEMINI_MAX_CLEAN_RETRIES):
-        cleaned = clean_text(pre, strict=attempt > 0, overrides=overrides)
-        ratio = difflib.SequenceMatcher(
-            None, pre.lower().split(), cleaned.lower().split()).ratio()
-        if ratio >= GEMINI_SIMILARITY_THRESHOLD:
+    if not (pre or "").strip():
+        return pre, False
+
+    if _shared is None:
+        _warn_once("unavailable",
+                   f"WARN shared number-cleaner unavailable ({_CLEANER_ERROR}) — text is "
+                   f"voiced as written and flagged edit_required. Check that "
+                   f"'Audio Generation/' exists under REVIEW_APP_SCRIPTS_ROOT.")
+        return pre, True
+    if lang is None:
+        _warn_once(f"lang:{language_of(doc_id)}",
+                   f"WARN no number-clean prompt for language {language_of(doc_id)!r} "
+                   f"({doc_id}) — add it to audio_core._LANG_CODES. Text voiced as written.")
+        return pre, True
+    if lang in _NO_CLEAN_LANGS:
+        return pre, False       # by design — see _NO_CLEAN_LANGS
+
+    # Korean runs its own harness, which applies its own overrides → RAW text, not `pre`.
+    harness = _own_harness(lang)
+    if harness is not None:
+        try:
+            cleaned = harness.clean_field(text, doc_id)
+        except Exception as e:  # noqa: BLE001
+            _warn_once(f"harness:{lang}", f"WARN {lang} number-clean failed: {e}")
+            return pre, True
+        # Both harnesses fall back to their input silently; leftover digits say they did.
+        return cleaned, bool(_LEFTOVER_NUMERIC_RE.search(cleaned or ""))
+
+    # Nothing convertible → return unchanged WITHOUT an API call. Not just a saving: a
+    # cleaner handed prose with no numbers in it can only do harm, and was measured doing
+    # exactly that (it deleted a particle from a Japanese kana line, 2026-08-04).
+    #
+    # ⚠ NOT `_shared.needs_number_clean` here. That gate counts "a Latin token of 2+
+    # letters" as convertible — right for the CJK/Korean text it was written for, where
+    # stray Latin IS the work, but on a Latin-script language EVERY word matches and the
+    # gate never fires. `_is_convertible` is the Latin-script reading of the same
+    # question, and is the predicate the skeleton is already built from.
+    if not any(_is_convertible(w) for w in pre.split()):
+        return pre, False
+
+    for attempt in range(NUMBER_CLEAN_MAX_RETRIES):
+        try:
+            cleaned = clean_text(pre, strict=attempt > 0, overrides=overrides, lang=lang)
+        except Exception as e:  # noqa: BLE001
+            _warn_once(f"api:{lang}", f"WARN number-clean API failure ({lang}): {e}")
+            continue
+        if clean_accepted(lang, pre, cleaned):
             return cleaned, False
     return pre, True
 
@@ -459,7 +666,7 @@ _ORDINAL_WORDS = {
 
 def is_numberish(token: str) -> bool:
     """True if a token is a number / regnal numeral / ordinal — a BAD anchor
-    because the Gemini speller may re-render it differently than Whisper heard it."""
+    because the number speller may re-render it differently than Whisper heard it."""
     t = token.strip(".,;:!?\"'()").strip()
     if not t:
         return False

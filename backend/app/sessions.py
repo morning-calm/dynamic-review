@@ -9,7 +9,7 @@ mutated during review; combine/import write the working copy and archive a v{n}
 under work/{sid}/versions/. On submit, changed working files are promoted to the
 masters (prior master archived under mp3_dir/versions/).
 
-Whisper transcription and Gemini cleaning of the original are done LAZILY (first
+Whisper transcription and number-cleaning of the original are done LAZILY (first
 time a scene needs a segment splice) and cached — so seeding a session never blocks
 on the GPU or the network, and read-only browsing is instant. This is a deliberate,
 equivalent-correctness deviation from 'cache at seed' (same cached values, computed
@@ -1453,9 +1453,17 @@ def _can_accept_text_as_voiced(trip_id: str, frow, cur_kind: str) -> bool:
 def _cleaned_orig(srow, frow) -> tuple[str, bool]:
     """Cleaned text of the CURRENT working audio — the base a segment/highlight splice
     diffs against, so successive edits accumulate on the combined take. Re-cleans
-    whenever the working text changes (cache keyed on its hash)."""
+    whenever the working text changes (cache keyed on its hash).
+
+    ⚠ The key mixes in ``audio_core.CLEANER_VERSION``, not just the text. A cached entry
+    is an ASSERTION about what the working audio says; when the cleaner itself changes,
+    the same raw text yields different words and the old entry becomes a lie the splice
+    engine then diffs against. Sessions seeded before 2026-08-06 hold English-numbered
+    baselines for French/Spanish/German/Italian/Korean trips — bumping the version is what
+    makes them re-clean on resume instead of producing phantom diffs around every number."""
     base = _working_base_raw(frow)
-    h = hashlib.sha1(base.encode("utf-8")).hexdigest()[:12]
+    h = hashlib.sha1(
+        f"{audio_core.CLEANER_VERSION}\0{base}".encode("utf-8")).hexdigest()[:12]
     cache = json.loads(srow["cleaned_orig_json"] or "{}")
     key = str(frow["id"])
     c = cache.get(key)
@@ -2318,7 +2326,7 @@ def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
     cur = audio_core.strip_url_lines(frow["current_text"] or "")
 
     # CJK (_ZH hanzi / _JP kana): the narrated text is the Simplified hanzi (localization
-    # cur.Hans) or the kana line — NOT current_text/Gemini (the number-speller is
+    # cur.Hans) or the kana line — NOT current_text (zh/jp are not number-cleaned;
     # English-only). This branch is ADDITIVE and SEPARATE from the English token engine
     # below. On a SceneDesc text edit it tries a surgical CHAR-LEVEL splice (cjk_splice, via
     # the isolated MMS forced aligner); on ANY uncertainty plan_cjk returns None and we
@@ -2387,7 +2395,7 @@ def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
         cleaned_orig, fb_orig = _cleaned_orig(srow, frow)
         if cur == working_raw:
             # Text unchanged since the take was voiced (the pure fix-pronunciation /
-            # highlight flow): reuse the cached clean VERBATIM. Two independent Gemini
+            # highlight flow): reuse the cached clean VERBATIM. Two independent
             # cleans of the SAME text can drift (the cleaner is not deterministic), and
             # any drift becomes a phantom diff op that made an untouched highlight fail
             # as "not locatable in the take's audio".
@@ -2736,7 +2744,7 @@ def _clips_for(sid: str, fid: int) -> list[dict]:
 
 
 def _render_clip(srow, cid: int, text: str) -> None:
-    """Voice ``text`` VERBATIM (no Gemini cleaning — manual edit = full control) at the
+    """Voice ``text`` VERBATIM (no number cleaning — manual edit = full control) at the
     session voice/speed/model and write it to the clip's file."""
     voice_id, voice_settings = audio_core.VOICES[srow["voice"]]
     voice_settings = {**voice_settings, "speed": _effective_speed(srow)}
