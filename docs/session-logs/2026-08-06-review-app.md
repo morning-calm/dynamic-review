@@ -264,3 +264,98 @@ code against the laptop's checkout before restarting, not after.*
 - `scripts/backup_review_db.py` **aborts on the laptop**: "R2 creds missing" although
   `.env` holds 5 `Cloudfare_*` keys — an env-loading path issue, not absent creds. review.db
   is the only copy of review state; worth a look.
+
+---
+
+## 00:15 — dave pushed `dynamic-content`; thorough verification on the live host
+
+**Goal (dave):** "I pushed it. Test it thoroughly. No chrome playthroughs."
+
+Laptop `Scripts` pulled `b88cd55` → `9908685`; **`c3b87eea` (the translator-pack prompts)
+is now present**. Verified the app against the new revision BEFORE restarting (the same
+gate that caught the AttributeError last round): all modules import, `similarity_basis` /
+`clean_similarity` / `needs_number_clean` now exist, inventory registered for it+jp.
+Restarted at 23:57; startup line OK, health 200, uvicorn + cloudflared both up.
+Workstation and laptop are now on the SAME Scripts commit, so the local suite tests the
+production revision.
+
+### 1. Whole real corpus, language-leak check — **316 scenes, 0 leaks, 0 errors**
+Ran every numbered `SceneDesc` in the live review.db through `validate_and_clean` and
+scanned each output for English number/ordinal/unit vocabulary.
+
+| lang | n | cleaned | fallback |
+|---|---|---|---|
+| en | 188 | 188 | 0 |
+| fr | 70 | 70 | 0 |
+| jp | 26 | 26 (untouched by design) | 0 |
+| de | 15 | 15 | 0 |
+| zh | 11 | 11 (untouched by design) | 0 |
+| es | 6 | 6 | 0 |
+
+**100% acceptance in every language, no exceptions raised.** The 5 flagged "leaks" were all
+my detector's fault — French `cinquante-six`/`vingt-six` split on the hyphen and `six` is
+also an English word. Manually checked all five: correct French.
+
+### 2. Old guard vs new, same cleaned output — the guard change earns its place
+| lang | n | OLD accept | NEW accept |
+|---|---|---|---|
+| es | 6 | 67% | **100%** |
+| fr | 30 | 93% | **100%** |
+| en | 30 | 100% | 100% |
+| de | 15 | 100% | 100% |
+
+**Every disagreement is old-REJECTS / new-accepts, and every one of those cleans is
+correct.** There is no case of old-accepts / new-rejects — the new guard rescues correct
+work without loosening anything the old one caught. Examples:
+`«¡Tienen 351 escalones!» → «trescientos cincuenta y un escalones»` (word ratio 0.737),
+`«a commencé en 1789 et a fini en 1799»` (0.720). Short number-dense A12 sentences are
+exactly where the word ratio fails, and A12 is most of the EU queue.
+
+### 3. The stale cached baselines — the bug caught in production data
+Read-only scan of `sessions.cleaned_orig_json`: **17 of 98 cached baselines contain English
+number words on a non-English trip.** These are the splice engine's diff baselines, i.e.
+its record of what the audio says:
+- `Reims3_A12_FR` — *"La Révolution française a commencé en **seventeen eighty nine** et a
+  fini en **seventeen ninety nine**"*
+- `Reims3_A12_FR` — *"Cette sculpture est de **fifteen thirty one**"*
+- `Baden-Baden_A12_DE` — *"Der Turm ist aus dem Jahr **nineteen sixty one**"*
+
+Confirmed the `CLEANER_VERSION` key change makes every one of them MISS, so they re-clean
+in the trip language on next use. `Reims3_A12_FR` scene "1789/1799" is the whole arc in one
+scene: cleaned into English → cached as English → now cleans into French AND the cache is
+invalidated.
+
+### 4. The two things the reviewer actually named
+Dates and numbers after monarchs, across all four EU languages — all correct:
+`Louis XIV → Louis quatorze`, `Napoleon III → Napoleon trois`, `Louis XVI → Louis seize`,
+`XIIe siecle → douzième siècle`, `1215 → mille deux cent quinze`;
+`Alfonso X → Alfonso décimo` (RAE ordinal-to-10 rule); `Friedrich II → Friedrich der
+Zweite`, `1745 → siebzehnhundertfünfundvierzig`; `Carlo V → Carlo quinto`,
+`1536 → millecinquecentotrentasei` (single word, per the translator fix).
+
+### 5. Korean on real staging content (no KO sessions exist yet, so read from Firebase)
+5 scenes across `Busan_Oryukdo_TPK1/TPK2_KO`, all correct — including the **irregular
+month forms** the translator pack added: `6월 → 유월` (not 육월), `10월 → 시월` (not 십월).
+`1950년 → 천구백오십 년`, `2013년 → 이천십삼 년`, `35미터 → 삼십오 미터`.
+
+### 6. Everything else
+- **Determinism**: 3 identical runs, FR and EN, byte-identical output (temperature 0).
+  Matters because `_cleaned_orig` caches one clean and the splice engine compares it with a
+  second independent clean — drift becomes a phantom diff op.
+- **Edge cases**: empty / whitespace / None / bare number / no-numbers / punctuation-only /
+  single char / URL / mixed scripts / unmapped trip suffix — all handled, none raised.
+  A 40×-repeated sentence falls back (the model deduplicates it); the **longest real** EU
+  scenes (up to 1635 chars) all clean at recall 1.000, so this is not a length problem.
+- **Pronunciation overrides**: survive the clean on EN (`Oryukdo → oh-ryook-do` kept while
+  `1950 → nineteen fifty` expanded), and the `prompt_rule` reinforcement block is present in
+  the EN prompt. On non-EN the substitution still applies (verified `ang-pau → 昂包`).
+- **Live service**: health 200, `/api/trips` without a token 401, **zero tracebacks /
+  AttributeErrors / 500s** in the journal since restart, and a reviewer was polling the app
+  throughout without error.
+- **Suite**: 111 green against the production Scripts revision; both inventory branches
+  (`test_registered_inventory_defers_to_scripts`, `..._without_the_inventory`) run and pass.
+
+### Still open (unchanged)
+zh year duplication (`一九九九年（一九九九年）`), fr/de/es strippers not registered upstream,
+no `{extra}` slot in non-EN templates, `backup_review_db.py` aborting on the laptop.
+All in BACKLOG 0n/0o.
