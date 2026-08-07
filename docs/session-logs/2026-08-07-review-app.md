@@ -45,7 +45,7 @@ confirmed live: 3/3 runs of `mandarin_number_clean.clean_field` emitted
 - `main.py` startup line: drop the now-empty "passthrough" clause.
 
 ### Verified
-- Full backend suite **145 passed** (17 new in `tests/test_cjk_voicing_parity.py`:
+- Full backend suite **145 passed** (23 new in `tests/test_cjk_voicing_parity.py`:
   regenerate wiring via a no-DB/no-network harness, surgical-bail on OLD/NEW convertible,
   surgical preserved on clean fields, alt-refuse reason, outage fallback keeps overrides +
   flags edit_required, no-clean-langs-empty, fallback parity; reworked zh/jp dispatch tests

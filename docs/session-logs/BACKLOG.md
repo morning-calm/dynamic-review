@@ -55,6 +55,13 @@ judgment call recorded so it isn't rediscovered cold.
    but are NOT duplicates** — one is a post-condition on a harness's output, the other decides
    what the guard's skeleton excludes. Both comments are load-bearing. Do not "deduplicate"
    them without reading both.
+5. **(added 2026-08-07, CJK-parity red-team)** ⚠ A **pure-native-script pronunciation
+   override** (a `say` phrase with no digit/Latin, e.g. a hypothetical 「西門町 → …」)
+   would make a `_ZH`/`_JP` take's audio differ from raw text WITHOUT tripping
+   `audio_core.cjk_convertible`, re-opening the stale-cut window the surgical bail
+   closes. **No such override exists today** (audited `audio_pronunciation_overrides.json`
+   — every zh entry carries digits or Latin). If one is ever added, extend the bail to
+   also check the trip's override phrases against the spoken line.
 
 ### 0o. `scripts/backup_review_db.py` aborts on the laptop (added 2026-08-06)
 Run over ssh it prints "R2 creds missing (Cloudfare_* in the Scripts .env) — aborting",
@@ -433,7 +440,7 @@ Scripts note via GitHub Desktop.
   verified 5/5 live runs. App side verified live against real DeepSeek: jp
   「3ばんめ…634めーとる」→ full kana expansion accepted by the jp inventory guard, zh
   Taipei101 → `台北一〇一…五百零八…一九九九年`, pure-kana/hanzi no-op paths unchanged with
-  zero API calls. New `tests/test_cjk_voicing_parity.py` (17 tests incl. the regenerate
+  zero API calls. New `tests/test_cjk_voicing_parity.py` (23 tests incl. the regenerate
   wiring, surgical-bail, alt-refuse and outage paths) + reworked zh/jp dispatch tests;
   full suite 145 green. NOT yet deployed to the laptop (needs the dynamic-content pull for
   the zh dedup — see 0m — then app pull + restart).
