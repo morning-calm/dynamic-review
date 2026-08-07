@@ -23,10 +23,10 @@ in GitHub Desktop, then on the laptop: `cd ~/Desktop/Server/Scripts && git pull`
 
 ### 0n. Three number-clean follow-ups on the Scripts side (added 2026-08-06)
 All found while wiring the review app to the shared cleaner; none blocks anything today.
-1. **zh emits the year twice** — `1999年` → `一九九九年（一九九九年）`, reproducible over three
-   identical runs of `mandarin_number_clean.clean_field`. Its numeral-stripped guard cannot
-   see it (both sides strip to nothing). This is why `audio_core._NO_CLEAN_LANGS` still
-   holds `zh`; fixing it is the precondition for cleaning CJK in the app at all.
+1. ~~**zh emits the year twice**~~ — **DONE 2026-08-07** (see the Done entry with the CJK
+   voicing-parity fix): prompt clause + two deterministic dedup guards in
+   `mandarin_number_clean` (`_PAREN_DUP_RE` for 「一九九九年（一九九九年）」, `_YEAR_DUP_RE`
+   for the sibling 「一九九九年年」 flake). Commit lives in `dynamic-content`.
 2. **Register `fr`/`de`/`es` in `tts_number_clean._STRIPPERS`.** Without an inventory,
    `clean_similarity` degrades to a word ratio that REJECTS correct expansions — measured
    against the 0.80 bar on four perfect cleans: en 0.62, fr 0.71, es 0.40, de 0.47. The
@@ -36,35 +36,6 @@ All found while wiring the review app to the shared cleaner; none blocks anythin
 3. **Non-EN prompt templates have no `{extra}` slot** (only en/zh/jp/ko do), so per-trip
    pronunciation-override *reinforcement* is silently dropped for fr/de/es/it. The
    `apply_overrides` text substitution still happens, so this is degradation, not breakage.
-
-### 0q. ⚠ CJK regenerate bypasses BOTH number-cleaning and pronunciation overrides (added 2026-08-07)
-**The Scripts repo is fine — this is entirely app-side, and it pre-dates the 2026-08-06
-shared-cleaner work.** Verified in `dynamic-content`: the pipeline cleans all three CJK
-languages before TTS — zh via `mandarin_number_clean.clean_field` (the three
-`multiple_documents_*_ZH.py` templates), jp via each template's own `validate_and_clean` on
-`build_prompt("jp",…)` applied to the kana line **after** `process_text()` extracts it (i.e.
-the exact string the app voices), ko via `korean_number_clean.clean_field`.
-
-The app's `sessions.regenerate` routes zh/jp through `_cjk_spoken` → `plan_whole(cjk_new)`
-and **never calls `validate_and_clean`**. Two consequences:
-1. **No number cleaning.** The master was voiced from cleaned text; a regenerate sends raw.
-   Measured on the live DB, audio-bearing fields whose SPOKEN line contains digits:
-   **jp 32 fields / 4 trips** (`Tokyo_03_Beg_N4_JP` 「634めーとる」「3ばんめ」,
-   `Tokyo_04_Beg_N4_JP`, `KochiCity_N3_JP`, `Yusuhara_Beg_N4_JP`);
-   **zh 19 fields / 2 trips** (`Taipei101_HSK3_ZH`, `Taipei101_HSK12_ZH` — all `台北101`).
-2. **No pronunciation overrides.** `apply_overrides` is applied in exactly ONE place in the
-   whole backend (`audio_core.validate_and_clean:548`), so `Taipei101_HSK3_ZH`'s pinned
-   `台北101 → 台北一〇一` never reaches ElevenLabs on a `_ZH` regenerate. Taipei101 is hit by
-   both halves at once.
-
-**Not a flag flip.** `cjk_splice` char-diffs OLD→NEW and reads cut times from the forced
-aligner against the REAL audio, so OLD (`localization.working_hans`, or the stored kana line)
-and NEW must both live in *cleaned* space, and `working_text`/`working_hans` must be
-re-baselined there — otherwise every surgical splice mis-locates. Precondition: fix the zh
-year duplication first (0n.1), or zh would voice the date twice.
-Suggested order: (a) fix zh duplication upstream; (b) clean at the `_cjk_spoken` boundary so
-OLD and NEW are produced in the same space; (c) re-baseline `working_hans` on combine;
-(d) re-run the CJK splice regression on `Tokyo_08` / `Taipei101`.
 
 ### 0p. Number-clean: four items triaged and deliberately left (added 2026-08-06)
 From the Fable red-team of the shared-cleaner wiring. None is a live defect; each is a
@@ -443,6 +414,29 @@ Scripts note via GitHub Desktop.
 ---
 
 ## Done
+- **2026-08-07** — **0q: CJK voicing parity — regenerate now number-cleans zh/jp and applies
+  pronunciation overrides** (plan: Scripts
+  `docs/plans/2026-08-07-review-app-cjk-voicing-parity.md`; measured exposure jp 32 fields /
+  4 trips + zh 19 / 2, all `台北101`). Shipped as B-shaped-as-D with one deliberate deviation
+  from the plan's "store cleaned baselines" note: `working_text`/`working_hans` STAY in raw
+  space (moving them would wedge the text-ahead-of-audio bookkeeping that compares them to
+  `current_text`), and instead the surgical path is disabled deterministically whenever the
+  OLD **or** NEW spoken line has convertible content (`audio_core.cjk_convertible`; OLD too
+  covers the edit that deletes a number). Whole-regen / alt / fallback all route through
+  `validate_and_clean`: zh via a new `mandarin_number_clean` own-harness (exactly what the
+  `_ZH` templates call — overrides survive even a DeepSeek outage since `apply_overrides` is
+  deterministic), jp via the generic `build_prompt("jp",…)` path gated by the pipeline's
+  `needs_number_clean` (feature-detected). `_NO_CLEAN_LANGS` is now empty;
+  `CLEANER_VERSION` → `3-cjk-cleaned`. Precondition **0n.1 (zh double-year) fixed upstream
+  same day**: PROMPT_ZH no-gloss clause + `_PAREN_DUP_RE`/`_YEAR_DUP_RE` deterministic
+  dedup (the similarity guard is structurally blind to both — numerals strip to nothing);
+  verified 5/5 live runs. App side verified live against real DeepSeek: jp
+  「3ばんめ…634めーとる」→ full kana expansion accepted by the jp inventory guard, zh
+  Taipei101 → `台北一〇一…五百零八…一九九九年`, pure-kana/hanzi no-op paths unchanged with
+  zero API calls. New `tests/test_cjk_voicing_parity.py` (17 tests incl. the regenerate
+  wiring, surgical-bail, alt-refuse and outage paths) + reworked zh/jp dispatch tests;
+  full suite 145 green. NOT yet deployed to the laptop (needs the dynamic-content pull for
+  the zh dedup — see 0m — then app pull + restart).
 - **2026-07-30** — **Zhuyin autosave normalizer** (`a06c02f`, LIVE). After Kaohsiung
   and Taipei101 were approval-blocked by joined syllables / trailing neutral-tone dots,
   `zhuyin_normalize.py` now canonicalizes only a unique whole-field parse with exactly

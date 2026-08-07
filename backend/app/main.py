@@ -96,9 +96,10 @@ def _startup():
     # away rather than a day of guessing.
     st = audio_core.cleaner_status()
     if st["ok"] and st["api_key_set"]:
+        passthrough = (f"; passthrough {', '.join(st['not_cleaned'])}"
+                       if st["not_cleaned"] else "")
         print(f"[startup] number-clean OK: {st['model']} v{st['version']} — "
-              f"cleaning {', '.join(st['languages'])}; "
-              f"passthrough {', '.join(st['not_cleaned'])}", flush=True)
+              f"cleaning {', '.join(st['languages'])}{passthrough}", flush=True)
     else:
         print(f"[startup] WARN number-clean DEGRADED — cleaning disabled, every field "
               f"will be voiced as written and flagged edit_required. "

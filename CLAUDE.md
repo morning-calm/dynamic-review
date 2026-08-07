@@ -152,20 +152,25 @@ Whisper around every number. **Do not port these prompts back in here.**
   `_LANG_CODES` (⚠ enumerated set — a language in `language_of` with no entry here is NOT
   silently English; it disables cleaning and warns). **ko** → `korean_number_clean.clean_field`
   (deterministic `sino_year` + acronym pre-expansion: the model dropped a 百 from 1963 and read
-  KBS as **BTS**). **zh/jp** → NOT cleaned — ⚠ this matches the rest of the app but NOT the
-  pipeline, and is a **known open gap** (BACKLOG 0q), not a correctness claim. The pipeline
-  cleans all three CJK languages at generation time (zh via `mandarin_number_clean`, jp via
-  `build_prompt("jp",…)` applied to the kana line *after* `process_text()` extracts it — the
-  exact string this app voices, ko via `korean_number_clean`), so a CJK master was voiced from
-  CLEANED text while an app regenerate voices RAW text. It stays off because `regenerate`
-  routes zh/jp through `_cjk_spoken` → `plan_whole(cjk_new)` and never calls
-  `validate_and_clean` at all — cleaning on the `fallback()` path alone would make the
-  reference clip disagree with the working take — because closing it properly means putting
-  `cjk_splice`'s OLD/NEW char-diff and `working_hans` into cleaned space, and because the zh
-  harness currently emits the year twice (`1999年` → `一九九九年（一九九九年）`, reproducible).
-  ⚠ Same bypass costs the CJK path its **pronunciation overrides**: `apply_overrides` is
-  applied in exactly one place in the backend (`validate_and_clean`), so `台北101` reaches
-  ElevenLabs unconverted on a `_ZH` regenerate even though the trip pins `台北一〇一`.
+  KBS as **BTS**). **zh** → `mandarin_number_clean.clean_field` (its own harness since
+  2026-08-07 — EXACTLY what the `_ZH` voice templates call, own overrides + hanzi-numeral
+  guard + the deterministic year-gloss dedup). **jp** → the generic `build_prompt("jp",…)`
+  path (what the six JP templates run on the kana line), gated by the pipeline's
+  `needs_number_clean` (feature-detected — a lagging Scripts checkout falls back to
+  `_is_convertible`). **CJK voicing parity shipped 2026-08-07** (was BACKLOG 0q; plan:
+  Scripts `docs/plans/2026-08-07-review-app-cjk-voicing-parity.md`): the CJK whole-regen /
+  alt / fallback paths in `sessions.regenerate` all route through `validate_and_clean`, so a
+  regenerate voices the same cleaned string the master was voiced from AND applies the trip's
+  pronunciation overrides (`台北101` → `台北一〇一` — `apply_overrides`' one call site is
+  `validate_and_clean`). ⚠ The constraint that shaped it: cleaning cannot move upstream of
+  selection/diff/alignment (`cjk_splice` char-diffs and aligns in RAW space against audio that
+  SAYS the cleaned string), so `working_text`/`working_hans` stay RAW and the **surgical path
+  is disabled** for any field whose OLD **or** NEW spoken line has convertible content
+  (`audio_core.cjk_convertible` — digits/symbols/Latin; OLD too, so an edit that deletes a
+  number can't splice at stale times). Highlight on such a field whole-regenerates
+  (`cjk_fallback`); alt refuses with a numbers-specific reason. Those fields never dependably
+  had surgical — the aligner was scoring raw 「634」 against kana audio. Regression suite:
+  `backend/tests/test_cjk_voicing_parity.py`.
 - **The accept/reject guard (`clean_accepted`)**: where Scripts has a numeral inventory for the
   language (`similarity_basis` — today it/jp) that comparison is authoritative. Everywhere else
   a plain word ratio **rejects correct work** — measured against the 0.80 bar on four perfect

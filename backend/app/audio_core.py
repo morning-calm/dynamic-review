@@ -257,10 +257,11 @@ def speed_for_trip(trip_id: str) -> float:
 try:  # noqa: SIM105
     import tts_number_clean as _shared            # transport + guard helpers
     import korean_number_clean as _ko_clean       # ko: sino-year + acronym pre-expansion
+    import mandarin_number_clean as _zh_clean     # zh: the pipeline's own DeepSeek harness
     from gemini_number_clean_prompts import build_prompt as _build_prompt
     _CLEANER_ERROR: str | None = None
 except Exception as _e:  # noqa: BLE001
-    _shared = _ko_clean = _build_prompt = None    # type: ignore[assignment]
+    _shared = _ko_clean = _zh_clean = _build_prompt = None  # type: ignore[assignment]
     _CLEANER_ERROR = f"{type(_e).__name__}: {_e}"
 
 #: Accepted-clean bar for the languages where Scripts HAS a numeral inventory registered
@@ -276,7 +277,7 @@ NUMBER_CLEAN_MAX_RETRIES = 3
 #: prompt-surface change, language dispatch. `sessions._cleaned_orig` mixes this into its
 #: cache key so a session seeded under an older cleaner RE-CLEANS instead of diffing the
 #: reviewer's new text against a stale (here: English-numbered) baseline.
-CLEANER_VERSION = "2-shared-deepseek"
+CLEANER_VERSION = "3-cjk-cleaned"
 
 #: `language_of()` output → the `gemini_number_clean_prompts` language key.
 #: ⚠ ENUMERATED SET: every value `language_of` can return needs an entry here. An absent
@@ -288,46 +289,58 @@ _LANG_CODES = {
     "Spanish": "es", "Mandarin": "zh", "Japanese": "jp", "Korean": "ko",
 }
 
-#: Korean cleans through its OWN Scripts harness rather than the generic build_prompt
-#: path: it carries deterministic pre-expansion (`sino_year` — the model dropped the 百
-#: from 1963; `expand_latin_acronyms` — it read KBS as BTS and the guard passed it) plus a
-#: Hangul-numeral-aware similarity check. It applies its own pronunciation overrides, so
-#: it gets the RAW text, not `pre`. Verified live 2026-08-06: 「1963년…21명」 →
-#: 「천구백육십삼 년…스물한 명」.
+#: Korean and Mandarin clean through their OWN Scripts harnesses rather than the generic
+#: build_prompt path:
+#:   ko — deterministic pre-expansion (`sino_year` — the model dropped the 百 from 1963;
+#:        `expand_latin_acronyms` — it read KBS as BTS and the guard passed it) plus a
+#:        Hangul-numeral-aware similarity check. Verified live 2026-08-06:
+#:        「1963년…21명」 → 「천구백육십삼 년…스물한 명」.
+#:   zh — `mandarin_number_clean.clean_field`, EXACTLY what the three `_ZH` voice
+#:        templates call, so an app regenerate voices the same string a master was voiced
+#:        from. Carries its own hanzi-numeral similarity guard and the deterministic
+#:        year-gloss dedup (the 「一九九九年（一九九九年）」 fix, 2026-08-07).
+#: Both apply their own pronunciation overrides, so they get the RAW text, not `pre`.
+#: jp stays on the generic path: the six JP templates run `build_prompt("jp", …)` through
+#: their own validate_and_clean — the generic path here IS that, and `tts_number_clean`
+#: registers a jp numeral inventory so `clean_accepted` defers to `clean_similarity`.
 def _own_harness(lang: str):
-    return {"ko": _ko_clean}.get(lang)
+    return {"ko": _ko_clean, "zh": _zh_clean}.get(lang)
 
 
-#: ⚠ zh/jp are not number-cleaned here. This MATCHES the rest of the app — it does NOT
-#: match the pipeline, and that difference is a known open gap, not a correctness claim.
+#: zh/jp ARE number-cleaned here since 2026-08-07 (the CJK voicing-parity fix — Scripts
+#: `docs/plans/2026-08-07-review-app-cjk-voicing-parity.md`). The pipeline always cleaned
+#: all three CJK languages before TTS (zh `mandarin_number_clean`, jp `build_prompt("jp",…)`
+#: on the kana line, ko `korean_number_clean`), so until this an app regenerate voiced RAW
+#: text — 「634めーとる」 read as digits — while the master said the kana expansion, and a
+#: `_ZH` regenerate also dropped the trip's pronunciation overrides (`台北101` un-pinned),
+#: because `apply_overrides` lives only inside `validate_and_clean`.
 #:
-#: THE PIPELINE DOES CLEAN CJK (verified 2026-08-07 in the Scripts repo):
-#:   zh — the three `multiple_documents_*_ZH.py` voice templates call
-#:        `mandarin_number_clean.clean_field`
-#:   jp — the six JP templates run their own `validate_and_clean` on `build_prompt("jp",…)`,
-#:        applied to the kana line AFTER `process_text()` extracts it — i.e. to exactly the
-#:        string this app voices
-#:   ko — `multiple_documents_Korean_KO.py` calls `korean_number_clean.clean_field` (and the
-#:        app matches it: `ko` is NOT in this set)
-#: So a CJK master was voiced from CLEANED text, and an app regenerate voices RAW text.
-#:
-#: Why it is still not switched on here:
-#: 1. `sessions.regenerate` routes zh/jp through `_cjk_spoken` → `plan_whole(cjk_new)` and
-#:    never calls this function at all; `fallback()` is the only path that reaches us.
-#:    Cleaning on that one path would make the reference clip disagree with the working
-#:    take, which is what the splice engine diffs against — strictly worse than the gap.
-#: 2. Closing it properly is a CJK-splice change, not a flag flip. `cjk_splice` char-diffs
-#:    OLD→NEW and reads cut times from the forced aligner against the REAL audio, so OLD
-#:    (`localization.working_hans` / the stored kana) and NEW would both have to live in
-#:    cleaned space, and `working_text`/`working_hans` re-baselined there too.
-#: 3. The zh harness currently emits the year TWICE — 「1999年」 → 「一九九九年（一九九九年）」,
-#:    three identical runs, invisible to its own numeral-stripped guard. Turning zh on today
-#:    would voice the date twice.
-#: Measured exposure on the live DB (audio-bearing fields whose SPOKEN line has digits):
-#: jp 32 fields / 4 trips, zh 19 fields / 2 trips. See BACKLOG 0q.
-#: What they must NOT do is what they did until 2026-08-06: fall through to the ENGLISH
-#: prompt.
-_NO_CLEAN_LANGS = {"zh", "jp"}
+#: The constraint that shaped the fix: cleaning cannot move upstream of selection/diff/
+#: alignment — `cjk_splice` char-diffs OLD→NEW in RAW space and reads cut times from the
+#: forced aligner against audio that SAYS the cleaned string. So the surgical path is
+#: DISABLED for any field whose OLD or NEW spoken line has convertible content
+#: (`cjk_convertible` below; sessions.regenerate bails those to whole-regen, which cleans).
+#: For such fields the aligner was already scoring raw 「634」 against kana audio — bailing
+#: is an honesty improvement, not a capability loss.
+#: What none of this may EVER do is what it did until 2026-08-06: fall through to the
+#: ENGLISH prompt.
+_NO_CLEAN_LANGS: set[str] = set()
+
+
+#: Deterministic "could the cleaner change this CJK spoken line?" gate — digits (incl.
+#: fullwidth), currency/percent/degree symbols, or ANY Latin (Roman numerals, unit
+#: abbreviations, acronyms the harnesses expand). Mirrors the pipeline gates
+#: (`mandarin_number_clean.DIGIT_RE`, `tts_number_clean.needs_number_clean`) but is local
+#: and dependency-free: it decides whether the SURGICAL path is safe, so it must give the
+#: same answer whether or not the Scripts checkout is present or current.
+_CJK_CONVERTIBLE_RE = re.compile(r"[0-9０-９A-Za-z$£¥€₩%°]")
+
+
+def cjk_convertible(text: str) -> bool:
+    """True when a zh/jp spoken line contains content voicing-time cleaning would rewrite
+    — i.e. raw text and cleaned text differ, so raw-space char-diff/alignment against the
+    (cleaned-voiced) audio cannot be trusted and whole-regen is the only honest path."""
+    return bool(_CJK_CONVERTIBLE_RE.search(text or ""))
 
 
 #: Post-condition on a self-guarding harness's output: a digit or currency/percent symbol
@@ -578,9 +591,9 @@ def validate_and_clean(text: str, doc_id: str, scene_index) -> tuple[str, bool]:
                    f"({doc_id}) — add it to audio_core._LANG_CODES. Text voiced as written.")
         return pre, True
     if lang in _NO_CLEAN_LANGS:
-        return pre, False       # by design — see _NO_CLEAN_LANGS
+        return pre, False       # empty today — kept as the documented off-switch shape
 
-    # Korean runs its own harness, which applies its own overrides → RAW text, not `pre`.
+    # ko/zh run their own harnesses, which apply their own overrides → RAW text, not `pre`.
     harness = _own_harness(lang)
     if harness is not None:
         try:
@@ -604,12 +617,17 @@ def validate_and_clean(text: str, doc_id: str, scene_index) -> tuple[str, bool]:
     # cleaner handed prose with no numbers in it can only do harm, and was measured doing
     # exactly that (it deleted a particle from a Japanese kana line, 2026-08-04).
     #
-    # ⚠ NOT `_shared.needs_number_clean` here. That gate counts "a Latin token of 2+
+    # ⚠ `_shared.needs_number_clean` ONLY for jp. That gate counts "a Latin token of 2+
     # letters" as convertible — right for the CJK/Korean text it was written for, where
     # stray Latin IS the work, but on a Latin-script language EVERY word matches and the
     # gate never fires. `_is_convertible` is the Latin-script reading of the same
-    # question, and is the predicate the skeleton is already built from.
-    if not any(_is_convertible(w) for w in pre.split()):
+    # question, and is the predicate the skeleton is already built from. (Feature-detected
+    # like `similarity_basis`: a lagging Scripts checkout owes us neither.)
+    nnc = getattr(_shared, "needs_number_clean", None)
+    if lang == "jp" and nnc is not None:
+        if not nnc(pre):
+            return pre, False
+    elif not any(_is_convertible(w) for w in pre.split()):
         return pre, False
 
     for attempt in range(NUMBER_CLEAN_MAX_RETRIES):

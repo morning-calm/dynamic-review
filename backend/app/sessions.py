@@ -2332,12 +2332,14 @@ def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
     cur = audio_core.strip_url_lines(frow["current_text"] or "")
 
     # CJK (_ZH hanzi / _JP kana): the narrated text is the Simplified hanzi (localization
-    # cur.Hans) or the kana line — NOT current_text (zh/jp are not number-cleaned;
-    # English-only). This branch is ADDITIVE and SEPARATE from the English token engine
-    # below. On a SceneDesc text edit it tries a surgical CHAR-LEVEL splice (cjk_splice, via
-    # the isolated MMS forced aligner); on ANY uncertainty plan_cjk returns None and we
-    # WHOLE-regenerate the narration (the safe Path-A floor). Q&A fields, an explicit 'whole'
-    # request, and alt text always whole-regenerate.
+    # cur.Hans) or the kana line — NOT current_text. This branch is ADDITIVE and SEPARATE
+    # from the English token engine below. On a SceneDesc text edit it tries a surgical
+    # CHAR-LEVEL splice (cjk_splice, via the isolated MMS forced aligner); on ANY
+    # uncertainty plan_cjk returns None and we WHOLE-regenerate the narration (the safe
+    # Path-A floor). Q&A fields, an explicit 'whole' request, and alt text always
+    # whole-regenerate. Whole-regen text goes through `validate_and_clean` (numbers → the
+    # language's spoken form + pronunciation overrides), matching how the pipeline voiced
+    # the master (CJK voicing-parity fix, 2026-08-07).
     cjk_fell_back = False   # surgical splice was requested but bailed to whole-regen (#5)
     cjk = _cjk_spoken(srow["trip_id"], frow)
     if cjk is not None:
@@ -2345,7 +2347,16 @@ def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
         plan = None
         cjk_wanted_surgical = False
         working_mp3 = (dirs["working"] / frow["mp3_name"]) if frow["mp3_name"] else None
+        # Convertible content (digits/symbols/Latin) in EITHER spoken line kills the
+        # surgical path: the take's audio says the CLEANED string while the char-diff and
+        # the forced aligner work in RAW space, so cuts would mis-locate. (Checking OLD
+        # too covers the edit that DELETES a number — NEW is clean but the audio isn't.)
+        # These fields never dependably had surgical — the aligner was scoring raw 「634」
+        # against kana audio — so bailing to whole-regen is the honest floor.
+        cjk_conv = (audio_core.cjk_convertible(cjk_old)
+                    or audio_core.cjk_convertible(cjk_new))
         can_surgical = (field_path == "SceneDesc" and cjk_old and cjk_new
+                        and not cjk_conv
                         and working_mp3 is not None and working_mp3.exists())
         if mode in ("highlight", "alt") and rng is not None and can_surgical:
             # Selection ops: re-voice the clause enclosing the highlighted chars (alt text
@@ -2370,21 +2381,33 @@ def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
             elif plan is None:
                 cjk_wanted_surgical = True   # highlight → the Path-A whole-regen floor
         elif mode == "alt" and rng is not None:
-            # Alt with a selection but nothing to splice into (no working take) — refuse
-            # rather than mis-voice the alt as the whole field or drop it.
+            # Alt with a selection but no surgical path — refuse rather than mis-voice
+            # the alt as the whole field or drop it.
             plan = audio_splice.RegenPlan(
                 edit_required=True,
-                reason="No working audio to splice the alt text into — use "
-                       "whole-regenerate or Create new.")
+                reason=("This narration contains numbers/symbols that are converted to "
+                        "spoken form when voiced, so the alt text can't be spliced in at "
+                        "the highlight — use Regenerate All or Create new."
+                        if cjk_conv else
+                        "No working audio to splice the alt text into — use "
+                        "whole-regenerate or Create new."))
         elif alt_text and alt_text.strip():
-            plan = audio_splice.plan_whole(alt_text.strip(), False, voice_id,
+            cleaned_alt, fb_alt = audio_core.validate_and_clean(
+                alt_text.strip(), srow["trip_id"], frow["scene_index"])
+            plan = audio_splice.plan_whole(cleaned_alt, fb_alt, voice_id,
                                            voice_settings, model_id)
         # ("Generate from edit" — the full-diff surgical branch, mode='segment' — was
         # removed 2026-08-05: reviewers fix audio via highlight/alt, the waveform editor,
         # or Regenerate All. cjk_splice.plan_cjk still backs the span planner.)
         if plan is None:      # Q&A / whole / no clean splice → whole-regenerate the narration
-            cjk_fell_back = cjk_wanted_surgical
-            plan = audio_splice.plan_whole(cjk_new, False, voice_id, voice_settings, model_id)
+            # A highlight that couldn't go surgical (aligner bail, or a convertible field
+            # where surgical is off by design) is a whole-clip change — tell the FE.
+            cjk_fell_back = (cjk_wanted_surgical
+                             or (mode == "highlight" and rng is not None))
+            cleaned_cjk, fb_cjk = audio_core.validate_and_clean(
+                cjk_new, srow["trip_id"], frow["scene_index"])
+            plan = audio_splice.plan_whole(cleaned_cjk, fb_cjk, voice_id,
+                                           voice_settings, model_id)
     # Q&A fields and SceneDesc 'whole' → whole regenerate (no splice). Alt text (if
     # supplied) is voiced VERBATIM as the whole block — "regenerate with alt text" for a
     # question option, mirroring highlight-with-alt-text but for the entire field.

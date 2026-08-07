@@ -84,15 +84,47 @@ def test_english_trip_still_gets_english(monkeypatch):
     assert "King Charles the First" in seen["p"]
 
 
-def test_zh_and_jp_are_not_cleaned(monkeypatch):
-    """By design — `sessions.regenerate` voices their spoken line raw, so cleaning only on
-    the `fallback()` path would make the reference clip disagree with the working take.
-    What must never happen again is the English prompt."""
-    monkeypatch.setattr(audio_core._shared, "complete_prompt",
-                        lambda *a, **k: pytest.fail("zh/jp must not call the cleaner"))
-    for trip, text in (("Taipei101_HSK3_ZH", "1999年开始"), ("Tokyo_03_Beg_N4_JP", "1868ねん")):
-        out, fb = audio_core.validate_and_clean(text, trip, 0)
-        assert (out, fb) == (text, False)
+def test_zh_uses_the_mandarin_harness(monkeypatch):
+    """zh must reach `mandarin_number_clean.clean_field` — EXACTLY what the pipeline's
+    `_ZH` voice templates call, so a regenerate voices the same string the master was
+    voiced from (CJK voicing-parity fix, 2026-08-07). The harness applies its own
+    overrides, so it gets the RAW text and the doc_id."""
+    calls = {}
+    monkeypatch.setattr(audio_core._zh_clean, "clean_field",
+                        lambda t, d=None, **k: calls.update(text=t, doc=d)
+                        or "台北一〇一大楼一九九九年开始建造。")
+    out, fb = audio_core.validate_and_clean("台北101大楼1999年开始建造。", "Taipei101_HSK3_ZH", 0)
+    assert calls == {"text": "台北101大楼1999年开始建造。", "doc": "Taipei101_HSK3_ZH"}
+    assert (out, fb) == ("台北一〇一大楼一九九九年开始建造。", False)
+
+
+def test_jp_gets_the_japanese_prompt(monkeypatch):
+    """jp goes through the generic path — the same `build_prompt("jp", …)` the six JP
+    templates run — never the English prompt, and never raw passthrough."""
+    seen = {}
+
+    def fake(prompt, *, lang=None):
+        seen["prompt"], seen["lang"] = prompt, lang
+        return "たかさはろっぴゃくさんじゅうよんめーとるもあります"
+
+    monkeypatch.setattr(audio_core._shared, "complete_prompt", fake)
+    out, fb = audio_core.validate_and_clean(
+        "たかさは634めーとるもあります", "Tokyo_03_Beg_N4_JP", 0)
+    assert seen["lang"] == "jp"
+    assert "テキスト" in seen["prompt"], "not the Japanese prompt"
+    assert "King Charles the First" not in seen["prompt"]
+    assert (out, fb) == ("たかさはろっぴゃくさんじゅうよんめーとるもあります", False)
+
+
+def test_zh_harness_failure_reports_fallback(monkeypatch):
+    """Same degraded shape as Korean: a SystemExit (missing key) must fall back with
+    the flag, not crash the request or claim a clean."""
+    def die(*a, **k):
+        raise SystemExit("Missing DeepSeek_API_KEY in .env")
+
+    monkeypatch.setattr(audio_core._zh_clean, "clean_field", die)
+    out, fb = audio_core.validate_and_clean("1999年开始", "Taipei101_HSK3_ZH", 0)
+    assert (out, fb) == ("1999年开始", True)
 
 
 def test_korean_uses_its_own_harness(monkeypatch):
