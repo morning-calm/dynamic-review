@@ -485,3 +485,51 @@ It also needs the zh year-duplication fixed upstream first, or zh would voice th
 Filed as **BACKLOG 0q** with the measurement and a suggested order of work.
 
 Docs corrected, tests still 120 green, ruff clean. No behaviour change in this follow-up.
+
+---
+
+## 01:15 — Plan written, session closed
+
+**Goal (dave):** capture the CJK fix options as a plan for tomorrow, commit, close out.
+
+Plan written to **`D:\Dynamic Languages\Scripts\docs\plans\2026-08-07-review-app-cjk-voicing-parity.md`**
+(the Scripts repo's plans folder, per dave's request — the *fix* is review-app side; only the
+§7 blocker changes dynamic-content). Committed there on its own; **not pushed** — it is the
+only unpushed commit in that repo, so dave can push it with his own work tomorrow.
+
+Contents: verified statement of what the pipeline does vs what the app does (with the
+per-template evidence), the measured exposure + a re-measure snippet, the constraint that
+shapes every option (`_cjk_sel_range` maps selection offsets by locating the spoken text
+LITERALLY in the reviewer's textarea, so cleaning cannot move upstream of it), one option
+explicitly **ruled out** (pre-expanding stored text — against the product design, stated
+outright in `korean_number_clean`'s docstring: displayed text keeps `1952년`, only the TTS copy
+is expanded), four live options A–D with effort/risk/blockers, a recommendation
+(**A now → B next, jp first, zh after the §7 blocker → shaped as D**), acceptance criteria,
+and file:line pointers on both sides — all re-verified against the current source before
+committing.
+
+⚠ The §7 blocker is a **dynamic-content** bug, not a review-app one, and it affects the
+pipeline in its own right: `mandarin_number_clean.clean_field` emits the year twice
+(`1999年` → `一九九九年（一九九九年）`), invisible to its own numeral-stripped guard. Any zh scene
+with a year is liable to be voiced with the date read twice. Repro is in the plan.
+
+### Session end state
+- review-app `main` @ this commit, pushed; working tree clean.
+- Laptop checkout in sync; service **active**, health 200, uvicorn + cloudflared + tunnel up,
+  startup line `cleaning de, en, es, fr, it, ko; passthrough jp, zh`.
+- 120 backend tests green; ruff clean on every file touched this session.
+- Nothing left running: no background jobs, no agents, no scratch state on the laptop beyond
+  `/tmp` scripts.
+
+### What shipped tonight, in order
+`462209b` shared per-language number-clean wiring · `dc31260` feature-detect the Scripts
+inventory · `e91ab38` red-team fixes (empty-clean accepted, Korean SystemExit, `Ier`) ·
+`b0c90a0` CJK passthrough documented accurately as an open gap.
+
+### Open for dave
+1. **BACKLOG 0m** — nothing outstanding; the dynamic-content push happened mid-session. ✔
+2. **BACKLOG 0q** + the new plan — the CJK voicing gap (this is the one to pick up).
+3. **BACKLOG 0n** — zh year duplication (blocks 0q's zh half), fr/de/es strippers, `{extra}`
+   slot in non-EN templates.
+4. **BACKLOG 0o** — `backup_review_db.py` aborts on the laptop; review.db is the only copy of
+   review state. Worth confirming there is a working backup path on the live host.
