@@ -21,6 +21,22 @@ not getting the refined FR/IT/KO/ES rules the translator pack came back with. On
 in GitHub Desktop, then on the laptop: `cd ~/Desktop/Server/Scripts && git pull` +
 `sudo -n /usr/bin/systemctl restart review-app.service`.
 
+### 0q. The digit-voicing damage in the 357 QUEUED trips is unmeasured (added 2026-08-09)
+Today's headline — *"504 digit-voiced clips across 123 trips, re-voiced, now 7"* — says
+**nothing about the review queue**. `Audio Generation/digits_reached_voice.py` scans
+`Scripts/Logs/audio_queue.db`, which only holds clips the `audio_engine` voiced: 230 trips, of
+which **0 are in `trips_to_review.json`** (measured — the intersection is empty, and so is the
+intersection of the 124 re-voiced cids with the manifest). The queued trips' masters were
+voiced by earlier tooling through the same word-ratio guard that was rejecting correct cleans
+at ES 13% / ZH 100% / KO 49% / EN-FR-DE 30-48-24% in the number-dense band, and 167 of the 357
+were already known exposed by the 2026-08-06 language-dispatch finding. So this is unmeasured,
+not zero.
+**Why it can't be answered from this side:** the app never records what a master was voiced
+FROM — `_cleaned_orig` is a re-derivation, not a record. It needs a Scripts-side scan of the
+queued cids' source text (a digit in the source that the master's audio reads as a digit), or
+a `spoken_text` backfill for pre-`audio_engine` runs. Decide which; the clips in question are
+the ones reviewers are listening to right now.
+
 ### 0n. Three number-clean follow-ups on the Scripts side (added 2026-08-06)
 All found while wiring the review app to the shared cleaner; none blocks anything today.
 1. ~~**zh emits the year twice**~~ — **DONE 2026-08-07** (see the Done entry with the CJK
