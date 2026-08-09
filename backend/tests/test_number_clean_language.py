@@ -284,9 +284,16 @@ def test_growth_is_what_catches_insertion():
 @pytest.mark.skipif(not hasattr(audio_core._shared, "similarity_basis"),
                     reason="Scripts checkout predates similarity_basis")
 def test_registered_inventory_defers_to_scripts():
-    """Where Scripts HAS a numeral inventory (it/jp) its comparison is authoritative —
-    we only supply our own where it would otherwise degrade to the word ratio."""
+    """Where Scripts HAS a numeral inventory (it/es/jp) its comparison is authoritative —
+    we only supply our own where it would otherwise degrade to the word ratio.
+
+    ⚠ Spanish moved arms on 2026-08-09 with NO change on this side: the arm is chosen by
+    feature-detecting the basis, so registering `es` in the Scripts `_STRIPPERS` was
+    enough. A lagging Scripts checkout keeps Spanish on `_prose_survival` instead, which
+    is why this asserts the basis EXISTS rather than asserting a verdict.
+    """
     assert audio_core._scripts_inventory_basis("it", "nel 1348") is not None
+    assert audio_core._scripts_inventory_basis("es", "en 1868") is not None
     assert audio_core._scripts_inventory_basis("fr", "en 1668") is None
 
 

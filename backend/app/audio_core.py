@@ -265,11 +265,15 @@ except Exception as _e:  # noqa: BLE001
     _CLEANER_ERROR = f"{type(_e).__name__}: {_e}"
 
 #: Accepted-clean bar for the languages where Scripts HAS a numeral inventory registered
-#: (`tts_number_clean.similarity_basis` — today it/jp), i.e. where a legitimate expansion
-#: is stripped from both sides and so scores ~1.0. Languages without one are judged by
-#: `_prose_survival` instead; see the guard block below for why the word ratio it would
-#: otherwise degrade to cannot be used. Registering fr/de/es in `_STRIPPERS` on the
+#: (`tts_number_clean.similarity_basis` — today it/es/jp), i.e. where a legitimate
+#: expansion is stripped from both sides and so scores ~1.0. Languages without one are
+#: judged by `_prose_survival` instead; see the guard block below for why the word ratio
+#: it would otherwise degrade to cannot be used. Registering fr/de in `_STRIPPERS` on the
 #: Scripts side would let this bar cover them too and retire our arm.
+#: ⚠ ES joined on 2026-08-09 and it is not cosmetic: without an inventory the Spanish
+#: word ratio rejected CORRECT expansions and fell back to raw digits on 67 of 506 clips
+#: (13%) in that day's Spanish re-voice. Nothing here needed changing for it — the arm is
+#: chosen by feature-detecting the basis — but the cache key did (see CLEANER_VERSION).
 NUMBER_CLEAN_THRESHOLD = 0.8
 NUMBER_CLEAN_MAX_RETRIES = 3
 
@@ -277,7 +281,7 @@ NUMBER_CLEAN_MAX_RETRIES = 3
 #: prompt-surface change, language dispatch. `sessions._cleaned_orig` mixes this into its
 #: cache key so a session seeded under an older cleaner RE-CLEANS instead of diffing the
 #: reviewer's new text against a stale (here: English-numbered) baseline.
-CLEANER_VERSION = "3-cjk-cleaned"
+CLEANER_VERSION = "4-es-numeral-basis"
 
 #: `language_of()` output → the `gemini_number_clean_prompts` language key.
 #: ⚠ ENUMERATED SET: every value `language_of` can return needs an entry here. An absent
@@ -364,8 +368,9 @@ _LEFTOVER_NUMERIC_RE = re.compile(r"[0-9０-９°%£¥€$₩]")
 # so number-dense ENGLISH scenes have been silently falling back to raw digits all along.
 #
 # Scripts solves this per language by stripping the numeral vocabulary from both sides
-# (`tts_number_clean.similarity_basis`), but only it/jp are registered, and building a
-# numeral inventory for every language is a real piece of work. So where an inventory
+# (`tts_number_clean.similarity_basis`), but only it/es/jp are registered (es 2026-08-09),
+# and building a numeral inventory for every language is a real piece of work — fr/de and
+# en still have none, and the es example just above is now handled. So where an inventory
 # EXISTS we defer to it, and where it does not we measure the thing the guard is actually
 # for, in a way that needs no vocabulary at all:
 #
