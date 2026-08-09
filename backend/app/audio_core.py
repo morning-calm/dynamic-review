@@ -265,15 +265,22 @@ except Exception as _e:  # noqa: BLE001
     _CLEANER_ERROR = f"{type(_e).__name__}: {_e}"
 
 #: Accepted-clean bar for the languages where Scripts HAS a numeral inventory registered
-#: (`tts_number_clean.similarity_basis` — today it/es/jp), i.e. where a legitimate
-#: expansion is stripped from both sides and so scores ~1.0. Languages without one are
-#: judged by `_prose_survival` instead; see the guard block below for why the word ratio
-#: it would otherwise degrade to cannot be used. Registering fr/de in `_STRIPPERS` on the
-#: Scripts side would let this bar cover them too and retire our arm.
-#: ⚠ ES joined on 2026-08-09 and it is not cosmetic: without an inventory the Spanish
-#: word ratio rejected CORRECT expansions and fell back to raw digits on 67 of 506 clips
-#: (13%) in that day's Spanish re-voice. Nothing here needed changing for it — the arm is
-#: chosen by feature-detecting the basis — but the cache key did (see CLEANER_VERSION).
+#: (`tts_number_clean.similarity_basis`), i.e. where a legitimate expansion is stripped from
+#: both sides and so scores ~1.0. Languages without one are judged by `_prose_survival`
+#: instead; see the guard block below for why the word ratio it would otherwise degrade to
+#: cannot be used.
+#: ⚠ AS OF 2026-08-09 EVERY PRODUCT LANGUAGE HAS ONE — en/fr/de/it/es/zh/jp/ko — so against
+#: an up-to-date Scripts checkout `_prose_survival` no longer runs at all. It STAYS: it is
+#: what a lagging laptop checkout falls back to (see `_scripts_inventory_basis`), and it is
+#: the only arm that needs no vocabulary.
+#: ⚠ NONE OF THIS WAS COSMETIC ON THE SCRIPTS SIDE. Without an inventory the guard rejected
+#: CORRECT expansions three times and the ORIGINAL text — raw digits — went to ElevenLabs
+#: while the log said OK. Measured there: ES 67 of 506 clips (13%), then ZH 265 clips over
+#: 48 trips at **100%** (a space-free script splits into ONE token, so every change scores
+#: exactly 0.00) and KO 141 over 22 (49%); EN/FR/DE were re-measured stratified by number
+#: density and their dense band — every quiz question and answer option — ran 30%/48%/24%.
+#: Nothing here needed changing for any of it, because the arm is chosen by feature-detecting
+#: the basis — but the cache key did (see CLEANER_VERSION).
 NUMBER_CLEAN_THRESHOLD = 0.8
 NUMBER_CLEAN_MAX_RETRIES = 3
 
@@ -281,7 +288,18 @@ NUMBER_CLEAN_MAX_RETRIES = 3
 #: prompt-surface change, language dispatch. `sessions._cleaned_orig` mixes this into its
 #: cache key so a session seeded under an older cleaner RE-CLEANS instead of diffing the
 #: reviewer's new text against a stale (here: English-numbered) baseline.
-CLEANER_VERSION = "4-es-numeral-basis"
+#: ⚠ v5 changes output for real, in four ways beyond the new inventories: Korean years and
+#: Latin acronyms are now pre-expanded on the generic `build_prompt` path (they were on the
+#: `korean_number_clean.clean_field` path only); `clean_similarity` now pre-expands the
+#: ORIGINAL before comparing, so the model is not charged for work done deterministically
+#: ahead of it; `korean_number_clean._YEAR_RE` was FIXED — it carried a literal backspace
+#: byte where `\b` was meant, so `sino_year` had never fired on any path; and THE PROMPT
+#: SURFACE ITSELF CHANGED — EN gained an ORDINAL rule (it had none, and ordinals were 37 of
+#: the 66 clips still voicing digits after the guard was fixed: `the 2nd Earl`, `the 33rd
+#: Regiment`, `on the 10th of June`, `the 15th century`), ZH gained decade / Japanese-era /
+#: route-number rules, KO gained short-decimal examples, and all three gained an explicit
+#: completeness instruction. Measured on the 66: 61 now convert fully, 0 guard rejections.
+CLEANER_VERSION = "5-all-languages-numeral-basis"
 
 #: `language_of()` output → the `gemini_number_clean_prompts` language key.
 #: ⚠ ENUMERATED SET: every value `language_of` can return needs an entry here. An absent
@@ -368,11 +386,13 @@ _LEFTOVER_NUMERIC_RE = re.compile(r"[0-9０-９°%£¥€$₩]")
 # so number-dense ENGLISH scenes have been silently falling back to raw digits all along.
 #
 # Scripts solves this per language by stripping the numeral vocabulary from both sides
-# (`tts_number_clean.similarity_basis`), but only it/es/jp are registered (es 2026-08-09),
-# and building a numeral inventory for every language is a real piece of work — fr/de and
-# en still have none, and the es example just above is now handled. So where an inventory
-# EXISTS we defer to it, and where it does not we measure the thing the guard is actually
-# for, in a way that needs no vocabulary at all:
+# (`tts_number_clean.similarity_basis`). As of 2026-08-09 every product language is
+# registered, so all four examples above are now handled THERE and this arm no longer runs
+# against an up-to-date checkout — but the registration is a fact about the OTHER repo, and
+# the live laptop is a separate checkout that has sat 30 commits behind. So where an
+# inventory exists we defer to it, and where it does not — a lagging checkout, or a
+# language added to `_LANG_CODES` before Scripts has a stripper for it — we measure the
+# thing the guard is actually for, in a way that needs no vocabulary at all:
 #
 #   recall  — how much of the input's NON-CONVERTIBLE prose survived, in order. Number
 #             words the model legitimately added cannot lower this, because they are not
@@ -456,8 +476,16 @@ def _prose_survival(pre: str, cleaned: str) -> tuple[float, bool]:
     growth_ok = len(out_words) <= len(skeleton) + _WORDS_PER_CONVERTIBLE * n_convertible
     if not skeleton:
         return 1.0, growth_ok
+    # ⚠ `autojunk=False`, for the reason `cjk_splice` already gives: difflib discards any
+    # element occurring in more than 1% of a 200+ element sequence, and in a long scene the
+    # commonest WORDS ("the", "de", "der") clear that easily — so recall is depressed on
+    # exactly the longest clips. Measured on the Scripts side of the same defect (character
+    # level, `Baden-Baden_EN` s10): a fully correct clean scored 0.703 with the default and
+    # 0.985 without it. It can only ever depress a score, so removing it cannot admit a
+    # hallucination.
     matched = sum(b.size for b in
-                  difflib.SequenceMatcher(None, skeleton, out_words).get_matching_blocks())
+                  difflib.SequenceMatcher(None, skeleton, out_words,
+                                          autojunk=False).get_matching_blocks())
     return matched / len(skeleton), growth_ok
 
 

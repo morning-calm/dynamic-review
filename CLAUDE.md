@@ -172,14 +172,22 @@ Whisper around every number. **Do not port these prompts back in here.**
   had surgical — the aligner was scoring raw 「634」 against kana audio. Regression suite:
   `backend/tests/test_cjk_voicing_parity.py`.
 - **The accept/reject guard (`clean_accepted`)**: where Scripts has a numeral inventory for the
-  language (`similarity_basis` — today it/jp) that comparison is authoritative. Everywhere else
-  a plain word ratio **rejects correct work** — measured against the 0.80 bar on four perfect
-  cleans: en 0.62, fr 0.71, es 0.40, de 0.47, so number-dense **English** scenes had been
-  falling back to raw digits all along. Replaced with two vocabulary-free arms that must both
-  pass: **recall** of the non-convertible prose skeleton (≥0.9; inserted number words can't
-  lower it) and a **growth** budget (≤8 words per convertible token — recall alone scores an
-  added paragraph 1.0). Registering fr/de/es in `tts_number_clean._STRIPPERS` would let us drop
-  our arm and defer to Scripts everywhere.
+  language (`similarity_basis`) that comparison is authoritative. Everywhere else a plain word
+  ratio **rejects correct work** — measured against the 0.80 bar on four perfect cleans: en 0.62,
+  fr 0.71, es 0.40, de 0.47, so number-dense **English** scenes had been falling back to raw
+  digits all along. Our own arm is two vocabulary-free halves that must both pass: **recall**
+  of the non-convertible prose skeleton (≥0.9; inserted number words can't lower it) and a
+  **growth** budget (≤8 words per convertible token — recall alone scores an added paragraph
+  1.0), both with `autojunk=False` (difflib drops any element in >1% of a 200+ sequence, i.e.
+  the commonest WORDS, so recall was depressed on exactly the longest clips).
+  ⚠ **Since 2026-08-09 EVERY product language is registered in `tts_number_clean._STRIPPERS`
+  (en/fr/de/it/es/zh/jp/ko), so `_prose_survival` no longer runs against an up-to-date Scripts
+  checkout.** It stays, and must: the arm is chosen by feature-detecting the basis, the live
+  laptop is a separate checkout that has sat 30 commits behind, and it's the only arm that
+  needs no vocabulary if a language is added to `_LANG_CODES` before Scripts has a stripper.
+  Registering was NOT cosmetic upstream — the word ratio was voicing raw digits on ES 13%,
+  **ZH 100%** (a space-free script splits into one token, so every change scores 0.00), KO 49%,
+  and EN/FR/DE 30%/48%/24% in the number-dense band (every quiz question and answer option).
 - API failure now reports `used_fallback=True` → `edit_required`. The old port returned the
   *input* on an error, which scored 1.0 against itself and was reported as a **successful**
   clean, so that routing could only ever fire on a similarity miss, never on an outage.

@@ -284,17 +284,46 @@ def test_growth_is_what_catches_insertion():
 @pytest.mark.skipif(not hasattr(audio_core._shared, "similarity_basis"),
                     reason="Scripts checkout predates similarity_basis")
 def test_registered_inventory_defers_to_scripts():
-    """Where Scripts HAS a numeral inventory (it/es/jp) its comparison is authoritative —
-    we only supply our own where it would otherwise degrade to the word ratio.
+    """Where Scripts HAS a numeral inventory its comparison is authoritative — we only supply
+    our own where it would otherwise degrade to the word ratio.
 
-    ⚠ Spanish moved arms on 2026-08-09 with NO change on this side: the arm is chosen by
-    feature-detecting the basis, so registering `es` in the Scripts `_STRIPPERS` was
-    enough. A lagging Scripts checkout keeps Spanish on `_prose_survival` instead, which
-    is why this asserts the basis EXISTS rather than asserting a verdict.
+    ⚠ Spanish moved arms on 2026-08-09 with NO change on this side, and later the same day so
+    did zh/ko/en/fr/de: the arm is chosen by feature-detecting the basis, so registering a
+    language in the Scripts `_STRIPPERS` is the whole change. A lagging Scripts checkout keeps
+    that language on `_prose_survival` instead, which is why this asserts the basis EXISTS
+    rather than asserting a verdict.
+    ⚠ AGAINST AN UP-TO-DATE CHECKOUT NO LANGUAGE IS LEFT ON OUR ARM — hence no `is None` case
+    here any more. `_prose_survival` is still covered by
+    `test_survives_a_scripts_checkout_without_the_inventory` below, which is now the only
+    situation it exists for.
     """
-    assert audio_core._scripts_inventory_basis("it", "nel 1348") is not None
-    assert audio_core._scripts_inventory_basis("es", "en 1868") is not None
-    assert audio_core._scripts_inventory_basis("fr", "en 1668") is None
+    for lang, probe in (
+        ("it", "nel 1348"),
+        ("es", "en 1868"),
+        ("fr", "en 1668"),
+        ("de", "im 1868"),
+        ("en", "in 1868"),
+        ("zh", "1868年"),
+        ("ko", "1868년"),
+        ("jp", "1868ねん"),
+    ):
+        assert audio_core._scripts_inventory_basis(lang, probe) is not None, lang
+
+
+@pytest.mark.parametrize("lang", ["en", "fr", "de", "it", "es", "jp"])
+def test_the_scripts_arm_is_the_one_taken(lang, monkeypatch):
+    """The test above proves only that Scripts REGISTERED an inventory — a fact about the
+    other repo. This proves we act on it, which is what the removed `fr … is None` line
+    used to imply by contrast: with every language registered there is no longer a negative
+    case to assert, so deferral has to be pinned directly or nothing pins it at all.
+
+    Stubbed to REJECT a clean `_prose_survival` accepts at recall 1.0, so a silent fall-back
+    to our arm shows up as True. The six languages here are exactly those that reach
+    `clean_accepted`: zh/ko divert to their own harnesses before the retry loop, so a
+    stripper being registered for them changes nothing on this side."""
+    monkeypatch.setattr(audio_core._shared, "clean_similarity", lambda *a, **k: 0.0)
+    assert not audio_core.clean_accepted(
+        lang, "built in 1868", "built in eighteen sixty eight")
 
 
 def test_survives_a_scripts_checkout_without_the_inventory(monkeypatch):

@@ -27,12 +27,16 @@ All found while wiring the review app to the shared cleaner; none blocks anythin
    voicing-parity fix): prompt clause + two deterministic dedup guards in
    `mandarin_number_clean` (`_PAREN_DUP_RE` for 「一九九九年（一九九九年）」, `_YEAR_DUP_RE`
    for the sibling 「一九九九年年」 flake). Commit lives in `dynamic-content`.
-2. **Register `fr`/`de`/`es` in `tts_number_clean._STRIPPERS`.** Without an inventory,
-   `clean_similarity` degrades to a word ratio that REJECTS correct expansions — measured
-   against the 0.80 bar on four perfect cleans: en 0.62, fr 0.71, es 0.40, de 0.47. The
-   pipeline's own templates use the same measure, so they are discarding correct work too.
-   The review app works around it (`audio_core._prose_survival`); doing it properly upstream
-   would let that arm be retired.
+2. ~~**Register `fr`/`de`/`es` in `tts_number_clean._STRIPPERS`**~~ — **DONE 2026-08-09**, and
+   it went further than the ask: en/fr/de/it/es/zh/jp/ko are ALL registered (`efccc236` in
+   `dynamic-content`), plus `clean_similarity` now pre-expands the original before comparing
+   and `difflib`'s `autojunk` is off on both sides. The word ratio was voicing raw digits on
+   ES 13%, **ZH 100%**, KO 49% and EN/FR/DE 30%/48%/24% in the number-dense band; 504 clips
+   across 123 trips were re-voiced. `_prose_survival` is now unreachable against an
+   up-to-date Scripts checkout but is **deliberately kept**, not retired — the arm is chosen
+   by feature-detecting the basis, the laptop is a separate checkout that has sat 30 commits
+   behind, and it is the only arm needing no vocabulary if a language reaches `_LANG_CODES`
+   before Scripts has a stripper for it. App side: `CLEANER_VERSION` → `5-…`.
 3. **Non-EN prompt templates have no `{extra}` slot** (only en/zh/jp/ko do), so per-trip
    pronunciation-override *reinforcement* is silently dropped for fr/de/es/it. The
    `apply_overrides` text substitution still happens, so this is degradation, not breakage.
