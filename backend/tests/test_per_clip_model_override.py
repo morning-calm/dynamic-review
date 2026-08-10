@@ -74,3 +74,51 @@ def test_validated_model_rejects_unknown():
     with pytest.raises(HTTPException) as e:
         sessions._validated_model("eleven_v99")
     assert e.value.status_code == 422
+
+
+class _FakeResp:
+    status_code = 200
+
+    @staticmethod
+    def json():
+        import base64
+        return {"audio_base64": base64.b64encode(b"mp3").decode(),
+                "alignment": {"characters": ["h", "i"],
+                              "character_start_times_seconds": [0.0, 0.1],
+                              "character_end_times_seconds": [0.1, 0.2]}}
+
+
+def _capture_ts_bodies(monkeypatch):
+    """Route audio_core's with-timestamps POST into a list of captured bodies."""
+    bodies = []
+
+    def fake_post(url, json=None, headers=None, timeout=None):
+        bodies.append(json)
+        return _FakeResp()
+
+    monkeypatch.setattr(audio_core.requests, "post", fake_post)
+    return bodies
+
+
+def test_v3_request_never_carries_prosody_context(monkeypatch):
+    # Replicates the 2026-08-10 live 400: the English splice engine (plan_segment)
+    # always sends previous_text/next_text, and eleven_v3 rejects them outright
+    # ("unsupported_model ... previous_text or next_text is not yet supported").
+    # The guard must live in the choke point, not at call sites — the CJK engine
+    # carried per-site guards and the EN engine (v2-only until the per-clip V3
+    # override) predictably lacked one.
+    bodies = _capture_ts_bodies(monkeypatch)
+    audio_core.generate_with_timestamps(
+        "hi", "voice-id", {"stability": 0.5}, "prev context", "next context",
+        model_id="eleven_v3")
+    assert len(bodies) == 1, "context is dropped BEFORE the call — no leak-retry either"
+    assert "previous_text" not in bodies[0] and "next_text" not in bodies[0]
+
+
+def test_v2_request_keeps_prosody_context(monkeypatch):
+    bodies = _capture_ts_bodies(monkeypatch)
+    audio_core.generate_with_timestamps(
+        "hi", "voice-id", {"stability": 0.5}, "prev context", "next context",
+        model_id="eleven_multilingual_v2")
+    assert bodies[0]["previous_text"] == "prev context"
+    assert bodies[0]["next_text"] == "next context"

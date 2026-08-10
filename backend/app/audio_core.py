@@ -725,6 +725,14 @@ def generate_with_timestamps(text: str, voice_id: str, voice_settings: dict,
     tail of the context before the phrase), re-request ONCE without ``previous_text``
     — a clause-length phrase has acceptable standalone prosody (the JP/v3 path omits
     context entirely), and clean audio beats a leaky lead."""
+    if model_id == "eleven_v3":
+        # v3 hard-rejects previous_text/next_text on /with-timestamps
+        # ("unsupported_model", live 400 on the first spliced V3 fix-pronunciation,
+        # 2026-08-10). Drop them HERE, at the choke point, so no caller has to know:
+        # cjk_splice guards its own two call sites, but the English engine
+        # (plan_segment) was v2-only until the per-clip V3 override and predictably
+        # didn't. Nulling before the first call also keeps the leak-retry below inert.
+        previous_text = next_text = None
     mp3, words = _generate_with_timestamps(text, voice_id, voice_settings,
                                            previous_text, next_text, model_id)
     if previous_text and words and float(words[0]["start"] or 0.0) > _LEAK_RETRY_LEAD_S:
