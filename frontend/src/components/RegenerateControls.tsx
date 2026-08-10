@@ -3,6 +3,7 @@ import Modal from 'react-modal';
 import { toast } from 'react-toastify';
 import { api, ApiError, type Field, type RegenerateMode } from '../api';
 import type { CapturedSelection } from '../hooks';
+import { offersV3, useNarration, v3IgnoresSpeed, V3_MODEL } from '../narrationContext';
 import InlineDiff from './InlineDiff';
 import ManualEditModal from './ManualEditModal';
 import WaveformEditor from './WaveformEditor';
@@ -77,10 +78,18 @@ const RegenerateControls = ({
   const [altRange, setAltRange] = useState<{ start: number; end: number } | null>(null);
   const [altText, setAltText] = useState('');
   const [altWhole, setAltWhole] = useState(false); // true → voice alt text as the WHOLE field
+  // One-off V3 for THIS take (whole-block Fix pronunciation only): offered when the
+  // session voices with v2 and the v2 take won't say a word right however it's spelled.
+  // CJK sessions are v3 end-to-end, so the offer never shows there. v3 ignores the
+  // narration speed, hence the slowed-trip (A12/B1) warning in the modal.
+  const narration = useNarration();
+  const v3Offer = offersV3(narration);
+  const v3SpeedWarn = v3IgnoresSpeed(narration);
+  const [altV3, setAltV3] = useState(false);
   // The exact params of the last regenerate, so a candidate can be re-rolled identically
   // (TTS is non-deterministic → a fresh take) if the first one has an issue.
   const [lastRegen, setLastRegen] = useState<
-    { mode: RegenerateMode; range?: { start: number; end: number }; alt?: string } | null
+    { mode: RegenerateMode; range?: { start: number; end: number }; alt?: string; model?: string } | null
   >(null);
 
   const afterRegen = (updated: Field) => {
@@ -97,12 +106,13 @@ const RegenerateControls = ({
     mode: RegenerateMode,
     range?: { start: number; end: number },
     alt?: string,
+    model?: string,
   ) => {
     setBusy(true);
-    setLastRegen({ mode, range, alt });
+    setLastRegen({ mode, range, alt, model });
     try {
       await onBeforeRegenerate?.(); // S3: persist the latest text before the server diffs it
-      const updated = await api.regenerate(sid, field.fid, mode, range, alt);
+      const updated = await api.regenerate(sid, field.fid, mode, range, alt, model);
       afterRegen(updated);
     } catch (e: unknown) {
       // 409 = the server refused with directions (e.g. un-voiced edits outside the
@@ -114,10 +124,10 @@ const RegenerateControls = ({
     }
   };
 
-  // Re-roll the current candidate with the IDENTICAL request (same span/alt text).
+  // Re-roll the current candidate with the IDENTICAL request (same span/alt text/model).
   const redoCandidate = () => {
     if (!lastRegen) return;
-    regen(lastRegen.mode, lastRegen.range, lastRegen.alt);
+    regen(lastRegen.mode, lastRegen.range, lastRegen.alt, lastRegen.model);
   };
 
   // Undo / redo through the working take's audio version history.
@@ -170,6 +180,7 @@ const RegenerateControls = ({
       return;
     }
     setAltWhole(false);
+    setAltV3(false);
     setAltRange(range);
     // Prefill with the highlighted words so the reviewer tweaks the spelling/phonetics
     // rather than retyping the whole phrase from scratch. The offsets index into the
@@ -181,6 +192,7 @@ const RegenerateControls = ({
   // Whole-field alt text (question options / Q&A — no selection): voice it as the whole block.
   const onAltTextWhole = () => {
     setAltWhole(true);
+    setAltV3(false);
     setAltRange(null);
     setAltText('');
     setAltOpen(true);
@@ -191,7 +203,9 @@ const RegenerateControls = ({
       toast.warn('Type the text for ElevenLabs to speak.');
       return;
     }
-    if (altWhole) regen('whole', undefined, altText.trim());
+    // The V3 option is whole-block only: a v3 phrase spliced INTO a v2 take would put a
+    // model-timbre seam inside one clip (the highlighted variant stays on the session model).
+    if (altWhole) regen('whole', undefined, altText.trim(), altV3 ? V3_MODEL : undefined);
     else if (altRange) regen('alt', altRange, altText.trim());
     setAltOpen(false);
   };
@@ -894,6 +908,26 @@ const RegenerateControls = ({
           autoFocus
           className="mb-3 w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-base sm:text-sm"
         />
+        {altWhole && v3Offer && (
+          <div className="mb-3 space-y-1">
+            <label className="flex items-center gap-2 text-xs text-gray-300">
+              <input
+                type="checkbox"
+                checked={altV3}
+                onChange={(e) => setAltV3(e.target.checked)}
+                className="h-4 w-4 accent-custom-green"
+              />
+              Voice with the V3 model — try this when the normal (V2) voice won’t say it right,
+              however it’s spelled. This take only; everything else stays on V2.
+            </label>
+            {altV3 && v3SpeedWarn && (
+              <p className="pl-6 text-xs text-amber-300">
+                V3 ignores this trip’s slow narration speed ({narration?.speed}×) — this clip
+                will come out at full speed, faster than its neighbours.
+              </p>
+            )}
+          </div>
+        )}
         <div className="flex justify-end gap-2">
           <button type="button" disabled={busy} onClick={() => setAltOpen(false)} className={`${btn} border-gray-600 text-gray-300`}>
             Cancel

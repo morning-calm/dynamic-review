@@ -26,6 +26,7 @@ import ExternalReports from '../components/ExternalReports';
 import CategoryEditor from '../components/CategoryEditor';
 import { useAuth } from '../authContext';
 import { useHeartbeat } from '../usePresence';
+import { NarrationContext } from '../narrationContext';
 
 /** Scroll the first not-yet-done field into view (document order, read from the DOM
  * anchors FlagControl renders). Returns true if one was found. */
@@ -199,6 +200,21 @@ const ReviewBody = () => {
     [],
   );
 
+  // The session's effective model + speed, for the per-clip "Voice with V3" offer in
+  // RegenerateControls / ManualEditModal (memoised — a fresh object per render would
+  // re-render every consumer, bypassing SceneCard's memo). Keyed on the two VALUES, not
+  // on `session`: setSession replaces the whole object on unrelated edits (e.g. the
+  // category editor), which would hand every consumer a new context value for nothing.
+  const sessionModel = session?.model;
+  const sessionSpeed = session?.speed;
+  const narrationInfo = useMemo(
+    () =>
+      sessionModel !== undefined && sessionSpeed !== undefined
+        ? { model: sessionModel, speed: sessionSpeed }
+        : null,
+    [sessionModel, sessionSpeed],
+  );
+
   // Stable updater. Replaces only the changed field's array entry so unchanged
   // scene arrays keep their reference and memoised SceneCards skip re-rendering.
   const updateField = useCallback((f: Field) => {
@@ -237,7 +253,7 @@ const ReviewBody = () => {
   const isZh = session.is_zh;
 
   return (
-    <>
+    <NarrationContext.Provider value={narrationInfo}>
       <NavBar
         title={session.trip_id}
         subtitle={`${session.folder_name} · voice: ${session.voice_display}${
@@ -466,7 +482,7 @@ const ReviewBody = () => {
           </section>
         )}
       </main>
-    </>
+    </NarrationContext.Provider>
   );
 };
 

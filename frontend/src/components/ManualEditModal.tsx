@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Modal from 'react-modal';
 import { toast } from 'react-toastify';
 import { api, ApiError, type Field, type ManualClip } from '../api';
+import { offersV3, useNarration, v3IgnoresSpeed, V3_MODEL } from '../narrationContext';
 
 const MODAL_STYLE: Modal.Styles = {
   overlay: { backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 50 },
@@ -49,6 +50,10 @@ interface RowProps {
 const ClipRow = ({ clip, sid, fid, busy, setBusy, onFieldUpdate }: RowProps) => {
   const [text, setText] = useState(clip.text);
   const [note, setNote] = useState(clip.comment);
+  // Same one-off V3 offer as the draft flow — a saved take may need re-voicing on V3
+  // too (and without this, re-voicing a V3 take would silently render it back on V2).
+  const v3Offer = offersV3(useNarration());
+  const [useV3, setUseV3] = useState(false);
   const isGen = clip.kind === 'generated';
   const forAdmin = Boolean(clip.comment.trim());
 
@@ -113,11 +118,24 @@ const ClipRow = ({ clip, sid, fid, busy, setBusy, onFieldUpdate }: RowProps) => 
           <button
             type="button"
             disabled={busy}
-            onClick={() => run(() => api.regenClip(sid, fid, clip.id, text), 'Regenerate')}
+            onClick={() =>
+              run(() => api.regenClip(sid, fid, clip.id, text, useV3 ? V3_MODEL : undefined), 'Regenerate')
+            }
             className={`${btn} border-gray-600 text-gray-200`}
           >
             Re-voice
           </button>
+        )}
+        {isGen && v3Offer && (
+          <label className="flex items-center gap-1.5 text-xs text-gray-300">
+            <input
+              type="checkbox"
+              checked={useV3}
+              onChange={(e) => setUseV3(e.target.checked)}
+              className="h-4 w-4 accent-custom-green"
+            />
+            with V3
+          </label>
         )}
         <button
           type="button"
@@ -147,6 +165,12 @@ const ManualEditModal = ({ field, sid, isOpen, onClose, onFieldUpdate, onInsertR
   const [newText, setNewText] = useState(field.current_text);
   const [comment, setComment] = useState('');
   const [draftId, setDraftId] = useState<number | null>(null);
+  // One-off V3 for the generated take — offered when the session voices with v2 (CJK
+  // sessions are already v3). v3 ignores the narration speed, hence the slowed-trip warning.
+  const narration = useNarration();
+  const v3Offer = offersV3(narration);
+  const v3SpeedWarn = v3IgnoresSpeed(narration);
+  const [useV3, setUseV3] = useState(false);
 
   const draft = draftId === null ? null : field.manual_clips.find((c) => c.id === draftId) ?? null;
   // Everything that isn't the in-progress draft is saved — with a note (for the admin) or
@@ -158,6 +182,7 @@ const ManualEditModal = ({ field, sid, isOpen, onClose, onFieldUpdate, onInsertR
     setDraftId(null);
     setComment('');
     setNewText(field.current_text);
+    setUseV3(false);
   };
 
   const generate = async () => {
@@ -167,13 +192,14 @@ const ManualEditModal = ({ field, sid, isOpen, onClose, onFieldUpdate, onInsertR
     }
     setBusy(true);
     try {
+      const model = useV3 ? V3_MODEL : undefined;
       if (draftId !== null) {
         // Re-voice the existing draft in place (a fresh take of the same text).
-        onFieldUpdate(await api.regenClip(sid, field.fid, draftId, newText));
+        onFieldUpdate(await api.regenClip(sid, field.fid, draftId, newText, model));
         toast.success('Re-voiced the draft — audition it, then Save attachment.');
       } else {
         const prev = new Set(field.manual_clips.map((c) => c.id));
-        const updated = await api.createClip(sid, field.fid, newText, '');
+        const updated = await api.createClip(sid, field.fid, newText, '', model);
         onFieldUpdate(updated);
         const added = updated.manual_clips.find((c) => !prev.has(c.id));
         if (added) setDraftId(added.id);
@@ -286,6 +312,26 @@ const ManualEditModal = ({ field, sid, isOpen, onClose, onFieldUpdate, onInsertR
           placeholder="Text to voice for a new take"
           className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-base sm:text-sm"
         />
+        {v3Offer && (
+          <div className="space-y-1">
+            <label className="flex items-center gap-2 text-xs text-gray-300">
+              <input
+                type="checkbox"
+                checked={useV3}
+                onChange={(e) => setUseV3(e.target.checked)}
+                className="h-4 w-4 accent-custom-green"
+              />
+              Voice with the V3 model — try this when the normal (V2) voice won’t say it right,
+              however it’s spelled. This take only.
+            </label>
+            {useV3 && v3SpeedWarn && (
+              <p className="pl-6 text-xs text-amber-300">
+                V3 ignores this trip’s slow narration speed ({narration?.speed}×) — this take
+                will come out at full speed, faster than the surrounding audio.
+              </p>
+            )}
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" disabled={busy} onClick={generate} className={`${btn} border-gray-600 text-gray-200`}>
             {draftId !== null ? 'Re-voice draft' : 'Generate take'}

@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { Field, Session } from '../api';
+import { NarrationContext } from '../narrationContext';
 import { fieldChanged } from '../fieldDiff';
 import { useSaveCoordinator } from '../saveStatusContext';
 import SaveStatus from './SaveStatus';
@@ -19,6 +20,14 @@ import ZhFieldBlock from './ZhFieldBlock';
  */
 const AdminInlineEdit = ({ session, onUpdate }: { session: Session; onUpdate: (f: Field) => void }) => {
   const { state: saveState } = useSaveCoordinator();
+  // Session model + speed for the per-clip "Voice with V3" offer (RegenerateControls /
+  // ManualEditModal read it via context — same as ReviewPage). Keyed on the two VALUES:
+  // here `session` is replaced on EVERY field update (ChangesSummaryPage.onUpdate), so a
+  // `[session]` dep would make the memo a no-op and churn the context value constantly.
+  const narrationInfo = useMemo(
+    () => ({ model: session.model, speed: session.speed }),
+    [session.model, session.speed],
+  );
   // -1 = the trip-header pseudo-scene.
   const [open, setOpen] = useState<Set<number>>(new Set());
   const toggle = (k: number) =>
@@ -44,6 +53,7 @@ const AdminInlineEdit = ({ session, onUpdate }: { session: Session; onUpdate: (f
   );
 
   return (
+    <NarrationContext.Provider value={narrationInfo}>
     <section className="rounded-lg border border-purple-800/60 bg-gray-800/60 p-4">
       <div className="mb-1 flex flex-wrap items-center gap-3">
         <h2 className="text-sm font-semibold text-white">Edit inline (admin)</h2>
@@ -164,6 +174,7 @@ const AdminInlineEdit = ({ session, onUpdate }: { session: Session; onUpdate: (f
         );
       })}
     </section>
+    </NarrationContext.Provider>
   );
 };
 

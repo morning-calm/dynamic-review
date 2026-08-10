@@ -100,7 +100,7 @@ def post_version(sid: str, body: VersionSet):
 @router.post("/sessions/{sid}/fields/{fid}/regenerate", dependencies=_EDIT)
 def post_regenerate(sid: str, fid: int, body: Regenerate):
     rng = body.range.model_dump() if body.range else None
-    return sessions.regenerate(sid, fid, body.mode, rng, body.alt_text)
+    return sessions.regenerate(sid, fid, body.mode, rng, body.alt_text, body.model)
 
 
 @router.post("/sessions/{sid}/fields/{fid}/combine", dependencies=_EDIT)
@@ -196,7 +196,7 @@ async def post_import(sid: str, fid: int, file: UploadFile = File(...)):
 # --- "Create new" attachment workspace (manual edit) ---
 @router.post("/sessions/{sid}/fields/{fid}/clips", dependencies=_EDIT)
 def post_clip(sid: str, fid: int, body: ClipCreate):
-    return sessions.create_clip(sid, fid, body.text, body.comment)
+    return sessions.create_clip(sid, fid, body.text, body.comment, body.model)
 
 
 @router.post("/sessions/{sid}/fields/{fid}/clips/upload", dependencies=_EDIT)
@@ -208,7 +208,7 @@ async def post_clip_upload(sid: str, fid: int, file: UploadFile = File(...),
 
 @router.post("/sessions/{sid}/fields/{fid}/clips/{cid}/regenerate", dependencies=_EDIT)
 def post_clip_regen(sid: str, fid: int, cid: int, body: ClipRegen):
-    return sessions.regenerate_clip(sid, fid, cid, body.text)
+    return sessions.regenerate_clip(sid, fid, cid, body.text, body.model)
 
 
 @router.post("/sessions/{sid}/fields/{fid}/clips/{cid}/comment", dependencies=_EDIT)

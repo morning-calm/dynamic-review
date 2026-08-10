@@ -98,8 +98,16 @@ def _findings(con):
 
 
 def _resubmit(con):
+    # Strictly after the newest report row: Windows time.time() ticks at ~16 ms, so a
+    # bare time.time() here can land in the SAME tick as the created_at the runner just
+    # wrote — pending_sessions' strict `created_at < updated_at` then judges the session
+    # already-reviewed and the test flakes (~30% on this box). A human re-submit can't
+    # land within one tick of the cron's report write, so the nudge only de-flakes the
+    # test, it doesn't paper over a live ordering bug.
+    latest = con.execute(
+        "SELECT COALESCE(MAX(created_at), 0) FROM auto_reviews").fetchone()[0]
     con.execute("UPDATE sessions SET status='submitted', updated_at=? WHERE id=?",
-                (time.time(), SID))
+                (max(time.time(), latest + 0.001), SID))
     con.commit()
 
 

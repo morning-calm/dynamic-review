@@ -21,6 +21,16 @@ separate reviewer — you review and approve them in one pass.
     them, Regenerate highlighted. (The old *Generate from edit* button — a whole-field text
     diff — was removed 2026-08-05: its splices were unreliable, and highlight / the waveform
     editor cover every case.)
+  - **Voice with the V3 model** (checkbox, V2 trips only) — when the normal (V2) voice won't say
+    a word right *however* you spell it, tick this to voice that one take with ElevenLabs V3
+    instead. It appears in the whole-block **Fix pronunciation…** popup (questions/answer
+    options) and in **Create new** (for a narration phrase: generate the V3 take, then
+    **Save & insert…** it via the waveform). It applies to that single take only — everything
+    else stays on V2, and the next regenerate is back on V2 automatically. ⚠ On slowed trips
+    (A1-2 / B1) V3 ignores the narration speed, so the take comes out **full-speed** — listen
+    for the pace difference against the neighbouring audio before keeping it. A combined V3
+    take leaves an automatic note on the part so it's clear later why that clip sounds
+    different.
   - **Trim highlighted noise** — highlight where an unwanted blip/breath is and trim it.
     Also available on **question and answer-option audio** (highlight in that field's own
     text box), in every language.
@@ -50,7 +60,8 @@ separate reviewer — you review and approve them in one pass.
   steps through every take).
 - **Replacing a phrase by hand (Create new → Insert new).** When the splice engine won't do a
   spot cleanly, do it yourself:
-  1. **Create new** → type the replacement wording → **Generate take**, audition it, then
+  1. **Create new** → type the replacement wording → **Generate take** (tick **Voice with the
+     V3 model** first if V2 can't pronounce it — see above), audition it, then
      **Save & insert…** (no note needed — you're doing the edit, so the take isn't sent to the
      admin queue and the part isn't flagged edit-required). Use **Save attachment** with a note
      instead when you want someone *else* to action it.
@@ -75,6 +86,8 @@ separate reviewer — you review and approve them in one pass.
 - Per trip you can correct the **voice**, **speed**, or **ElevenLabs model** if the auto-guess
   is wrong. Any take that was regenerated under the old setting is reset to the master (your
   text edits are kept). Untouched master audio is preserved.
+- Don't flip the trip-wide **Model** just to fix one stubborn clip — use the per-take
+  **Voice with the V3 model** checkbox (section 2) instead, which needs no flipping back.
 
 ## 4. Approving a reviewer's submission
 - The **Review queue** lists trips reviewers have submitted.

@@ -146,6 +146,19 @@ def model_for_voice(name: str) -> str:
     return (VOICE_REGISTRY.get(name) or {}).get("model", EL_MODEL)
 
 
+def v3_voice_settings(vs: dict) -> dict:
+    """A v2 voice's settings made acceptable to eleven_v3. v3 ignores `speed` and
+    rejects `style`; `stability` must be exactly 0.0 / 0.5 / 1.0 (the EN/EU voices
+    carry 0.75, which v3 4xxes). Applied at the two API call sites whenever the
+    request is v3, so a per-clip or session-wide model override can send any
+    registry voice to v3 without a bad-settings rejection."""
+    out = {k: v for k, v in vs.items() if k not in ("speed", "style")}
+    st = out.get("stability")
+    if st is not None and st not in (0.0, 0.5, 1.0):
+        out["stability"] = 0.5
+    return out
+
+
 def display_name(name: str) -> str:
     n = (name or "").strip().lower()
     return {"annasu": "Anna-Su", "annakim": "Anna Kim"}.get(n, n.capitalize())
@@ -684,6 +697,8 @@ def _headers() -> dict:
 def generate_audio(text: str, voice_id: str, voice_settings: dict,
                    model_id: str = EL_MODEL) -> bytes:
     """Plain TTS → mp3 bytes (whole-block + fallback clips). Raises on non-200."""
+    if model_id == "eleven_v3":
+        voice_settings = v3_voice_settings(voice_settings)
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     body = {"text": text, "model_id": model_id, "voice_settings": voice_settings}
     r = requests.post(url, json=body, headers=_headers(), timeout=180)
@@ -726,6 +741,8 @@ def _generate_with_timestamps(text: str, voice_id: str, voice_settings: dict,
 
     Words are aggregated from the per-character alignment by splitting on spaces;
     word.start = first char start, word.end = last char end."""
+    if model_id == "eleven_v3":
+        voice_settings = v3_voice_settings(voice_settings)
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/with-timestamps"
     body = {"text": text, "model_id": model_id, "voice_settings": voice_settings}
     if previous_text:

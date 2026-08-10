@@ -2316,7 +2316,7 @@ _CAND_TAIL_FLOOR_PAD_S = 0.13
 
 
 def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
-               alt_text: str | None = None) -> dict:
+               alt_text: str | None = None, model: str | None = None) -> dict:
     srow = _session_row(sid)
     frow = _field_row(sid, fid)
     if not frow["has_audio"]:
@@ -2324,7 +2324,11 @@ def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
                                          "detail": "field has no audio"})
     voice_id, voice_settings = audio_core.VOICES[srow["voice"]]
     voice_settings = {**voice_settings, "speed": _effective_speed(srow)}
-    model_id = _effective_model(srow)
+    # ``model``: a one-off override for THIS candidate only (the Fix-pronunciation
+    # "voice with V3" checkbox) — nothing is stored on the session, so the next
+    # regenerate is back on the session model. v3 ignores speed and needs its
+    # settings sanitized; audio_core does that at the API call sites.
+    model_id = _validated_model(model) or _effective_model(srow)
     dirs = work_dirs(sid)
     cand_path = dirs["candidate"] / f"{fid}.mp3"
 
@@ -2571,6 +2575,9 @@ def regenerate(sid: str, fid: int, mode: str, rng: dict | None,
         audio_io.samples_to_mp3(trimmed, cand_path)
     plan.meta["cand_trim_ms"] = round(
         (len(cand_samples) - len(trimmed)) / audio_io.SR * 1000.0, 1)
+    # What model voiced this candidate — combine reads it to note a one-off override
+    # on the field (an admin listening later should know why one clip sounds different).
+    plan.meta["model_id"] = model_id
     patch = {"candidate_mp3_path": str(cand_path),
              "splice_meta_json": json.dumps(plan.meta)}
     if plan.edit_required:        # S2: whole regen voiced from raw (uncleaned) text
@@ -2592,6 +2599,12 @@ def combine(sid: str, fid: int) -> dict:
                                          "detail": "regenerate first"})
     meta = json.loads(frow["splice_meta_json"] or "{}")
     dirs = work_dirs(sid)
+    # A candidate voiced under a one-off model override (≠ the session model — the
+    # Fix-pronunciation V3 checkbox) leaves a note on the field: an admin listening
+    # later should know why this one clip sounds different from its neighbours.
+    cand_model = meta.get("model_id")
+    model_note = (f"voiced with {cand_model} (one-off model override)"
+                  if cand_model and cand_model != _effective_model(srow) else None)
     # Every combined take ends on the trip's required trailing pause: the 3s beginner
     # pause is for the NARRATION only (SceneDesc); questions/options/titles keep a small
     # 0.4s. A whole TTS candidate lacks the beginner tail and a segment splice can disturb
@@ -2612,6 +2625,9 @@ def combine(sid: str, fid: int) -> dict:
                  "candidate_mp3_path": None, "working_text": frow["current_text"]}
         patch.update(_clear_coverage_and_done(frow))
         patch.update(_zh_working_hans_patch(frow))   # re-baseline ZH OLD to this take
+        if model_note:      # same form as the segment branch: never clobber a note
+            patch["comment"] = _append_note(patch.get("comment") or frow["comment"],
+                                            model_note)
         db.update_fields(fid, **patch)
         db.touch_session(sid)
         warm_whisper_async(sid, fid)   # re-transcribe the new take in the background
@@ -2641,6 +2657,9 @@ def combine(sid: str, fid: int) -> dict:
             frow["comment"],
             f"Low splice confidence ({result.confidence}); please verify or send to "
             f"manual edit.")
+    if model_note:
+        patch["comment"] = _append_note(patch.get("comment") or frow["comment"],
+                                        model_note)
     db.update_fields(fid, **patch)
     db.touch_session(sid)
     warm_whisper_async(sid, fid)   # re-transcribe the new take in the background
@@ -2772,12 +2791,14 @@ def _clips_for(sid: str, fid: int) -> list[dict]:
         "SELECT * FROM manual_clips WHERE field_id=? ORDER BY id", (fid,))]
 
 
-def _render_clip(srow, cid: int, text: str) -> None:
+def _render_clip(srow, cid: int, text: str, model: str | None = None) -> None:
     """Voice ``text`` VERBATIM (no number cleaning — manual edit = full control) at the
-    session voice/speed/model and write it to the clip's file."""
+    session voice/speed/model and write it to the clip's file. ``model`` is a one-off
+    override for this take (the Create-new V3 checkbox); not stored on the clip."""
     voice_id, voice_settings = audio_core.VOICES[srow["voice"]]
     voice_settings = {**voice_settings, "speed": _effective_speed(srow)}
-    mp3 = audio_core.generate_audio(text, voice_id, voice_settings, _effective_model(srow))
+    mp3 = audio_core.generate_audio(text, voice_id, voice_settings,
+                                    _validated_model(model) or _effective_model(srow))
     path = work_dirs(srow["id"])["clips"] / f"clip_{cid}.mp3"
     path.write_bytes(mp3)
     db.execute("UPDATE manual_clips SET path=? WHERE id=?", (str(path), cid))
@@ -2790,7 +2811,8 @@ def _flag_edit_required_for_clip(fid: int, frow) -> None:
         db.update_fields(fid, flag="edit_required")
 
 
-def create_clip(sid: str, fid: int, text: str, comment: str = "") -> dict:
+def create_clip(sid: str, fid: int, text: str, comment: str = "",
+                model: str | None = None) -> dict:
     """Voice a 'Create new' take. Comment is OPTIONAL here: the reviewer generates a DRAFT
     (no comment, no flag), auditions it, then commits it with a note via set_clip_comment —
     which is what flags the field edit-required. A clip with no comment is an unsaved draft."""
@@ -2805,7 +2827,7 @@ def create_clip(sid: str, fid: int, text: str, comment: str = "") -> dict:
         "INSERT INTO manual_clips(session_id,field_id,text,kind,comment,path,created_at) "
         "VALUES(?,?,?,?,?,?,?)",
         (sid, fid, text or "", "generated", (comment or "").strip(), "", time.time()))
-    _render_clip(srow, cid, txt)
+    _render_clip(srow, cid, txt, model)
     if (comment or "").strip():
         _flag_edit_required_for_clip(fid, frow)
     db.touch_session(sid)
@@ -2825,7 +2847,8 @@ def set_clip_comment(sid: str, fid: int, cid: int, comment: str) -> dict:
     return serialize_field(sid, _field_row(sid, fid))
 
 
-def regenerate_clip(sid: str, fid: int, cid: int, text: str | None) -> dict:
+def regenerate_clip(sid: str, fid: int, cid: int, text: str | None,
+                    model: str | None = None) -> dict:
     srow = _session_row(sid)
     _field_row(sid, fid)
     c = _clip_row(sid, fid, cid)
@@ -2834,7 +2857,7 @@ def regenerate_clip(sid: str, fid: int, cid: int, text: str | None) -> dict:
     if not txt:
         raise HTTPException(400, detail={"error": "empty", "detail": "clip text required"})
     db.execute("UPDATE manual_clips SET text=? WHERE id=?", (new_text or "", cid))
-    _render_clip(srow, cid, txt)
+    _render_clip(srow, cid, txt, model)
     db.touch_session(sid)
     return serialize_field(sid, _field_row(sid, fid))
 
@@ -3684,6 +3707,16 @@ def _effective_speed(srow) -> float:
 
 def _effective_model(srow) -> str:
     return _srow_get(srow, "model_override") or audio_core.model_for_voice(srow["voice"])
+
+
+def _validated_model(model: str | None) -> str | None:
+    """A per-request model override, checked against the known model list (422 on an
+    unknown id — same contract as set_narration). None passes through: caller falls
+    back to the session's effective model."""
+    if model is not None and model not in audio_core.EL_MODELS:
+        raise HTTPException(422, detail={"error": "bad_model",
+                                         "detail": f"unknown model {model!r}"})
+    return model
 
 
 def _field_was_regenerated(dirs, frow) -> bool:

@@ -168,6 +168,10 @@ class Regenerate(BaseModel):
     mode: Literal["whole", "highlight", "alt"]
     range: Optional[RegenRange] = None
     alt_text: Optional[str] = None   # mode="alt": free/phonetic text to voice in the span
+    # One-off ElevenLabs model for THIS candidate only (e.g. eleven_v3 when the v2 take
+    # won't say a word right). Nothing is persisted — the next regenerate reverts to the
+    # session model. None → the session's effective model, as ever.
+    model: Optional[str] = None
 
 
 class TrimNoise(BaseModel):
@@ -243,10 +247,12 @@ class CommentSet(BaseModel):
 class ClipCreate(BaseModel):
     text: str
     comment: str = ""   # required instruction to the admin about this 'Create new' take
+    model: Optional[str] = None   # one-off model for this take (e.g. eleven_v3)
 
 
 class ClipRegen(BaseModel):
     text: Optional[str] = None   # None → re-voice the clip's existing text
+    model: Optional[str] = None   # one-off model for this take (e.g. eleven_v3)
 
 
 class ClipComment(BaseModel):

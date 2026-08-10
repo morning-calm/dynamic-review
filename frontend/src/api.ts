@@ -860,11 +860,13 @@ export const api = {
     mode: RegenerateMode,
     range?: { start: number; end: number },
     altText?: string,
+    model?: string, // one-off ElevenLabs model for THIS candidate (e.g. 'eleven_v3')
   ): Promise<Field> =>
     postJson(field(sid, fid, '/regenerate'), {
       mode,
       ...(range ? { range } : {}),
       ...(altText !== undefined ? { alt_text: altText } : {}),
+      ...(model ? { model } : {}),
     }),
 
   combine: (sid: string, fid: number): Promise<Field> => postJson(field(sid, fid, '/combine')),
@@ -973,8 +975,8 @@ export const api = {
   redoAudio: (sid: string, fid: number): Promise<Field> => postJson(field(sid, fid, '/redo')),
 
   // --- "Create new" attachments (manual edit): new takes for the admin, NOT the working take ---
-  createClip: (sid: string, fid: number, text: string, comment: string): Promise<Field> =>
-    postJson(field(sid, fid, '/clips'), { text, comment }),
+  createClip: (sid: string, fid: number, text: string, comment: string, model?: string): Promise<Field> =>
+    postJson(field(sid, fid, '/clips'), { text, comment, ...(model ? { model } : {}) }),
 
   importClip: async (sid: string, fid: number, file: File, comment: string): Promise<Field> => {
     const form = new FormData();
@@ -987,8 +989,8 @@ export const api = {
     });
   },
 
-  regenClip: (sid: string, fid: number, cid: number, text?: string): Promise<Field> =>
-    postJson(field(sid, fid, `/clips/${cid}/regenerate`), { text }),
+  regenClip: (sid: string, fid: number, cid: number, text?: string, model?: string): Promise<Field> =>
+    postJson(field(sid, fid, `/clips/${cid}/regenerate`), { text, ...(model ? { model } : {}) }),
 
   // Attach / edit the admin note on a take. A non-empty note commits a draft (flags the
   // field edit-required); '' leaves it a draft.
