@@ -272,7 +272,9 @@ CREATE TABLE IF NOT EXISTS auto_reviews (
     ok_count     INTEGER NOT NULL DEFAULT 0,
     warn_count   INTEGER NOT NULL DEFAULT 0,
     flag_count   INTEGER NOT NULL DEFAULT 0,
-    report_json  TEXT NOT NULL DEFAULT '{}'     -- Gate-2 per-field verdicts (see claude_review.py)
+    report_json  TEXT NOT NULL DEFAULT '{}',    -- Gate-2 per-field verdicts (see claude_review.py)
+    input_json   TEXT                           -- the diff this report judged: the runner's
+                                                -- incremental-review baseline (2026-08-10)
 );
 
 -- NOTE: auto_review_findings lives in auto_review_ingest.FINDINGS_DDL (applied below in
@@ -318,6 +320,9 @@ def init() -> None:
             conn.execute("ALTER TABLE sessions ADD COLUMN speed_override REAL")
         if "model_override" not in have:
             conn.execute("ALTER TABLE sessions ADD COLUMN model_override TEXT")
+        arcols = {r["name"] for r in conn.execute("PRAGMA table_info(auto_reviews)")}
+        if "input_json" not in arcols:
+            conn.execute("ALTER TABLE auto_reviews ADD COLUMN input_json TEXT")
         fcols = {r["name"] for r in conn.execute("PRAGMA table_info(field_edits)")}
         if "original_coverage_json" not in fcols:
             conn.execute("ALTER TABLE field_edits ADD COLUMN "

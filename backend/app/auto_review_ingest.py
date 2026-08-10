@@ -68,7 +68,7 @@ CREATE INDEX IF NOT EXISTS ix_findings_report ON auto_review_findings(report_id)
 
 
 def ingest(con: sqlite3.Connection, sid: str, trip_id: str, report_id: int,
-           report: dict) -> int:
+           report: dict, changed_keys: set | None = None) -> int:
     """Create a finding per actionable verdict and, if any need an answer, bounce the
     session back to the reviewer. Returns the number of OPEN findings (the ones the
     reviewer still has to answer — carried-forward answers don't count).
@@ -78,28 +78,42 @@ def ingest(con: sqlite3.Connection, sid: str, trip_id: str, report_id: int,
     findings for the session are dropped first — a superseded report's items are stale, and
     keeping them would block the session forever on questions nobody can answer any more.
 
-    EXCEPT the reviewer's standing answers: a 'rejected' ("keeping my version" — the text
-    did NOT change) or 'deferred' ("the admin's call") answer is CARRIED FORWARD onto a
-    re-reported finding with the same (scene, field, option, verdict). Without this, the
-    routine re-review after a re-submit would delete the rejection note the admin is owed
-    and re-open the same question forever (reject -> re-submit -> re-flag -> reject ...).
-    'resolved' answers are NOT carried: the reviewer edited that text, so a re-flag is a
-    fresh judgment of their fix and deserves a fresh look.
+    EXCEPT the reviewer's standing answers, carried forward onto a re-reported finding:
+
+    * `changed_keys` (2026-08-10, the never-ending-cycle fix) is the set of
+      (scene, field, option) whose text CHANGED since the last report — the only fields the
+      model re-judged; the rest of the report is carried verdicts. A finding on an
+      UNCHANGED field keeps ANY answer ('resolved' included, verdict need not match): its
+      verdict is a verbatim copy of the one already answered, so re-opening it would ask
+      the same question of the same text forever.
+    * A finding on a CHANGED field (or every field when changed_keys is None — a forced
+      --sid full review) keeps only a 'rejected' ("keeping my version" — the text did NOT
+      change) or 'deferred' ("the admin's call") answer with the same
+      (scene, field, option, verdict). 'resolved' is NOT carried there: the reviewer edited
+      that text, so a re-flag is a fresh judgment of their fix and deserves a fresh look.
     """
     fields = [f for f in (report.get("fields") or [])
               if f.get("verdict") in ACTIONABLE_VERDICTS]
     now = time.time()
-    carried = {}   # (scene, field, option, verdict) -> (status, note, by, at)
+    exact = {}     # (scene, field, option, verdict) -> (status, note, by, at) — rej/def only
+    by_field = {}  # (scene, field, option) -> same, ANY answered status (unchanged fields)
     for r in con.execute(
             "SELECT scene_index, field_path, option_index, verdict, status,"
             " response_note, responded_by, responded_at FROM auto_review_findings"
-            " WHERE session_id=? AND status IN ('rejected','deferred')", (sid,)):
-        carried[(r[0], r[1], r[2], r[3])] = (r[4], r[5], r[6], r[7])
+            " WHERE session_id=? AND status IN ('resolved','rejected','deferred')", (sid,)):
+        ans = (r[4], r[5], r[6], r[7])
+        if r[4] in ("rejected", "deferred"):
+            exact[(r[0], r[1], r[2], r[3])] = ans
+        by_field[(r[0], r[1], r[2])] = ans
     con.execute("DELETE FROM auto_review_findings WHERE session_id=?", (sid,))
     opened: list[tuple] = []          # (scene, field, option) per finding needing an answer
     for f in fields:
-        key = (f.get("scene"), f.get("field") or "", f.get("option"), f.get("verdict"))
-        status, note, by, at = carried.get(key) or ("open", "", None, None)
+        key3 = (f.get("scene"), f.get("field") or "", f.get("option"))
+        if changed_keys is not None and key3 not in changed_keys:
+            ans = by_field.get(key3)
+        else:
+            ans = exact.get(key3 + (f.get("verdict"),))
+        status, note, by, at = ans or ("open", "", None, None)
         if status == "open":
             opened.append((f.get("scene"), f.get("field") or "", f.get("option")))
         con.execute(
