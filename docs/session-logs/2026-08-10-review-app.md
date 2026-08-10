@@ -167,3 +167,15 @@ Red-team (/red-opus) on this delta next.
 (no edits from it). Pushed; laptop pulled 205c366, frontend rebuilt, service restarted —
 review-app + review-tunnel active, /api/health 200. The narration Fix-pronunciation popup
 now offers the V3 checkbox live.
+
+**Live bug on first spliced-V3 use → fixed (2ba55d9):** ElevenLabs 400
+`unsupported_model` — "previous_text or next_text is not yet supported with
+'eleven_v3'". `plan_segment` always sends ±40 tokens of prosody context; the CJK
+engine guarded v3 at its own two call sites, the EN engine (v2-only until today)
+didn't — exactly the risk area the cancelled red-team was briefed to probe.
+Replicated with a mocked-transport test (v3 body must be context-free, v2 body
+unchanged; also pins that no spurious leak-retry fires), then guarded at the choke
+point: `generate_with_timestamps` nulls context for v3. 165/165. Deployed: laptop
+pulled 2ba55d9, service restarted (backend-only, no FE rebuild), both services
+active, health 200. NOTE the cjk_splice per-site guards are now redundant (harmless)
+— candidate for a later cleanup.
