@@ -138,3 +138,10 @@ re-submit can't land within one tick of the cron's write, so no production chang
 
 **Final verify (my own run):** backend import ok, 163/163 tests, npm run build clean,
 eslint clean. Not committed — awaiting dave's go-ahead.
+
+**Deployed (bc18066):** pushed to main; laptop pulled bc18066, `frontend/dist` rebuilt
+(js hash C5jeOyth matches the workstation build), `sudo -n systemctl restart
+review-app.service` — review-app + review-tunnel both active, /api/health 200, clean
+uvicorn boot in journal. (systemd printed a pre-existing "unit file changed on disk /
+daemon-reload" warning — not from this deploy; harmless, clear with a daemon-reload
+whenever convenient.)
