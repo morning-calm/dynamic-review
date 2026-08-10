@@ -162,3 +162,8 @@ candidate's `meta.model_id` is stamped on the segment path, and combine's segmen
 branch already writes the provenance note. Guides updated (admin-guide bullet, quick
 reference, README maintainer note). Verified: build + eslint clean, backend 163/163.
 Red-team (/red-opus) on this delta next.
+
+**Deployed (205c366):** red-opus on this delta was cancelled by dave before it started
+(no edits from it). Pushed; laptop pulled 205c366, frontend rebuilt, service restarted —
+review-app + review-tunnel active, /api/health 200. The narration Fix-pronunciation popup
+now offers the V3 checkbox live.
