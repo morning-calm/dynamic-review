@@ -78,10 +78,13 @@ const RegenerateControls = ({
   const [altRange, setAltRange] = useState<{ start: number; end: number } | null>(null);
   const [altText, setAltText] = useState('');
   const [altWhole, setAltWhole] = useState(false); // true → voice alt text as the WHOLE field
-  // One-off V3 for THIS take (whole-block Fix pronunciation only): offered when the
+  // One-off V3 for THIS take (both Fix-pronunciation variants): offered when the
   // session voices with v2 and the v2 take won't say a word right however it's spelled.
   // CJK sessions are v3 end-to-end, so the offer never shows there. v3 ignores the
-  // narration speed, hence the slowed-trip (A12/B1) warning in the modal.
+  // narration speed, hence the slowed-trip (A12/B1) warning in the modal. On the
+  // SPLICED variant the V3 phrase lands inside V2 audio — the modal warns about the
+  // possible voice-character change at the seam (dave's call 2026-08-10: offer it and
+  // let the reviewer's ears judge, rather than detour via Create new + waveform).
   const narration = useNarration();
   const v3Offer = offersV3(narration);
   const v3SpeedWarn = v3IgnoresSpeed(narration);
@@ -203,10 +206,9 @@ const RegenerateControls = ({
       toast.warn('Type the text for ElevenLabs to speak.');
       return;
     }
-    // The V3 option is whole-block only: a v3 phrase spliced INTO a v2 take would put a
-    // model-timbre seam inside one clip (the highlighted variant stays on the session model).
-    if (altWhole) regen('whole', undefined, altText.trim(), altV3 ? V3_MODEL : undefined);
-    else if (altRange) regen('alt', altRange, altText.trim());
+    const model = altV3 ? V3_MODEL : undefined;
+    if (altWhole) regen('whole', undefined, altText.trim(), model);
+    else if (altRange) regen('alt', altRange, altText.trim(), model);
     setAltOpen(false);
   };
 
@@ -908,7 +910,7 @@ const RegenerateControls = ({
           autoFocus
           className="mb-3 w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-base sm:text-sm"
         />
-        {altWhole && v3Offer && (
+        {v3Offer && (
           <div className="mb-3 space-y-1">
             <label className="flex items-center gap-2 text-xs text-gray-300">
               <input
@@ -920,10 +922,17 @@ const RegenerateControls = ({
               Voice with the V3 model — try this when the normal (V2) voice won’t say it right,
               however it’s spelled. This take only; everything else stays on V2.
             </label>
+            {altV3 && !altWhole && (
+              <p className="pl-6 text-xs text-amber-300">
+                The V3 phrase is stitched into V2 audio — listen for a change of voice
+                character at the joins before combining. If it doesn’t blend, use Regenerate
+                All with V3, or Create new.
+              </p>
+            )}
             {altV3 && v3SpeedWarn && (
               <p className="pl-6 text-xs text-amber-300">
-                V3 ignores this trip’s slow narration speed ({narration?.speed}×) — this clip
-                will come out at full speed, faster than its neighbours.
+                V3 ignores this trip’s slow narration speed ({narration?.speed}×) — the new
+                audio will come out at full speed, faster than the audio around it.
               </p>
             )}
           </div>

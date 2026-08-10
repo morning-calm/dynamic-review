@@ -33,8 +33,9 @@ Ted's. **Editing these markdown files updates what users see** (no rebuild neede
 - The highlight/selection audio tools (regenerate highlighted / alt text / trim noise /
   insert & remove pause) work in **all three languages** — JP highlights the kana line, ZH the
   Simplified (Hans) box.
-- **"Voice with the V3 model"** (2026-08-10) is a per-take checkbox in the whole-block *Fix
-  pronunciation…* popup and *Create new* — it only ever appears on **V2-voiced** sessions
-  (EN/EU), so the CJK guides don't mention it; the admin guide + quick reference do.
+- **"Voice with the V3 model"** (2026-08-10) is a per-take checkbox in both *Fix
+  pronunciation…* popups (whole-block AND the highlighted/spliced narration variant) and
+  *Create new* — it only ever appears on **V2-voiced** sessions (EN/EU), so the CJK guides
+  don't mention it; the admin guide + quick reference do.
 - The guides deliberately contain **no** technical/development detail — translators only need the
   produce-perfect-text-and-audio workflow.

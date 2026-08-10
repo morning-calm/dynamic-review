@@ -145,3 +145,20 @@ review-app.service` — review-app + review-tunnel both active, /api/health 200,
 uvicorn boot in journal. (systemd printed a pre-existing "unit file changed on disk /
 daemon-reload" warning — not from this deploy; harmless, clear with a daemon-reload
 whenever convenient.)
+
+---
+
+## Later still — V3 checkbox extended to the SPLICED Fix-pronunciation variant
+
+dave found the checkbox on Create new but not on the narration's Fix pronunciation —
+that was the deliberate whole-block-only scoping. His call: **Option 2 — allow the
+true V3-into-V2 splice** and let the reviewer's ears judge the seam (rather than the
+substitute-and-whole-regen alternative). FE-only change: the alt modal now shows the
+checkbox for BOTH variants (`v3Offer`, no longer `altWhole && v3Offer`); the spliced
+variant adds a seam warning ("V3 phrase stitched into V2 audio — listen for a change
+of voice character at the joins"); `submitAlt` passes the model on the `alt` path too.
+Backend needed nothing: `model` was already accepted on every regenerate mode, the
+candidate's `meta.model_id` is stamped on the segment path, and combine's segment
+branch already writes the provenance note. Guides updated (admin-guide bullet, quick
+reference, README maintainer note). Verified: build + eslint clean, backend 163/163.
+Red-team (/red-opus) on this delta next.

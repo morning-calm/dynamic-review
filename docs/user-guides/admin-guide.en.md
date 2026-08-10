@@ -23,14 +23,16 @@ separate reviewer — you review and approve them in one pass.
     editor cover every case.)
   - **Voice with the V3 model** (checkbox, V2 trips only) — when the normal (V2) voice won't say
     a word right *however* you spell it, tick this to voice that one take with ElevenLabs V3
-    instead. It appears in the whole-block **Fix pronunciation…** popup (questions/answer
-    options) and in **Create new** (for a narration phrase: generate the V3 take, then
-    **Save & insert…** it via the waveform). It applies to that single take only — everything
-    else stays on V2, and the next regenerate is back on V2 automatically. ⚠ On slowed trips
-    (A1-2 / B1) V3 ignores the narration speed, so the take comes out **full-speed** — listen
-    for the pace difference against the neighbouring audio before keeping it. A combined V3
-    take leaves an automatic note on the part so it's clear later why that clip sounds
-    different.
+    instead. It appears in both **Fix pronunciation…** popups (the whole-block one on
+    questions/answer options, and the highlighted one on the narration) and in **Create new**.
+    It applies to that single take only — everything else stays on V2, and the next regenerate
+    is back on V2 automatically. ⚠ On the *highlighted* variant the V3 phrase is stitched into
+    V2 audio: listen for a change of voice character at the joins before combining — if it
+    doesn't blend, fall back to Regenerate All (with V3 via the whole-block popup on Q&A, or
+    Create new for a narration). ⚠ On slowed trips (A1-2 / B1) V3 ignores the narration speed,
+    so the new audio comes out **full-speed** — listen for the pace difference against the
+    neighbouring audio before keeping it. A combined V3 take leaves an automatic note on the
+    part so it's clear later why that clip sounds different.
   - **Trim highlighted noise** — highlight where an unwanted blip/breath is and trim it.
     Also available on **question and answer-option audio** (highlight in that field's own
     text box), in every language.
