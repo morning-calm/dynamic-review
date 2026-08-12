@@ -133,6 +133,11 @@ session holding ONLY the changed fields (`sessions.delta_json`; full/delta resum
 are disjoint), audio pulled FRESH from R2 (never the stale-able seed cache). Same
 review → submit → approve flow; approve also DELETES the manifest (**object gone =
 consumed**, the Scripts-side signal) and bumps `completed_at` (Stage-9 re-finalise).
+**Re-issued-manifest guards (2026-08-12, Castello incident):** open reconciles a
+zero-work stale card (discard + re-seed), approve 409s while the live manifest's field
+set differs from the seeded `delta_json`, the consume is compare-and-delete, and the
+admin has a non-destructive **Discard** (`POST /api/deltas/{tid}/discard`, zero-work
+sessions only).
 Completed status is never reset. First real batch: 12 A12 quiz-variety manifests,
 2026-07-22/23.
 

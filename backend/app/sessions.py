@@ -4366,7 +4366,25 @@ def approve(sid: str, user) -> dict:
     CONSUMES its R2 ``_delta/<cid>.json`` manifest, which is how the Scripts side
     verifies the delta was reviewed (docs/delta-review.md)."""
     srow = _session_row(sid)   # 404 if missing
-    is_delta = bool(_srow_get(srow, "delta_json"))
+    delta_raw = _srow_get(srow, "delta_json")
+    is_delta = bool(delta_raw)
+    seeded_delta = json.loads(delta_raw) if is_delta else None
+    if is_delta:
+        # Invariant: a delta card can never approve away clips it never showed. If the
+        # manifest was RE-ISSUED with a different field set while this session was open
+        # (the CastellodiBrolio_A12_IT stuck card, 2026-08-12), approving would consume
+        # it and silently drop the scenes this session never seeded. Refuse: the admin
+        # discards the card (deltas/{tid}/discard) and re-opens from the live manifest.
+        # A vanished manifest is fine — the reviewer's work outlives it and the delete
+        # below is idempotent.
+        live = deltas.fetch(srow["trip_id"])
+        if live is not None and deltas.field_keys(live) != deltas.field_keys(seeded_delta):
+            raise HTTPException(409, detail={
+                "error": "delta_manifest_changed",
+                "detail": "the delta manifest on R2 was re-issued with a different "
+                          "clip set after this session was seeded — approving would "
+                          "drop clips this card never showed. Discard the card and "
+                          "re-open it to review the current manifest."})
     claimed = db.execute_rowcount(
         "UPDATE sessions SET status='approving', updated_at=? "
         "WHERE id=? AND status='submitted'",
@@ -4411,7 +4429,7 @@ def approve(sid: str, user) -> dict:
             # signal. On failure the card stays hidden anyway (delta_cards skips a
             # delta whose newest delta session approved after the file appeared),
             # but the file must still be removed for the pipeline's own bookkeeping.
-            if not deltas.delete_object(tid):
+            if not deltas.delete_object(tid, expect_doc=seeded_delta):
                 print(f"[approve] !! delta manifest review-audio/_delta/{tid}.json "
                       "could NOT be deleted — the Scripts side will still see it as "
                       "unconsumed; delete it manually (the approve itself succeeded)")
@@ -4766,10 +4784,101 @@ def delta_cards(user) -> list[dict]:
     return out
 
 
+def _delta_work_counts(sid: str) -> dict:
+    """How much reviewer work a session holds. `takes` excludes the seed's own
+    v0_original archive rows — those exist on every session from birth (the
+    CastellodiBrolio delta card had 3 of them with zero actual work, 2026-08-12)."""
+    def n(sql):
+        return db.query_one(sql, (sid,))["n"]
+    return {
+        "edits": n("SELECT COUNT(*) AS n FROM field_edits "
+                   "WHERE session_id=? AND current_text!=original_text"),
+        "flags": n("SELECT COUNT(*) AS n FROM field_edits "
+                   "WHERE session_id=? AND (flag!='none' OR comment!='')"),
+        "takes": n("SELECT COUNT(*) AS n FROM audio_versions "
+                   "WHERE session_id=? AND kind!='v0_original'"),
+        "clips": n("SELECT COUNT(*) AS n FROM manual_clips WHERE session_id=?"),
+        "candidates": n("SELECT COUNT(*) AS n FROM field_edits "
+                        "WHERE session_id=? AND candidate_mp3_path IS NOT NULL"),
+    }
+
+
+def _drop_session(sid: str) -> None:
+    """Hard-delete a session and everything hanging off it (rows + work dir).
+    Callers guard that it holds no reviewer work — this does not re-check."""
+    for table, col in (("field_edits", "session_id"), ("audio_versions", "session_id"),
+                       ("manual_clips", "session_id"), ("presence", "session_id"),
+                       ("sessions", "id")):
+        db.execute(f"DELETE FROM {table} WHERE {col}=?", (sid,))
+    _ZH_IS_CACHE.pop(sid, None)
+    try:
+        shutil.rmtree(WORK_ROOT / sid, ignore_errors=True)
+    except Exception as e:  # noqa: BLE001 — DB rows are gone; a stray dir is harmless
+        print(f"[discard] WARN could not remove work/{sid}: {e}")
+
+
+def _active_delta_session(trip_id: str):
+    ph = ",".join("?" * len(ACTIVE_STATUSES))
+    return db.query_one(
+        f"SELECT id, delta_json FROM sessions WHERE trip_id=? AND status IN ({ph}) "
+        "AND delta_json IS NOT NULL ORDER BY created_at DESC LIMIT 1",
+        (trip_id, *ACTIVE_STATUSES))
+
+
+def discard_delta(trip_id: str, user) -> dict:
+    """ADMIN ONLY: close the open delta card WITHOUT approving — the non-destructive
+    exit that never existed (approve is the one action that consumes the manifest,
+    so before this the only way out of a stuck card was the destructive one). The
+    R2 manifest is left untouched, so the card re-seeds fresh on the next open.
+    Refuses (409) if the session holds any reviewer work."""
+    srow = _active_delta_session(trip_id)
+    if not srow:
+        raise HTTPException(404, detail={
+            "error": "no_delta_session",
+            "detail": f"no open delta session for {trip_id}"})
+    work = _delta_work_counts(srow["id"])
+    if any(work.values()):
+        raise HTTPException(409, detail={
+            "error": "delta_has_work",
+            "detail": "this delta session holds reviewer work "
+                      f"({', '.join(f'{k} {v}' for k, v in work.items() if v)}) — "
+                      "review it to completion (or clear the work) instead of "
+                      "discarding it"})
+    print(f"[delta] discarding zero-work delta session {srow['id']} ({trip_id}) "
+          f"by {getattr(user, 'username', '?')} — manifest left pending")
+    _drop_session(srow["id"])
+    return {"ok": True, "discarded": srow["id"]}
+
+
 def open_delta(trip_id: str, user) -> dict:
     """Open (or resume) the delta session for a completed trip's manifest. The trip's
-    completed status is NOT touched — only approving the session refreshes it."""
+    completed status is NOT touched — only approving the session refreshes it.
+
+    If the manifest was RE-ISSUED with a different field set while a zero-work delta
+    session sat open, that stale session is discarded here and the card re-seeds from
+    the live manifest (the field set it froze at seed would otherwise be served
+    forever). A stale session WITH work resumes as-is — the reviewer's work wins —
+    and approve() refuses until the divergence is resolved."""
     doc = deltas.fetch(trip_id)   # fresh, uncached — the open must see the live manifest
+    if doc is not None:
+        srow = _active_delta_session(trip_id)
+        if srow:
+            try:
+                seeded = json.loads(srow["delta_json"])
+            except ValueError:
+                seeded = None
+            if (seeded is None
+                    or deltas.field_keys(seeded) != deltas.field_keys(doc)):
+                if not any(_delta_work_counts(srow["id"]).values()):
+                    print(f"[delta] {trip_id}: manifest re-issued while zero-work "
+                          f"session {srow['id']} was open — discarding it and "
+                          "re-seeding from the live manifest")
+                    _drop_session(srow["id"])
+                else:
+                    print(f"[delta] WARN {trip_id}: manifest re-issued while session "
+                          f"{srow['id']} was open and it holds reviewer work — "
+                          "resuming the stale card; approve will refuse until it is "
+                          "discarded or the manifest is restored")
     if doc is None:
         # Manifest gone (consumed, or removed by hand) but an in-flight delta session
         # must still resume — the reviewer's work outlives the manifest.

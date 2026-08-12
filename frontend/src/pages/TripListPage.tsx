@@ -251,6 +251,25 @@ const TripListPage = () => {
       });
   };
 
+  // Admin escape hatch: close a delta card without approving (approve is the one
+  // action that consumes the manifest). Only works on a session with zero reviewer
+  // work — the server 409s otherwise — and leaves the manifest pending to re-seed.
+  const discardDelta = (tripId: string) => {
+    if (!window.confirm('Discard this delta card? The open session (no reviewer work) is dropped; the pending manifest stays, so the card re-seeds fresh on the next open.')) return;
+    setOpening(`delta:${tripId}`);
+    api
+      .discardDelta(tripId)
+      .then(() => {
+        toast.success('Delta card discarded — it will re-seed on the next open');
+        return api.listDeltas().then(setDeltas);
+      })
+      .catch((e: unknown) => {
+        const msg = e instanceof ApiError ? e.detail || e.code : 'Could not discard delta card';
+        toast.error(msg);
+      })
+      .finally(() => setOpening(null));
+  };
+
   const tabs: [LaneFilter, string][] = [
     ['all', 'All'],
     ['6', `Translator · 6 (${laneCounts['6']})`],
@@ -351,6 +370,17 @@ const TripListPage = () => {
                     </span>
                   ) : (
                     <span className="rounded bg-gray-700 px-2 py-0.5 text-xs text-gray-300">Not started</span>
+                  )}
+                  {isAdmin && d.has_session && (
+                    <button
+                      type="button"
+                      disabled={opening === `delta:${d.trip_id}`}
+                      onClick={() => discardDelta(d.trip_id)}
+                      title="Drop the open session (only if it holds no reviewer work) without consuming the manifest — the card re-seeds fresh on the next open"
+                      className="rounded border border-gray-600 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-800 disabled:opacity-50"
+                    >
+                      Discard
+                    </button>
                   )}
                   <button
                     type="button"

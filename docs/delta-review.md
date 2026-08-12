@@ -100,6 +100,24 @@ the Scripts side agrees.
 - **Uploading a second remediation round** for the same trip: just upload a new
   manifest (it may re-list old scenes plus new ones). A newer `LastModified` than
   the last approved delta session makes the card show again.
+- **Manifest re-issued while a card is open** (the CastellodiBrolio_A12_IT stuck
+  card, 2026-08-12 — the Scripts side now refuses this without `--amend-open-delta`,
+  but the app defends itself too): the open session's `delta_json` is frozen at
+  seed. Three guards (all since 2026-08-12):
+  1. **open reconciles** — if the live manifest's field set differs and the open
+     session holds *zero reviewer work*, `open_delta` discards it and re-seeds from
+     the live manifest; with work, it resumes as-is (the work wins) and logs a WARN.
+  2. **approve refuses** (`409 delta_manifest_changed`) while the live manifest's
+     field set differs from the seeded one — a card can never approve away clips it
+     never showed. Exit: **Discard** the card and re-open.
+  3. **consume is compare-and-delete** — `deltas.delete_object(expect_doc=seeded)`
+     leaves a re-issued manifest in place (loud log) instead of consuming it.
+- **Discarding a card** (admin, `POST /api/deltas/{tid}/discard`, the trip-list
+  **Discard** button): drops the open delta session *only if it has no reviewer
+  work* (409 `delta_has_work` otherwise) and leaves the manifest pending, so the
+  card re-seeds fresh. This is the non-destructive exit — approve is the only
+  action that consumes the manifest. Regression tests:
+  `backend/tests/test_delta_reissue.py`.
 - **A manifest clip missing from `review-audio/<cid>/`**: that field seeds
   text-only (audio tools disabled); if NONE of the clips resolve the open 422s
   (`delta_audio_missing`).

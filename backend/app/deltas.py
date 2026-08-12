@@ -172,15 +172,27 @@ def invalidate() -> None:
         _CACHE = None
 
 
-def delete_object(trip_id: str) -> bool:
+def delete_object(trip_id: str, expect_doc: dict | None = None) -> bool:
     """Consume a delta: remove its manifest. Object-gone is how the Scripts side
     verifies consumption, so a failure here is loud — the caller decides what else
-    to say. Idempotent (deleting an absent key succeeds)."""
+    to say. Idempotent (deleting an absent key succeeds).
+
+    With ``expect_doc`` (the manifest the session was seeded from) the delete is
+    compare-and-delete: if the live object now names a DIFFERENT field set — it was
+    re-issued while the card was open — it is left in place, so the amendment can
+    re-seed instead of being consumed by a session that never showed its clips."""
     try:
         s3 = review_audio._r2()
         if s3 is None:
             print(f"[deltas] WARN cannot delete {_key(trip_id)} — R2 unavailable")
             return False
+        if expect_doc is not None:
+            live = fetch(trip_id)
+            if live is not None and field_keys(live) != field_keys(expect_doc):
+                print(f"[deltas] !! {_key(trip_id)} was RE-ISSUED while this session "
+                      "was open (field set differs from the seeded manifest) — NOT "
+                      "deleting; the amendment stays pending and will re-seed")
+                return False
         s3.delete_object(Bucket=review_audio.BUCKET, Key=_key(trip_id))
         invalidate()
         return True

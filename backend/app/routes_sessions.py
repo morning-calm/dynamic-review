@@ -58,6 +58,14 @@ def post_delta_open(trip_id: str, user=Depends(auth.require_user)):
     return sessions.open_delta(trip_id, user)
 
 
+@router.post("/deltas/{trip_id}/discard")
+def post_delta_discard(trip_id: str, user=Depends(auth.require_admin)):
+    # The non-destructive exit from a delta card: drops the open ZERO-WORK delta
+    # session (409 if it holds reviewer work) and leaves the R2 manifest pending,
+    # so the card re-seeds fresh on the next open.
+    return sessions.discard_delta(trip_id, user)
+
+
 @router.post("/sessions")
 def post_session(body: CreateSession, user=Depends(auth.require_user)):
     # [P0-1] language gate is enforced at the TOP of create_or_resume (keyed on trip_id).

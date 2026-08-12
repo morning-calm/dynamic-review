@@ -798,6 +798,11 @@ export const api = {
   openDelta: (tripId: string): Promise<Session> =>
     postJson(`/api/deltas/${encodeURIComponent(tripId)}/open`),
 
+  /** ADMIN: drop the open zero-work delta session WITHOUT consuming the manifest,
+   * so the card re-seeds fresh on the next open. 409 if it holds reviewer work. */
+  discardDelta: (tripId: string): Promise<{ ok: boolean; discarded: string }> =>
+    postJson(`/api/deltas/${encodeURIComponent(tripId)}/discard`),
+
   listVoices: (): Promise<VoicesResponse> => getJson('/api/voices'),
 
   setNarration: (sid: string, body: NarrationUpdate): Promise<Session> =>
