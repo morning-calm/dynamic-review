@@ -60,7 +60,7 @@ def test_delete_proceeds_when_live_manifest_matches_seed(monkeypatch):
 
 def test_delete_proceeds_when_manifest_already_gone(monkeypatch):
     # Object-gone mid-approve: nothing to protect, the delete is idempotent.
-    s3 = _wire(monkeypatch, None)
+    _wire(monkeypatch, None)
     assert deltas.delete_object("CastellodiBrolio_A12_IT",
                                 expect_doc=MANIFEST_3) is True
 
