@@ -277,6 +277,33 @@ CREATE TABLE IF NOT EXISTS auto_reviews (
                                                 -- incremental-review baseline (2026-08-10)
 );
 
+-- Family-level TripGroup description review (docs/tripgroup-description-review-proposal.md):
+-- one row per TripGroup in the review queue. Stage A: admin checks/edits the EN
+-- description + categories against the family's scenes (pending_en). Stage B: machine
+-- translation EN→TL via the claude CLI (translating; last_error surfaces a failed run).
+-- Stage C: the language's reviewer confirms the TL text (pending_tl). done = written to
+-- staging (descriptionHome/descriptionTarget/tripCategories + regenerated tooltip).
+CREATE TABLE IF NOT EXISTS tripgroup_reviews (
+    tg_id           TEXT PRIMARY KEY,
+    language        TEXT NOT NULL DEFAULT '',
+    family          TEXT NOT NULL DEFAULT '',
+    rep_trip_id     TEXT NOT NULL DEFAULT '',   -- representative trip for scene context
+    status          TEXT NOT NULL DEFAULT 'pending_en',  -- pending_en|translating|pending_tl|done
+    en_text         TEXT NOT NULL DEFAULT '',
+    en_original     TEXT NOT NULL DEFAULT '',
+    tl_text         TEXT NOT NULL DEFAULT '',
+    tl_original     TEXT NOT NULL DEFAULT '',
+    categories_json TEXT NOT NULL DEFAULT '[]',
+    last_error      TEXT NOT NULL DEFAULT '',
+    en_by           TEXT,
+    en_at           REAL,
+    tl_by           TEXT,
+    tl_at           REAL,
+    created_at      REAL NOT NULL,
+    updated_at      REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_tgreviews_status ON tripgroup_reviews(status, language);
+
 -- NOTE: auto_review_findings lives in auto_review_ingest.FINDINGS_DDL (applied below in
 -- init()) — the cron runner scripts/claude_review.py creates it too, and one copy of the
 -- DDL means the API and the runner can never disagree about the table.

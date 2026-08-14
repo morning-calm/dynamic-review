@@ -9,6 +9,7 @@ import { api, type AuthUser, type FindingsInbox } from '../api';
 const UserMenu = () => {
   const { user, logout } = useAuth();
   const [bugBadge, setBugBadge] = useState(0);
+  const [descBadge, setDescBadge] = useState(0);
   const [recallBadge, setRecallBadge] = useState(0);
   const [aiBadge, setAiBadge] = useState(0);
   const [aiSessions, setAiSessions] = useState<FindingsInbox['sessions']>([]);
@@ -58,6 +59,26 @@ const UserMenu = () => {
     };
   }, [user]);
 
+  // Trip-description items waiting on THIS user (admin: English checks; reviewer:
+  // translations in their languages).
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    const load = () =>
+      api
+        .tripDescCounts()
+        .then((c) => {
+          if (!cancelled) setDescBadge(c.open);
+        })
+        .catch(() => {});
+    load();
+    const t = setInterval(load, 60000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [user]);
+
   // Admin-only: open recall requests → badge on the Review queue link.
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
@@ -97,6 +118,7 @@ const UserMenu = () => {
         logout={logout}
         nativeLabel={nativeLabel}
         bugBadge={bugBadge}
+        descBadge={descBadge}
         recallBadge={recallBadge}
         aiBadge={aiBadge}
         aiSessions={aiSessions}
@@ -199,6 +221,24 @@ const UserMenu = () => {
           </span>
         )}
       </Link>
+      {(user.role === 'admin' || descBadge > 0) && (
+        <Link
+          to="/descriptions"
+          className="relative rounded border border-gray-600 px-2 py-1 text-gray-200 hover:bg-gray-700"
+          title={
+            user.role === 'admin'
+              ? 'Family trip descriptions — English check & translations'
+              : `${descBadge} trip description${descBadge === 1 ? '' : 's'} waiting for your review`
+          }
+        >
+          Descriptions
+          {descBadge > 0 && (
+            <span className="ml-1 rounded-full bg-teal-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+              {descBadge}
+            </span>
+          )}
+        </Link>
+      )}
       <Link to="/completed" className="rounded border border-gray-600 px-2 py-1 text-gray-200 hover:bg-gray-700">
         Completed
       </Link>
@@ -246,6 +286,7 @@ const MobileMenu = ({
   logout,
   nativeLabel,
   bugBadge,
+  descBadge,
   recallBadge,
   aiBadge,
   aiSessions,
@@ -254,6 +295,7 @@ const MobileMenu = ({
   logout: () => void;
   nativeLabel: string | null;
   bugBadge: number;
+  descBadge: number;
   recallBadge: number;
   aiBadge: number;
   aiSessions: FindingsInbox['sessions'];
@@ -261,7 +303,7 @@ const MobileMenu = ({
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
   // Unseen-activity dot on the closed ⋮ (the recall badge only counts for admins).
-  const totalBadge = bugBadge + aiBadge + (user.role === 'admin' ? recallBadge : 0);
+  const totalBadge = bugBadge + aiBadge + descBadge + (user.role === 'admin' ? recallBadge : 0);
   const item = 'flex items-center justify-between gap-3 rounded px-3 py-2 text-left text-sm text-gray-200 hover:bg-gray-700';
   const badge = (n: number, cls: string) =>
     n > 0 ? <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${cls}`}>{n}</span> : null;
@@ -300,6 +342,12 @@ const MobileMenu = ({
               <span>Bug reports</span>
               {badge(bugBadge, 'bg-rose-600 text-white')}
             </Link>
+            {(user.role === 'admin' || descBadge > 0) && (
+              <Link to="/descriptions" className={item} onClick={close}>
+                <span>Descriptions</span>
+                {badge(descBadge, 'bg-teal-600 text-white')}
+              </Link>
+            )}
             <Link to="/completed" className={item} onClick={close}>
               Completed
             </Link>

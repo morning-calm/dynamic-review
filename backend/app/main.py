@@ -25,7 +25,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from . import (audio_core, auth, db, review_audio, routes_admin, routes_audio,
-               routes_bugs, routes_help, routes_sessions)
+               routes_bugs, routes_help, routes_sessions, routes_tripdesc)
 from .config import CORS_ORIGINS, FRONTEND_DIST, HOST, PORT, SERVE_FRONTEND
 
 app = FastAPI(title="review-app backend", version="1.0",
@@ -127,6 +127,7 @@ app.include_router(routes_admin.router)
 app.include_router(routes_audio.router)
 app.include_router(routes_bugs.router)
 app.include_router(routes_help.router)
+app.include_router(routes_tripdesc.router)
 
 
 # --- Single-origin deploy: serve the built frontend (frontend/dist) so one hostname

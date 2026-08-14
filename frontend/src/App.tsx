@@ -12,6 +12,8 @@ import CompletedPage from './pages/CompletedPage';
 import BugReportsPage from './pages/BugReportsPage';
 import StagingSearchPage from './pages/StagingSearchPage';
 import StructureEditorPage from './pages/StructureEditorPage';
+import TripDescListPage from './pages/TripDescListPage';
+import TripDescPage from './pages/TripDescPage';
 
 const App = () => (
   <BrowserRouter>
@@ -26,6 +28,8 @@ const App = () => (
             <Route path="/admin/:sid" element={<ChangesSummaryPage />} />
             <Route path="/completed" element={<CompletedPage />} />
             <Route path="/bugs" element={<BugReportsPage />} />
+            <Route path="/descriptions" element={<TripDescListPage />} />
+            <Route path="/descriptions/:tgId" element={<TripDescPage />} />
             <Route element={<RequireAdmin />}>
               <Route path="/queue" element={<ReviewQueuePage />} />
               <Route path="/staging" element={<StagingSearchPage />} />

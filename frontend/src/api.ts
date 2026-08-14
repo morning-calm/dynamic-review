@@ -110,6 +110,46 @@ export interface DeltaCard {
   status: SessionStatus | null;
 }
 
+// --- TripGroup description review (family-level) -----------------------------
+
+export type TripDescStatus = 'pending_en' | 'translating' | 'pending_tl' | 'done';
+
+/** One family's description-review item. Admin gets `scenes` (checking context);
+ * a translator's copy carries only the texts. */
+export interface TripDescItem {
+  tg_id: string;
+  language: string;
+  family: string;
+  rep_trip_id: string;
+  status: TripDescStatus;
+  en_text: string;
+  en_original: string;
+  tl_text: string;
+  tl_original: string;
+  categories: string[];
+  last_error: string;
+  en_by: string | null;
+  en_at: number | null;
+  tl_by: string | null;
+  tl_at: number | null;
+  updated_at: number;
+  /** English-target family (Scotland/UK): EN approval finishes the item. */
+  en_target: boolean;
+  scenes?: TripDescScene[];
+}
+
+export interface TripDescScene {
+  index: number;
+  thumb_url: string | null;
+  title: string;
+  description: string;
+}
+
+export interface TripDescList {
+  items: TripDescItem[];
+  counts: Record<TripDescStatus, number>;
+}
+
 /** `approved` = completed via the normal submit→approve flow (has a session);
  * `manual` = admin bypass for work already done in the old system (no session). */
 export type CompletionMethod = 'approved' | 'manual';
@@ -1204,6 +1244,24 @@ export const api = {
   setBugStatus: (rid: number, status: BugStatusValue): Promise<BugReport> =>
     postJson(`/api/bug-reports/${rid}/status`, { status }),
   bugCounts: (): Promise<BugCounts> => getJson('/api/bug-reports/count'),
+
+  // --- TripGroup description review (family-level; docs/tripgroup-description-review-proposal.md)
+  listTripDescs: (): Promise<TripDescList> => getJson('/api/tripdesc'),
+  tripDescCounts: (): Promise<{ open: number }> => getJson('/api/tripdesc/count'),
+  getTripDesc: (tgId: string): Promise<TripDescItem> =>
+    getJson(`/api/tripdesc/${encodeURIComponent(tgId)}`),
+  saveTripDesc: (
+    tgId: string,
+    body: { en_text?: string; categories?: string[]; tl_text?: string },
+  ): Promise<TripDescItem> => putJson(`/api/tripdesc/${encodeURIComponent(tgId)}`, body),
+  approveTripDescEn: (tgId: string): Promise<TripDescItem> =>
+    postJson(`/api/tripdesc/${encodeURIComponent(tgId)}/approve-en`),
+  approveTripDescTl: (tgId: string): Promise<TripDescItem> =>
+    postJson(`/api/tripdesc/${encodeURIComponent(tgId)}/approve-tl`),
+  retryTripDescTranslate: (tgId: string): Promise<TripDescItem> =>
+    postJson(`/api/tripdesc/${encodeURIComponent(tgId)}/retry-translate`),
+  reopenTripDesc: (tgId: string): Promise<TripDescItem> =>
+    postJson(`/api/tripdesc/${encodeURIComponent(tgId)}/reopen`),
 };
 
 /**

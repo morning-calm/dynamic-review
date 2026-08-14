@@ -70,7 +70,7 @@ The atom the UI renders/edits. One per editable thing.
 | field_path | scene_index | has_audio | maps to (mp3) | maps to (Firebase) |
 |---|---|---|---|---|
 | `contentTitleKey` | null | no | — | Trip `contentTitleKey` |
-| `tripgroup_description` | null | no | — | **TripGroup** `descriptionTarget` (prose only) |
+| `tripgroup_description` | null | no | — | Trip `descriptionTarget` (legacy sessions only — no longer seeded since 2026-08-14; the TripGroup is never written by submit) |
 | `SceneDesc` | n | yes | `{n}.mp3` | `quickTrips[n].SceneDesc` |
 | `titleKey` | n | no | — | `quickTrips[n].titleKey` |
 | `questionKey` | n | yes | `{n}_q.mp3` | `quickTrips[n].questionKey` |
@@ -253,6 +253,14 @@ are admin-only. The audio-snapshot GET authenticates via the httpOnly cookie (br
 | `POST /api/admin/structure/{trip_id}/swap-video` | `{ "index", "video_url", "rekey", "base", "scene_id"? }` | Same shape — `rekey:false` = same footage/new encode (sceneId KEPT; registry gains the videoId and it becomes `currentVideoId`); `rekey:true` = genuinely different scene (atom id supplied/reused-by-videoId/derived/minted; old registry use released; translations keyed to the old id orphan until re-authored + recompiled). Trip+localization write is a single Firestore transaction (all structure ops); registry updates run after it best-effort — a failure is returned in `warnings`, never a 500. |
 | `POST /api/admin/structure/{trip_id}/static-images` | `{ "index", "filenames", "base" }` | Same shape — sets the scene's flat-overlay filename refs (files must exist in the image trees to render). |
 | `POST /api/admin/structure/{trip_id}/categories` | `{ "categories" }` | Same shape — sets `tripCategories` verbatim on the TripGroup (+ the Trip doc's copy when present). NB: approve re-derives the semantic set from the description's "Trip Type:" line — keep them consistent. |
+| `GET /api/tripdesc` | — | `{ "items": TripDescItem[], "counts": {pending_en,translating,pending_tl,done} }` — family-level TripGroup description review (docs/tripgroup-description-review-proposal.md). Admin: every family in the manifest (the call lazily seeds new rows; NO historical backfill); reviewer: only `pending_tl` items in their languages. `TripDescItem = { tg_id, language, family, rep_trip_id, status: "pending_en"\|"translating"\|"pending_tl"\|"done", en_text, en_original, tl_text, tl_original, categories[], last_error, en_by, en_at, tl_by, tl_at, updated_at, en_target }`. |
+| `GET /api/tripdesc/count` | — | `{ "open": n }` — nav badge: items awaiting THIS user (admin: `pending_en`; reviewer: `pending_tl` in their languages). |
+| `GET /api/tripdesc/{tg_id}` | — | `TripDescItem`; admins additionally get `scenes: [{index, thumb_url, title, description}]` (English context from the family's representative trip — `*En` siblings on non-EN trips). `403` if not assigned to the caller. |
+| `PUT /api/tripdesc/{tg_id}` | `{ "en_text"?, "categories"?, "tl_text"? }` | `TripDescItem` — autosave. EN/categories: admin + `pending_en` only; `tl_text`: assignee + `pending_tl` only (`409 wrong_status` otherwise). |
+| `POST /api/tripdesc/{tg_id}/approve-en` | — | `TripDescItem` — **admin only.** Writes `descriptionHome` + `tripCategories` + regenerated `tooltip` to the TripGroup; English-target families also get `descriptionTarget` and go straight to `done`, others → `translating` (claude-CLI EN→TL on a background thread; failure parks with `last_error`). `422 empty_description`; `409 tripgroup_gone` if the doc vanished. |
+| `POST /api/tripdesc/{tg_id}/approve-tl` | — | `TripDescItem` — the language's reviewer (or admin) confirms the translation: writes `descriptionTarget` + `tooltip`, status → `done`. |
+| `POST /api/tripdesc/{tg_id}/retry-translate` | — | `TripDescItem` — **admin only**, re-runs a failed translation (`409` unless `translating`). |
+| `POST /api/tripdesc/{tg_id}/reopen` | — | `TripDescItem` — **admin only**, back to `pending_en` (staging writes already made stay live). |
 
 ## Notes for implementers
 - `fid` is the `field_edits.id`. The frontend never constructs audio paths — it uses the URLs in `Field.audio` / `Field.versions`.

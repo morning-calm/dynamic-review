@@ -19,9 +19,9 @@ load-bearing check by design); **🔵 by-design** = intentionally deferred to st
 | R8 | **done** only if the **whole audio played through at least once** | BE coverage gate (`can_mark_done` ≥95%, range-clamped, reset-on-change); FE seek-proof `timeupdate` | ✅ verified |
 | R9 | **Comment box** per section | BE `/comment`; FE `CommentBox` (+unload flush) | ✅ built |
 | R10 | Reviewer **confirms** when all ready (pending edit-required) | FE session state surfaced to admin `ChangesSummary` | ✅ built |
-| R11 | Admin checks changes (orig+new), fixes edit-required, **submits to staging**, checks staging | FE `ChangesSummary`; BE `/submit` (live re-fetch → Trip text + TripGroup) | ✅ verified |
+| R11 | Admin checks changes (orig+new), fixes edit-required, **submits to staging**, checks staging | FE `ChangesSummary`; BE `/submit` (live re-fetch → Trip text; TripGroup no longer written — see R13) | ✅ verified |
 | R12 | Two roles Reviewer/Admin; **stage 1 = single combined admin** | Schema designed-in; v1 single role, no login wall | 🔵 by-design |
-| R13 | Description editing targets the **TripGroup** (Trip field is dead) | `tripgroup_description` field; submit writes TripGroup + re-derives `tripCategories` | ✅ verified |
+| R13 | ~~Description editing targets the TripGroup~~ **Superseded 2026-08-14**: field no longer seeded (redundant for reviewers); legacy sessions write Trip `descriptionTarget` only. Family descriptions get their own flow — `docs/tripgroup-description-review-proposal.md` | 🔵 superseded |
 | R14 | **Autosave** so a reviewer can leave partway and resume | BE SQLite persists everything; FE debounce + keepalive flush + retry; `POST /sessions` resumes | ✅ built |
 | R15 | Standalone **audio file + description** for the admin's manual edit when splicing fails | BE `/fallback` (ElevenLabs clip + note); FE "Send to manual edit" | ✅ built |
 | R16 | Admin can **download all** audio — originals + corrected versions | BE `/download` (zip); FE token-authenticated fetch→blob | ✅ built |

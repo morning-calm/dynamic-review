@@ -41,9 +41,8 @@ from . import (audio_core, audio_io, audio_splice, auth, auto_checks, auto_revie
 from .config import (COUNTRY_VOICE_GUESS, COVERAGE_DONE_FRACTION,
                      LANGUAGE_FALLBACK_VOICE, WORK_ROOT)
 from .locks import WHISPER_LOCK
-from .staging import (db as fb_db, get_trip, get_tripgroup, merge_categories,
-                      paths_for, tripgroup_id_for, update_trip_text,
-                      update_tripgroup)
+from .staging import (db as fb_db, get_trip, get_tripgroup,
+                      paths_for, update_trip_text)
 from .statuses import ACTIVE_STATUSES, EDITABLE_STATUSES
 
 from stage9.common import COUNTRY_CFG
@@ -905,10 +904,6 @@ def create_or_resume(trip_id: str, user, *,
     # description, whose scene_index is None) is left out of a delta session entirely.
     delta_wanted = deltas.field_keys(delta) if delta is not None else None
     categories = (tg or {}).get("tripCategories") or trip.get("tripCategories") or []
-    # Prefer the TripGroup description; fall back to the Trip doc's own descriptionTarget
-    # (leveled English trips — Bath1_A12_EN — nest in the base group, so their TripGroup
-    # lookup misses; their per-level description lives on the Trip doc).
-    tg_desc = (tg or {}).get("descriptionTarget") or trip.get("descriptionTarget") or ""
 
     sid = _new_sid()
     now = time.time()
@@ -983,8 +978,9 @@ def create_or_resume(trip_id: str, user, *,
 
     # trip-level
     add_field(None, "contentTitleKey", trip.get("contentTitleKey") or "", False)
-    add_field(None, "tripgroup_description", tg_desc, False,
-              source_text=trip.get("descriptionHome") or "")
+    # tripgroup_description is no longer seeded (2026-08-14): the field was redundant
+    # for reviewers, and the family-level description gets its own review flow.
+    # Existing sessions that carry it still approve — it writes to the Trip doc.
 
     # scenes (non-_EN trips carry English-source siblings: *En)
     for i, s in enumerate(trip.get("quickTrips") or []):
@@ -4193,7 +4189,12 @@ def commit(sid: str, user) -> dict:
             top_level["contentTitleKey"] = val
             written.append("contentTitleKey")
         elif fp == "tripgroup_description":
-            continue   # handled on the TripGroup below
+            # Written to the Trip doc's own descriptionTarget — NEVER the TripGroup.
+            # Leveled rungs (Monaco2_A12_FR, Bath1_A12_EN) have no TripGroup doc of
+            # their own, so a TripGroup .update() 404s (Monaco2_A12_FR, 2026-08-14);
+            # the seed reads this field from the Trip doc anyway.
+            top_level["descriptionTarget"] = val
+            written.append("descriptionTarget")
         elif si is not None and si < len(qt_live):
             sc = qt_live[si]
             applied = True
@@ -4249,18 +4250,6 @@ def commit(sid: str, user) -> dict:
     # S5: only rewrite the quickTrips array when a scene field actually changed —
     # a title-only / description-only edit must not clobber concurrent scene edits.
     update_trip_text(trip_id, qt_live if scene_changed else None, top_level)
-
-    # ---- TripGroup description + re-derived categories ----
-    desc_field = next((f for f in changed if f["field_path"] == "tripgroup_description"),
-                      None)
-    if desc_field:
-        tg_id, tg_live = get_tripgroup(trip_id)
-        live_cats = (tg_live or {}).get("tripCategories") or []
-        old_desc = (tg_live or {}).get("descriptionTarget") or desc_field["original_text"]
-        new_desc = desc_field["current_text"]
-        cats = merge_categories(old_desc, new_desc, live_cats)
-        update_tripgroup(tg_id, new_desc, cats)
-        written.append("TripGroup.descriptionTarget")
 
     # ---- promote changed working mp3s to the masters (archive prior master) ----
     mp3_dir = resolve_audio_dir(trip_id, trip_live)   # Quicktrips, else Audio Generation
