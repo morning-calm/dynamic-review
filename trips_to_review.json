@@ -1,37 +1,7 @@
 {
-  "generated_at": "2026-08-05T23:21:47+01:00",
+  "generated_at": "2026-08-14T22:25:55+01:00",
   "source": "trello 6,7",
   "trips": [
-    {
-      "trip_id": "Monaco1_A12_FR",
-      "lane": "6",
-      "level": "FR-A12",
-      "family": "Monaco1_Beg_FR",
-      "voice": "sebastien",
-      "gender": "male",
-      "title": "Monaco1_A12_FR",
-      "labels": [
-        "France"
-      ],
-      "card_url": "https://trello.com/c/7MMuTozA",
-      "pos": 140737488289792,
-      "duration_sec": 203.39
-    },
-    {
-      "trip_id": "Monaco1_A12_IT",
-      "lane": "6",
-      "level": "IT-A12",
-      "family": "Monaco1_Beg_IT",
-      "voice": "marco",
-      "gender": "male",
-      "title": "Monaco1_A12_IT",
-      "labels": [
-        "Italy"
-      ],
-      "card_url": "https://trello.com/c/duVvwKxF",
-      "pos": 140737488306176,
-      "duration_sec": 239.83
-    },
     {
       "trip_id": "Busan_Oryukdo_TPK1_KO",
       "lane": "6",
@@ -211,21 +181,6 @@
       "card_url": "https://trello.com/c/dPlm4EfA",
       "pos": 140737488314880,
       "duration_sec": 218.41
-    },
-    {
-      "trip_id": "Monaco2_A12_FR",
-      "lane": "6",
-      "level": "FR-A12",
-      "family": "Monaco2_Beg_FR",
-      "voice": "sebastien",
-      "gender": "male",
-      "title": "Monaco2_A12_FR",
-      "labels": [
-        "France"
-      ],
-      "card_url": "https://trello.com/c/9JlJR6Gc",
-      "pos": 140737488322560,
-      "duration_sec": 213.16
     },
     {
       "trip_id": "Busan_Songdo2_SkyPark_TPK1_KO",
@@ -1500,22 +1455,7 @@
       ],
       "card_url": "https://trello.com/c/tEeI4LZp",
       "pos": 140737488896000,
-      "duration_sec": 147.3
-    },
-    {
-      "trip_id": "CastellodiBrolio_A12_IT",
-      "lane": "6",
-      "level": "IT-A12",
-      "family": "CastellodiBrolio_Beg_IT",
-      "voice": "marco",
-      "gender": "male",
-      "title": "CastellodiBrolio_A12_IT",
-      "labels": [
-        "Italy"
-      ],
-      "card_url": "https://trello.com/c/z66hXasz",
-      "pos": 140737488928768,
-      "duration_sec": 196.47
+      "duration_sec": 147.49
     },
     {
       "trip_id": "Cordoba3_A12_ES",
@@ -1546,36 +1486,6 @@
       "card_url": "https://trello.com/c/VilUFFDk",
       "pos": 140737488961536,
       "duration_sec": 161.41
-    },
-    {
-      "trip_id": "Hyeres_A12_FR",
-      "lane": "6",
-      "level": "FR-A12",
-      "family": "Hyeres_Beg_FR",
-      "voice": "yvonne",
-      "gender": "female",
-      "title": "Hyeres_A12_FR",
-      "labels": [
-        "France"
-      ],
-      "card_url": "https://trello.com/c/GqdU69yz",
-      "pos": 140737488994304,
-      "duration_sec": 147.8
-    },
-    {
-      "trip_id": "Reims3_A12_FR",
-      "lane": "6",
-      "level": "FR-A12",
-      "family": "Reims3_Beg_FR",
-      "voice": "sebastien",
-      "gender": "male",
-      "title": "Reims3_A12_FR",
-      "labels": [
-        "France"
-      ],
-      "card_url": "https://trello.com/c/qCkP1jVo",
-      "pos": 140737489010688,
-      "duration_sec": 251.79
     },
     {
       "trip_id": "Fiesole_A12_IT",
@@ -1635,7 +1545,7 @@
       ],
       "card_url": "https://trello.com/c/dThEgUnA",
       "pos": 140737489076224,
-      "duration_sec": 488.39
+      "duration_sec": 488.78
     },
     {
       "trip_id": "Alps1_A12_IT",
@@ -1695,7 +1605,7 @@
       ],
       "card_url": "https://trello.com/c/Z26LDbzu",
       "pos": 140737489174528,
-      "duration_sec": 256.5
+      "duration_sec": 255.76
     },
     {
       "trip_id": "Siena1_A12_IT",
@@ -1951,81 +1861,6 @@
       "card_url": "https://trello.com/c/GTYZA51s",
       "pos": 140737489469440,
       "duration_sec": 289.54
-    },
-    {
-      "trip_id": "Cassis_A12_FR",
-      "lane": "6",
-      "level": "FR-A12",
-      "family": "Cassis_Beg_FR",
-      "voice": "sebastien",
-      "gender": "male",
-      "title": "Cassis_A12_FR",
-      "labels": [
-        "France"
-      ],
-      "card_url": "https://trello.com/c/5npTXe7r",
-      "pos": 140737489485824,
-      "duration_sec": 225.12
-    },
-    {
-      "trip_id": "Reims1_A12_FR",
-      "lane": "6",
-      "level": "FR-A12",
-      "family": "Reims1_Beg_FR",
-      "voice": "sebastien",
-      "gender": "male",
-      "title": "Reims1_A12_FR",
-      "labels": [
-        "France"
-      ],
-      "card_url": "https://trello.com/c/ymEYBDjl",
-      "pos": 140737489502208,
-      "duration_sec": 258.48
-    },
-    {
-      "trip_id": "Reims2_A12_FR",
-      "lane": "6",
-      "level": "FR-A12",
-      "family": "Reims2_Beg_FR",
-      "voice": "sebastien",
-      "gender": "male",
-      "title": "Reims2_A12_FR",
-      "labels": [
-        "France"
-      ],
-      "card_url": "https://trello.com/c/t3AruZVg",
-      "pos": 140737489518592,
-      "duration_sec": 250.72
-    },
-    {
-      "trip_id": "Alps1_A12_FR",
-      "lane": "6",
-      "level": "FR-A12",
-      "family": "Alps1_Beg_FR",
-      "voice": "yvonne",
-      "gender": "female",
-      "title": "Alps1_A12_FR",
-      "labels": [
-        "France"
-      ],
-      "card_url": "https://trello.com/c/6OtpfMVG",
-      "pos": 140737489534976,
-      "duration_sec": 277.6
-    },
-    {
-      "trip_id": "Alps2_A12_FR",
-      "lane": "6",
-      "level": "FR-A12",
-      "family": "Alps2_Beg_FR",
-      "voice": "yvonne",
-      "gender": "female",
-      "title": "Alps2_A12_FR",
-      "labels": [
-        "France"
-      ],
-      "card_url": "https://trello.com/c/8mrLtm9d",
-      "pos": 140737489551360,
-      "duration_sec": 304.77
     },
     {
       "trip_id": "Bandol_Toulon_A12_FR",
@@ -2295,7 +2130,7 @@
       ],
       "card_url": "https://trello.com/c/jNGqnn9e",
       "pos": 140737489846272,
-      "duration_sec": 300.2
+      "duration_sec": 300.28
     },
     {
       "trip_id": "Cadaques_A12_ES",
@@ -2325,7 +2160,7 @@
       ],
       "card_url": "https://trello.com/c/iOSXBIX6",
       "pos": 140737489879040,
-      "duration_sec": 298.97
+      "duration_sec": 301.09
     },
     {
       "trip_id": "El_Planeta_A12_ES",
@@ -2340,7 +2175,7 @@
       ],
       "card_url": "https://trello.com/c/2QXkkBIE",
       "pos": 140737489895424,
-      "duration_sec": 235.55
+      "duration_sec": 235.08
     },
     {
       "trip_id": "Ingenio_Humano1_A12_ES",
@@ -2355,7 +2190,7 @@
       ],
       "card_url": "https://trello.com/c/FP84NjLh",
       "pos": 140737489911808,
-      "duration_sec": 226.66
+      "duration_sec": 225.57
     },
     {
       "trip_id": "Ingenio_Humano2_A12_ES",
@@ -2370,7 +2205,7 @@
       ],
       "card_url": "https://trello.com/c/HwV9AFja",
       "pos": 140737489928192,
-      "duration_sec": 301.53
+      "duration_sec": 302.63
     },
     {
       "trip_id": "Mercados_A12_ES",
@@ -2400,7 +2235,7 @@
       ],
       "card_url": "https://trello.com/c/pseFq89n",
       "pos": 140737489960960,
-      "duration_sec": 307.07
+      "duration_sec": 305.68
     },
     {
       "trip_id": "Org_Social1_A12_ES",
@@ -2415,7 +2250,7 @@
       ],
       "card_url": "https://trello.com/c/vkE1x7pW",
       "pos": 140737489977344,
-      "duration_sec": 242.91
+      "duration_sec": 242.7
     },
     {
       "trip_id": "Org_Social2_A12_ES",
@@ -2460,7 +2295,7 @@
       ],
       "card_url": "https://trello.com/c/L7dOBjRc",
       "pos": 140737490026496,
-      "duration_sec": 299.28
+      "duration_sec": 297.04
     },
     {
       "trip_id": "UrbanoRural_A12_ES",
@@ -2490,7 +2325,7 @@
       ],
       "card_url": "https://trello.com/c/dsPL45LF",
       "pos": 140737490059264,
-      "duration_sec": 333.3
+      "duration_sec": 334.76
     },
     {
       "trip_id": "Don_Quijote_La_Mancha_A12_ES",
@@ -2505,7 +2340,7 @@
       ],
       "card_url": "https://trello.com/c/9sNvxTRg",
       "pos": 140737490075648,
-      "duration_sec": 261.12
+      "duration_sec": 260.96
     },
     {
       "trip_id": "Toledo1_A12_ES",
@@ -2535,7 +2370,7 @@
       ],
       "card_url": "https://trello.com/c/WHJ1eStd",
       "pos": 140737490108416,
-      "duration_sec": 361.64
+      "duration_sec": 360.1
     },
     {
       "trip_id": "Toledo3_A12_ES",
@@ -2550,7 +2385,7 @@
       ],
       "card_url": "https://trello.com/c/uSw2dd1y",
       "pos": 140737490124800,
-      "duration_sec": 406.7
+      "duration_sec": 407.17
     },
     {
       "trip_id": "Vic_A12_ES",
@@ -2565,7 +2400,7 @@
       ],
       "card_url": "https://trello.com/c/S9YIQgUv",
       "pos": 140737490141184,
-      "duration_sec": 109.17
+      "duration_sec": 109.43
     },
     {
       "trip_id": "Cadiz_A12_ES",
@@ -2595,7 +2430,7 @@
       ],
       "card_url": "https://trello.com/c/KZfqmH19",
       "pos": 140737490173952,
-      "duration_sec": 188.63
+      "duration_sec": 189.05
     },
     {
       "trip_id": "Cordoba1_A12_ES",
@@ -2610,7 +2445,7 @@
       ],
       "card_url": "https://trello.com/c/wJWUxjIr",
       "pos": 140737490190336,
-      "duration_sec": 146.21
+      "duration_sec": 146.7
     },
     {
       "trip_id": "Cordoba2_A12_ES",
@@ -2625,7 +2460,7 @@
       ],
       "card_url": "https://trello.com/c/RKNiLexI",
       "pos": 140737490206720,
-      "duration_sec": 145.14
+      "duration_sec": 144.85
     },
     {
       "trip_id": "Cordoba4_A12_ES",
@@ -2640,7 +2475,7 @@
       ],
       "card_url": "https://trello.com/c/NFbeBPVW",
       "pos": 140737490223104,
-      "duration_sec": 119.72
+      "duration_sec": 119.82
     },
     {
       "trip_id": "Los_Escobazos_A12_ES",
@@ -2655,7 +2490,7 @@
       ],
       "card_url": "https://trello.com/c/s3Dl5FSj",
       "pos": 140737490239488,
-      "duration_sec": 239.33
+      "duration_sec": 239.15
     },
     {
       "trip_id": "Madrid1_A12_ES",
@@ -2685,7 +2520,7 @@
       ],
       "card_url": "https://trello.com/c/rvipmhVN",
       "pos": 140737490272256,
-      "duration_sec": 136.7
+      "duration_sec": 136.78
     },
     {
       "trip_id": "Madrid3_A12_ES",
@@ -2700,7 +2535,7 @@
       ],
       "card_url": "https://trello.com/c/Z84LzItx",
       "pos": 140737490288640,
-      "duration_sec": 148.19
+      "duration_sec": 148.66
     },
     {
       "trip_id": "Montserrat_A12_ES",
@@ -2730,7 +2565,7 @@
       ],
       "card_url": "https://trello.com/c/itv8zOY0",
       "pos": 140737490321408,
-      "duration_sec": 151.01
+      "duration_sec": 152.32
     },
     {
       "trip_id": "Sevilla2_A12_ES",
@@ -2745,7 +2580,7 @@
       ],
       "card_url": "https://trello.com/c/x38jRswn",
       "pos": 140737490337792,
-      "duration_sec": 150.28
+      "duration_sec": 150.2
     },
     {
       "trip_id": "Sevilla3_A12_ES",
@@ -2760,7 +2595,7 @@
       ],
       "card_url": "https://trello.com/c/1tdcBE37",
       "pos": 140737490354176,
-      "duration_sec": 156.58
+      "duration_sec": 158.93
     },
     {
       "trip_id": "Tossa_de_Mar_A12_ES",
@@ -2790,7 +2625,7 @@
       ],
       "card_url": "https://trello.com/c/0wbYHPz5",
       "pos": 140737490386944,
-      "duration_sec": 163.87
+      "duration_sec": 165.72
     },
     {
       "trip_id": "Valencia2_A12_ES",
@@ -2805,7 +2640,7 @@
       ],
       "card_url": "https://trello.com/c/RFzcNQMJ",
       "pos": 140737490403328,
-      "duration_sec": 209.74
+      "duration_sec": 209.53
     },
     {
       "trip_id": "Girona_A12_ES",
@@ -2820,7 +2655,7 @@
       ],
       "card_url": "https://trello.com/c/RFwyl0wy",
       "pos": 140737490419712,
-      "duration_sec": 407.48
+      "duration_sec": 407.33
     },
     {
       "trip_id": "Salvador_Dali_A12_ES",
@@ -2835,7 +2670,7 @@
       ],
       "card_url": "https://trello.com/c/J6xtifcU",
       "pos": 140737490436096,
-      "duration_sec": 393.01
+      "duration_sec": 393.33
     },
     {
       "trip_id": "Sant_Felíu_de_Guíxols_A12_ES",
@@ -2850,7 +2685,7 @@
       ],
       "card_url": "https://trello.com/c/BKJBD0Fg",
       "pos": 140737490452480,
-      "duration_sec": 251.9
+      "duration_sec": 251.53
     },
     {
       "trip_id": "Valencia3_A12_ES",
@@ -2865,7 +2700,7 @@
       ],
       "card_url": "https://trello.com/c/MExGiYmY",
       "pos": 140737490468864,
-      "duration_sec": 140.75
+      "duration_sec": 142.13
     },
     {
       "trip_id": "Valencia4_A12_ES",
@@ -2895,7 +2730,7 @@
       ],
       "card_url": "https://trello.com/c/NqkLQrMw",
       "pos": 140737490501632,
-      "duration_sec": 147.02
+      "duration_sec": 147.54
     },
     {
       "trip_id": "Zaragoza2_A12_ES",
@@ -2925,7 +2760,7 @@
       ],
       "card_url": "https://trello.com/c/x0hfGU2U",
       "pos": 140737490534400,
-      "duration_sec": 114.76
+      "duration_sec": 114.63
     },
     {
       "trip_id": "Sevilla4_B1_ES",
@@ -2940,7 +2775,7 @@
       ],
       "card_url": "https://trello.com/c/IcNlW2yo",
       "pos": 140737490550784,
-      "duration_sec": 306.16
+      "duration_sec": 307.88
     },
     {
       "trip_id": "Sevilla5_B1_ES",
@@ -2955,7 +2790,7 @@
       ],
       "card_url": "https://trello.com/c/9qOT6oHK",
       "pos": 140737490567168,
-      "duration_sec": 253.18
+      "duration_sec": 253.88
     },
     {
       "trip_id": "Cassis_Calanques_A12_FR",
@@ -2985,7 +2820,7 @@
       ],
       "card_url": "https://trello.com/c/zKvgFcR1",
       "pos": 140737490599936,
-      "duration_sec": null
+      "duration_sec": 23.12
     },
     {
       "trip_id": "Bilbao2_Guggenheim_A12_ES",
@@ -3000,7 +2835,7 @@
       ],
       "card_url": "https://trello.com/c/olMXADc8",
       "pos": 140737490616320,
-      "duration_sec": null
+      "duration_sec": 12.98
     },
     {
       "trip_id": "Bilbao1_LaRia_A12_ES",
@@ -3015,7 +2850,7 @@
       ],
       "card_url": "https://trello.com/c/82nGwNut",
       "pos": 140737490632704,
-      "duration_sec": null
+      "duration_sec": 23.67
     },
     {
       "trip_id": "Bilbao1_LaRia_B1_ES",
@@ -3030,7 +2865,7 @@
       ],
       "card_url": "https://trello.com/c/82nGwNut",
       "pos": 140737490632704,
-      "duration_sec": null
+      "duration_sec": 263.84
     },
     {
       "trip_id": "Cordoba_CascoHistorico_A12_ES",
@@ -3045,7 +2880,7 @@
       ],
       "card_url": "https://trello.com/c/sIeM6RFL",
       "pos": 140737490649088,
-      "duration_sec": null
+      "duration_sec": 49.16
     },
     {
       "trip_id": "Cuevas_Altamira_A12_ES",
@@ -3060,7 +2895,7 @@
       ],
       "card_url": "https://trello.com/c/qrZLzgEe",
       "pos": 140737490665472,
-      "duration_sec": null
+      "duration_sec": 40.05
     },
     {
       "trip_id": "Jerez_CascoAntiguo_A12_ES",
@@ -3075,7 +2910,7 @@
       ],
       "card_url": "https://trello.com/c/jhHSMkAP",
       "pos": 140737490681856,
-      "duration_sec": null
+      "duration_sec": 37.07
     },
     {
       "trip_id": "Jerez_CascoAntiguo_B1_ES",
@@ -3090,7 +2925,7 @@
       ],
       "card_url": "https://trello.com/c/jhHSMkAP",
       "pos": 140737490681856,
-      "duration_sec": 73.01
+      "duration_sec": 72.46
     },
     {
       "trip_id": "LasFallas2019_A12_ES",
@@ -3105,7 +2940,7 @@
       ],
       "card_url": "https://trello.com/c/RBvGTPyC",
       "pos": 140737490698240,
-      "duration_sec": null
+      "duration_sec": 12.7
     },
     {
       "trip_id": "LosPirineos_Aventura_A12_ES",
@@ -3120,7 +2955,7 @@
       ],
       "card_url": "https://trello.com/c/nB9QALtD",
       "pos": 140737490714624,
-      "duration_sec": null
+      "duration_sec": 28.94
     },
     {
       "trip_id": "Merida3_Anfiteatro_A12_ES",
@@ -3135,7 +2970,7 @@
       ],
       "card_url": "https://trello.com/c/EVkZ7Aqn",
       "pos": 140737490731008,
-      "duration_sec": null
+      "duration_sec": 36.18
     },
     {
       "trip_id": "Merida3_Anfiteatro_B1_ES",
@@ -3150,7 +2985,7 @@
       ],
       "card_url": "https://trello.com/c/EVkZ7Aqn",
       "pos": 140737490731008,
-      "duration_sec": null
+      "duration_sec": 134.5
     },
     {
       "trip_id": "Merida2_Acueducto_A12_ES",
@@ -3165,7 +3000,7 @@
       ],
       "card_url": "https://trello.com/c/C1mkUNFl",
       "pos": 140737490747392,
-      "duration_sec": null
+      "duration_sec": 19.62
     },
     {
       "trip_id": "Merida2_Acueducto_B1_ES",
@@ -3180,7 +3015,7 @@
       ],
       "card_url": "https://trello.com/c/C1mkUNFl",
       "pos": 140737490747392,
-      "duration_sec": null
+      "duration_sec": 180.66
     },
     {
       "trip_id": "Merida1_PuenteYAlcazaba_A12_ES",
@@ -3195,7 +3030,7 @@
       ],
       "card_url": "https://trello.com/c/CBAMt96p",
       "pos": 140737490763776,
-      "duration_sec": null
+      "duration_sec": 10.89
     },
     {
       "trip_id": "Merida1_PuenteYAlcazaba_B1_ES",
@@ -3210,7 +3045,7 @@
       ],
       "card_url": "https://trello.com/c/CBAMt96p",
       "pos": 140737490763776,
-      "duration_sec": null
+      "duration_sec": 145.08
     },
     {
       "trip_id": "Salamanca2_Catedrales_A12_ES",
@@ -3225,7 +3060,7 @@
       ],
       "card_url": "https://trello.com/c/Yr0KX0jh",
       "pos": 140737490780160,
-      "duration_sec": null
+      "duration_sec": 37.43
     },
     {
       "trip_id": "Salamanca2_Catedrales_B1_ES",
@@ -3240,7 +3075,7 @@
       ],
       "card_url": "https://trello.com/c/Yr0KX0jh",
       "pos": 140737490780160,
-      "duration_sec": null
+      "duration_sec": 228.47
     },
     {
       "trip_id": "Salamanca1_Universidad_A12_ES",
@@ -3255,7 +3090,7 @@
       ],
       "card_url": "https://trello.com/c/6ee03YGc",
       "pos": 140737490796544,
-      "duration_sec": null
+      "duration_sec": 36.18
     },
     {
       "trip_id": "SanSebastian2_ParteVieja_A12_ES",
@@ -3270,7 +3105,7 @@
       ],
       "card_url": "https://trello.com/c/s4mresBI",
       "pos": 140737490812928,
-      "duration_sec": null
+      "duration_sec": 15.86
     },
     {
       "trip_id": "SanSebastian1_LaConcha_A12_ES",
@@ -3285,7 +3120,7 @@
       ],
       "card_url": "https://trello.com/c/GNfpM5Ze",
       "pos": 140737490829312,
-      "duration_sec": null
+      "duration_sec": 71.47
     },
     {
       "trip_id": "Santiago3_Catedral_A12_ES",
@@ -3300,7 +3135,7 @@
       ],
       "card_url": "https://trello.com/c/hJaa8bVu",
       "pos": 140737490845696,
-      "duration_sec": null
+      "duration_sec": 54.86
     },
     {
       "trip_id": "Santiago3_Catedral_B1_ES",
@@ -3315,7 +3150,7 @@
       ],
       "card_url": "https://trello.com/c/hJaa8bVu",
       "pos": 140737490845696,
-      "duration_sec": null
+      "duration_sec": 187.12
     },
     {
       "trip_id": "Santiago2_Patrimonio_A12_ES",
@@ -3330,7 +3165,7 @@
       ],
       "card_url": "https://trello.com/c/sJmFS24S",
       "pos": 140737490862080,
-      "duration_sec": null
+      "duration_sec": 13.04
     },
     {
       "trip_id": "Santiago2_Patrimonio_B1_ES",
@@ -3345,7 +3180,7 @@
       ],
       "card_url": "https://trello.com/c/sJmFS24S",
       "pos": 140737490862080,
-      "duration_sec": null
+      "duration_sec": 115.2
     },
     {
       "trip_id": "Santiago1_CiudadVieja_A12_ES",
@@ -3360,7 +3195,7 @@
       ],
       "card_url": "https://trello.com/c/4cspCnOd",
       "pos": 140737490878464,
-      "duration_sec": null
+      "duration_sec": 24.24
     },
     {
       "trip_id": "Tenerife3_SantaCruz_A12_ES",
@@ -3375,7 +3210,7 @@
       ],
       "card_url": "https://trello.com/c/uoRvHRq6",
       "pos": 140737490894848,
-      "duration_sec": null
+      "duration_sec": 26.7
     },
     {
       "trip_id": "Tenerife3_SantaCruz_B1_ES",
@@ -3390,7 +3225,7 @@
       ],
       "card_url": "https://trello.com/c/uoRvHRq6",
       "pos": 140737490894848,
-      "duration_sec": null
+      "duration_sec": 233.93
     },
     {
       "trip_id": "Tenerife2_Teno_A12_ES",
@@ -3405,7 +3240,7 @@
       ],
       "card_url": "https://trello.com/c/Lu4Gt6UO",
       "pos": 140737490911232,
-      "duration_sec": null
+      "duration_sec": 33.36
     },
     {
       "trip_id": "Tenerife2_Teno_B1_ES",
@@ -3420,7 +3255,7 @@
       ],
       "card_url": "https://trello.com/c/Lu4Gt6UO",
       "pos": 140737490911232,
-      "duration_sec": null
+      "duration_sec": 186.64
     },
     {
       "trip_id": "Tenerife4_Volcanes_A12_ES",
@@ -3435,7 +3270,7 @@
       ],
       "card_url": "https://trello.com/c/AzxOLeF1",
       "pos": 140737490927616,
-      "duration_sec": null
+      "duration_sec": 10.24
     },
     {
       "trip_id": "Tenerife1_ElTeide_A12_ES",
@@ -3450,7 +3285,7 @@
       ],
       "card_url": "https://trello.com/c/VtEKnPdg",
       "pos": 140737490944000,
-      "duration_sec": null
+      "duration_sec": 61.6
     },
     {
       "trip_id": "Tenerife1_ElTeide_B1_ES",
@@ -3465,7 +3300,7 @@
       ],
       "card_url": "https://trello.com/c/VtEKnPdg",
       "pos": 140737490944000,
-      "duration_sec": null
+      "duration_sec": 151.43
     },
     {
       "trip_id": "Tenerife5_Anaga_A12_ES",
@@ -3480,7 +3315,7 @@
       ],
       "card_url": "https://trello.com/c/dIs4volN",
       "pos": 140737490960384,
-      "duration_sec": null
+      "duration_sec": 36.99
     },
     {
       "trip_id": "Tenerife5_Anaga_B1_ES",
@@ -3495,7 +3330,7 @@
       ],
       "card_url": "https://trello.com/c/dIs4volN",
       "pos": 140737490960384,
-      "duration_sec": null
+      "duration_sec": 104.72
     },
     {
       "trip_id": "VitoriaGasteiz_CascoMedieval_A12_ES",
@@ -3510,37 +3345,7 @@
       ],
       "card_url": "https://trello.com/c/XpiTBBEg",
       "pos": 140737490976768,
-      "duration_sec": null
-    },
-    {
-      "trip_id": "Monaco1_Beg_FR",
-      "lane": "7",
-      "level": "FR-Beg",
-      "family": "Monaco1_Beg_FR",
-      "voice": "sebastien",
-      "gender": "male",
-      "title": "Monaco1_Beg_FR",
-      "labels": [
-        "France"
-      ],
-      "card_url": "https://trello.com/c/7MMuTozA",
-      "pos": 140737488289792,
-      "duration_sec": 244.92
-    },
-    {
-      "trip_id": "Monaco1_FR",
-      "lane": "7",
-      "level": "FR",
-      "family": "Monaco1_FR",
-      "voice": "sebastien",
-      "gender": "male",
-      "title": "Monaco1_FR",
-      "labels": [
-        "France"
-      ],
-      "card_url": "https://trello.com/c/7MMuTozA",
-      "pos": 140737488289792,
-      "duration_sec": 585.59
+      "duration_sec": 52.95
     },
     {
       "trip_id": "Busan_Oryukdo_EN",
@@ -3603,36 +3408,6 @@
       "duration_sec": 210.86
     },
     {
-      "trip_id": "Monaco2_Beg_FR",
-      "lane": "7",
-      "level": "FR-Beg",
-      "family": "Monaco2_Beg_FR",
-      "voice": "sebastien",
-      "gender": "male",
-      "title": "Monaco2_Beg_FR",
-      "labels": [
-        "France"
-      ],
-      "card_url": "https://trello.com/c/9JlJR6Gc",
-      "pos": 140737488322560,
-      "duration_sec": 276.92
-    },
-    {
-      "trip_id": "Monaco2_FR",
-      "lane": "7",
-      "level": "FR",
-      "family": "Monaco2_FR",
-      "voice": "sebastien",
-      "gender": "male",
-      "title": "Monaco2_FR",
-      "labels": [
-        "France"
-      ],
-      "card_url": "https://trello.com/c/9JlJR6Gc",
-      "pos": 140737488322560,
-      "duration_sec": 560.56
-    },
-    {
       "trip_id": "Busan_Songdo2_SkyPark_EN",
       "lane": "7",
       "level": "EN",
@@ -3693,6 +3468,51 @@
       "duration_sec": 698.78
     },
     {
+      "trip_id": "Jedburgh1_TownAbbey_A12_EN",
+      "lane": "7",
+      "level": "A12",
+      "family": "Jedburgh1_TownAbbey",
+      "voice": "isla",
+      "gender": "female",
+      "title": "Jedburgh1_TownAbbey_A12_EN",
+      "labels": [
+        "UK"
+      ],
+      "card_url": "https://trello.com/c/pabZS5gO",
+      "pos": 140737488359424,
+      "duration_sec": 178.18
+    },
+    {
+      "trip_id": "Jedburgh1_TownAbbey_B1_EN",
+      "lane": "7",
+      "level": "B1",
+      "family": "Jedburgh1_TownAbbey",
+      "voice": "isla",
+      "gender": "female",
+      "title": "Jedburgh1_TownAbbey_B1_EN",
+      "labels": [
+        "UK"
+      ],
+      "card_url": "https://trello.com/c/pabZS5gO",
+      "pos": 140737488359424,
+      "duration_sec": 340.77
+    },
+    {
+      "trip_id": "Jedburgh1_TownAbbey_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Jedburgh1_TownAbbey",
+      "voice": "isla",
+      "gender": "female",
+      "title": "Jedburgh1_TownAbbey_EN",
+      "labels": [
+        "UK"
+      ],
+      "card_url": "https://trello.com/c/pabZS5gO",
+      "pos": 140737488359424,
+      "duration_sec": 424.88
+    },
+    {
       "trip_id": "Taichung_EN",
       "lane": "7",
       "level": "EN",
@@ -3706,6 +3526,51 @@
       "card_url": "https://trello.com/c/Iu0gKxqs",
       "pos": 140737488363520,
       "duration_sec": 438.02
+    },
+    {
+      "trip_id": "Melrose_A12_EN",
+      "lane": "7",
+      "level": "A12",
+      "family": "Melrose",
+      "voice": "isla",
+      "gender": "female",
+      "title": "Melrose_A12_EN",
+      "labels": [
+        "UK"
+      ],
+      "card_url": "https://trello.com/c/LvllBus3",
+      "pos": 140737488412672,
+      "duration_sec": 246.44
+    },
+    {
+      "trip_id": "Melrose_B1_EN",
+      "lane": "7",
+      "level": "B1",
+      "family": "Melrose",
+      "voice": "isla",
+      "gender": "female",
+      "title": "Melrose_B1_EN",
+      "labels": [
+        "UK"
+      ],
+      "card_url": "https://trello.com/c/LvllBus3",
+      "pos": 140737488412672,
+      "duration_sec": 535.85
+    },
+    {
+      "trip_id": "Melrose_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Melrose",
+      "voice": "isla",
+      "gender": "female",
+      "title": "Melrose_EN",
+      "labels": [
+        "UK"
+      ],
+      "card_url": "https://trello.com/c/LvllBus3",
+      "pos": 140737488412672,
+      "duration_sec": 669.68
     },
     {
       "trip_id": "LunarNewYear_EN",

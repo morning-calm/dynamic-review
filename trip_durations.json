@@ -1,59 +1,12 @@
 {
-  "generated_at": "2026-08-05T23:21:47+01:00",
-  "total_hms": "29h 51m",
-  "total_sec": 107470.7,
+  "generated_at": "2026-08-14T22:25:55+01:00",
+  "total_hms": "30h 05m",
+  "total_sec": 108338.2,
   "unmeasured": [
     "Taichung_HSK3_ZH",
-    "Andorra_Pirineos_A12_ES",
-    "Bilbao2_Guggenheim_A12_ES",
-    "Bilbao1_LaRia_A12_ES",
-    "Bilbao1_LaRia_B1_ES",
-    "Cordoba_CascoHistorico_A12_ES",
-    "Cuevas_Altamira_A12_ES",
-    "Jerez_CascoAntiguo_A12_ES",
-    "LasFallas2019_A12_ES",
-    "LosPirineos_Aventura_A12_ES",
-    "Merida3_Anfiteatro_A12_ES",
-    "Merida3_Anfiteatro_B1_ES",
-    "Merida2_Acueducto_A12_ES",
-    "Merida2_Acueducto_B1_ES",
-    "Merida1_PuenteYAlcazaba_A12_ES",
-    "Merida1_PuenteYAlcazaba_B1_ES",
-    "Salamanca2_Catedrales_A12_ES",
-    "Salamanca2_Catedrales_B1_ES",
-    "Salamanca1_Universidad_A12_ES",
-    "SanSebastian2_ParteVieja_A12_ES",
-    "SanSebastian1_LaConcha_A12_ES",
-    "Santiago3_Catedral_A12_ES",
-    "Santiago3_Catedral_B1_ES",
-    "Santiago2_Patrimonio_A12_ES",
-    "Santiago2_Patrimonio_B1_ES",
-    "Santiago1_CiudadVieja_A12_ES",
-    "Tenerife3_SantaCruz_A12_ES",
-    "Tenerife3_SantaCruz_B1_ES",
-    "Tenerife2_Teno_A12_ES",
-    "Tenerife2_Teno_B1_ES",
-    "Tenerife4_Volcanes_A12_ES",
-    "Tenerife1_ElTeide_A12_ES",
-    "Tenerife1_ElTeide_B1_ES",
-    "Tenerife5_Anaga_A12_ES",
-    "Tenerife5_Anaga_B1_ES",
-    "VitoriaGasteiz_CascoMedieval_A12_ES",
     "Tokyo_08_ImperialPalace_EN"
   ],
   "trips": [
-    {
-      "trip_id": "Monaco1_A12_FR",
-      "lane": "6",
-      "duration_sec": 203.39,
-      "duration_hms": "3:23"
-    },
-    {
-      "trip_id": "Monaco1_A12_IT",
-      "lane": "6",
-      "duration_sec": 239.83,
-      "duration_hms": "4:00"
-    },
     {
       "trip_id": "Busan_Oryukdo_TPK1_KO",
       "lane": "6",
@@ -125,12 +78,6 @@
       "lane": "6",
       "duration_sec": 218.41,
       "duration_hms": "3:38"
-    },
-    {
-      "trip_id": "Monaco2_A12_FR",
-      "lane": "6",
-      "duration_sec": 213.16,
-      "duration_hms": "3:33"
     },
     {
       "trip_id": "Busan_Songdo2_SkyPark_TPK1_KO",
@@ -633,14 +580,8 @@
     {
       "trip_id": "Ainsa_A12_ES",
       "lane": "6",
-      "duration_sec": 147.3,
+      "duration_sec": 147.49,
       "duration_hms": "2:27"
-    },
-    {
-      "trip_id": "CastellodiBrolio_A12_IT",
-      "lane": "6",
-      "duration_sec": 196.47,
-      "duration_hms": "3:16"
     },
     {
       "trip_id": "Cordoba3_A12_ES",
@@ -653,18 +594,6 @@
       "lane": "6",
       "duration_sec": 161.41,
       "duration_hms": "2:41"
-    },
-    {
-      "trip_id": "Hyeres_A12_FR",
-      "lane": "6",
-      "duration_sec": 147.8,
-      "duration_hms": "2:28"
-    },
-    {
-      "trip_id": "Reims3_A12_FR",
-      "lane": "6",
-      "duration_sec": 251.79,
-      "duration_hms": "4:12"
     },
     {
       "trip_id": "Fiesole_A12_IT",
@@ -687,8 +616,8 @@
     {
       "trip_id": "Florence3_A12_IT",
       "lane": "6",
-      "duration_sec": 488.39,
-      "duration_hms": "8:08"
+      "duration_sec": 488.78,
+      "duration_hms": "8:09"
     },
     {
       "trip_id": "Alps1_A12_IT",
@@ -711,7 +640,7 @@
     {
       "trip_id": "Radda_SanGusme_A12_IT",
       "lane": "6",
-      "duration_sec": 256.5,
+      "duration_sec": 255.76,
       "duration_hms": "4:16"
     },
     {
@@ -815,36 +744,6 @@
       "lane": "6",
       "duration_sec": 289.54,
       "duration_hms": "4:50"
-    },
-    {
-      "trip_id": "Cassis_A12_FR",
-      "lane": "6",
-      "duration_sec": 225.12,
-      "duration_hms": "3:45"
-    },
-    {
-      "trip_id": "Reims1_A12_FR",
-      "lane": "6",
-      "duration_sec": 258.48,
-      "duration_hms": "4:18"
-    },
-    {
-      "trip_id": "Reims2_A12_FR",
-      "lane": "6",
-      "duration_sec": 250.72,
-      "duration_hms": "4:11"
-    },
-    {
-      "trip_id": "Alps1_A12_FR",
-      "lane": "6",
-      "duration_sec": 277.6,
-      "duration_hms": "4:38"
-    },
-    {
-      "trip_id": "Alps2_A12_FR",
-      "lane": "6",
-      "duration_sec": 304.77,
-      "duration_hms": "5:05"
     },
     {
       "trip_id": "Bandol_Toulon_A12_FR",
@@ -951,7 +850,7 @@
     {
       "trip_id": "Besalu_A12_ES",
       "lane": "6",
-      "duration_sec": 300.2,
+      "duration_sec": 300.28,
       "duration_hms": "5:00"
     },
     {
@@ -963,26 +862,26 @@
     {
       "trip_id": "ElCamino_A12_ES",
       "lane": "6",
-      "duration_sec": 298.97,
-      "duration_hms": "4:59"
+      "duration_sec": 301.09,
+      "duration_hms": "5:01"
     },
     {
       "trip_id": "El_Planeta_A12_ES",
       "lane": "6",
-      "duration_sec": 235.55,
-      "duration_hms": "3:56"
+      "duration_sec": 235.08,
+      "duration_hms": "3:55"
     },
     {
       "trip_id": "Ingenio_Humano1_A12_ES",
       "lane": "6",
-      "duration_sec": 226.66,
-      "duration_hms": "3:47"
+      "duration_sec": 225.57,
+      "duration_hms": "3:46"
     },
     {
       "trip_id": "Ingenio_Humano2_A12_ES",
       "lane": "6",
-      "duration_sec": 301.53,
-      "duration_hms": "5:02"
+      "duration_sec": 302.63,
+      "duration_hms": "5:03"
     },
     {
       "trip_id": "Mercados_A12_ES",
@@ -993,13 +892,13 @@
     {
       "trip_id": "Moros_y_Cristianos_A12_ES",
       "lane": "6",
-      "duration_sec": 307.07,
-      "duration_hms": "5:07"
+      "duration_sec": 305.68,
+      "duration_hms": "5:06"
     },
     {
       "trip_id": "Org_Social1_A12_ES",
       "lane": "6",
-      "duration_sec": 242.91,
+      "duration_sec": 242.7,
       "duration_hms": "4:03"
     },
     {
@@ -1017,8 +916,8 @@
     {
       "trip_id": "Segovia_A12_ES",
       "lane": "6",
-      "duration_sec": 299.28,
-      "duration_hms": "4:59"
+      "duration_sec": 297.04,
+      "duration_hms": "4:57"
     },
     {
       "trip_id": "UrbanoRural_A12_ES",
@@ -1029,13 +928,13 @@
     {
       "trip_id": "ArtsSci_A12_ES",
       "lane": "6",
-      "duration_sec": 333.3,
-      "duration_hms": "5:33"
+      "duration_sec": 334.76,
+      "duration_hms": "5:35"
     },
     {
       "trip_id": "Don_Quijote_La_Mancha_A12_ES",
       "lane": "6",
-      "duration_sec": 261.12,
+      "duration_sec": 260.96,
       "duration_hms": "4:21"
     },
     {
@@ -1047,19 +946,19 @@
     {
       "trip_id": "Toledo2_A12_ES",
       "lane": "6",
-      "duration_sec": 361.64,
-      "duration_hms": "6:02"
+      "duration_sec": 360.1,
+      "duration_hms": "6:00"
     },
     {
       "trip_id": "Toledo3_A12_ES",
       "lane": "6",
-      "duration_sec": 406.7,
+      "duration_sec": 407.17,
       "duration_hms": "6:47"
     },
     {
       "trip_id": "Vic_A12_ES",
       "lane": "6",
-      "duration_sec": 109.17,
+      "duration_sec": 109.43,
       "duration_hms": "1:49"
     },
     {
@@ -1071,31 +970,31 @@
     {
       "trip_id": "Carnaval_de_Cadiz_A12_ES",
       "lane": "6",
-      "duration_sec": 188.63,
+      "duration_sec": 189.05,
       "duration_hms": "3:09"
     },
     {
       "trip_id": "Cordoba1_A12_ES",
       "lane": "6",
-      "duration_sec": 146.21,
-      "duration_hms": "2:26"
+      "duration_sec": 146.7,
+      "duration_hms": "2:27"
     },
     {
       "trip_id": "Cordoba2_A12_ES",
       "lane": "6",
-      "duration_sec": 145.14,
+      "duration_sec": 144.85,
       "duration_hms": "2:25"
     },
     {
       "trip_id": "Cordoba4_A12_ES",
       "lane": "6",
-      "duration_sec": 119.72,
+      "duration_sec": 119.82,
       "duration_hms": "2:00"
     },
     {
       "trip_id": "Los_Escobazos_A12_ES",
       "lane": "6",
-      "duration_sec": 239.33,
+      "duration_sec": 239.15,
       "duration_hms": "3:59"
     },
     {
@@ -1107,14 +1006,14 @@
     {
       "trip_id": "Madrid2_A12_ES",
       "lane": "6",
-      "duration_sec": 136.7,
+      "duration_sec": 136.78,
       "duration_hms": "2:17"
     },
     {
       "trip_id": "Madrid3_A12_ES",
       "lane": "6",
-      "duration_sec": 148.19,
-      "duration_hms": "2:28"
+      "duration_sec": 148.66,
+      "duration_hms": "2:29"
     },
     {
       "trip_id": "Montserrat_A12_ES",
@@ -1125,20 +1024,20 @@
     {
       "trip_id": "Sevilla1_A12_ES",
       "lane": "6",
-      "duration_sec": 151.01,
-      "duration_hms": "2:31"
+      "duration_sec": 152.32,
+      "duration_hms": "2:32"
     },
     {
       "trip_id": "Sevilla2_A12_ES",
       "lane": "6",
-      "duration_sec": 150.28,
+      "duration_sec": 150.2,
       "duration_hms": "2:30"
     },
     {
       "trip_id": "Sevilla3_A12_ES",
       "lane": "6",
-      "duration_sec": 156.58,
-      "duration_hms": "2:37"
+      "duration_sec": 158.93,
+      "duration_hms": "2:39"
     },
     {
       "trip_id": "Tossa_de_Mar_A12_ES",
@@ -1149,38 +1048,38 @@
     {
       "trip_id": "Valencia1_A12_ES",
       "lane": "6",
-      "duration_sec": 163.87,
-      "duration_hms": "2:44"
+      "duration_sec": 165.72,
+      "duration_hms": "2:46"
     },
     {
       "trip_id": "Valencia2_A12_ES",
       "lane": "6",
-      "duration_sec": 209.74,
+      "duration_sec": 209.53,
       "duration_hms": "3:30"
     },
     {
       "trip_id": "Girona_A12_ES",
       "lane": "6",
-      "duration_sec": 407.48,
+      "duration_sec": 407.33,
       "duration_hms": "6:47"
     },
     {
       "trip_id": "Salvador_Dali_A12_ES",
       "lane": "6",
-      "duration_sec": 393.01,
+      "duration_sec": 393.33,
       "duration_hms": "6:33"
     },
     {
       "trip_id": "Sant_Felíu_de_Guíxols_A12_ES",
       "lane": "6",
-      "duration_sec": 251.9,
+      "duration_sec": 251.53,
       "duration_hms": "4:12"
     },
     {
       "trip_id": "Valencia3_A12_ES",
       "lane": "6",
-      "duration_sec": 140.75,
-      "duration_hms": "2:21"
+      "duration_sec": 142.13,
+      "duration_hms": "2:22"
     },
     {
       "trip_id": "Valencia4_A12_ES",
@@ -1191,8 +1090,8 @@
     {
       "trip_id": "Zaragoza1_A12_ES",
       "lane": "6",
-      "duration_sec": 147.02,
-      "duration_hms": "2:27"
+      "duration_sec": 147.54,
+      "duration_hms": "2:28"
     },
     {
       "trip_id": "Zaragoza2_A12_ES",
@@ -1203,20 +1102,20 @@
     {
       "trip_id": "Zaragoza3_A12_ES",
       "lane": "6",
-      "duration_sec": 114.76,
+      "duration_sec": 114.63,
       "duration_hms": "1:55"
     },
     {
       "trip_id": "Sevilla4_B1_ES",
       "lane": "6",
-      "duration_sec": 306.16,
-      "duration_hms": "5:06"
+      "duration_sec": 307.88,
+      "duration_hms": "5:08"
     },
     {
       "trip_id": "Sevilla5_B1_ES",
       "lane": "6",
-      "duration_sec": 253.18,
-      "duration_hms": "4:13"
+      "duration_sec": 253.88,
+      "duration_hms": "4:14"
     },
     {
       "trip_id": "Cassis_Calanques_A12_FR",
@@ -1225,22 +1124,220 @@
       "duration_hms": "19:03"
     },
     {
+      "trip_id": "Andorra_Pirineos_A12_ES",
+      "lane": "6",
+      "duration_sec": 23.12,
+      "duration_hms": "0:23"
+    },
+    {
+      "trip_id": "Bilbao2_Guggenheim_A12_ES",
+      "lane": "6",
+      "duration_sec": 12.98,
+      "duration_hms": "0:13"
+    },
+    {
+      "trip_id": "Bilbao1_LaRia_A12_ES",
+      "lane": "6",
+      "duration_sec": 23.67,
+      "duration_hms": "0:24"
+    },
+    {
+      "trip_id": "Bilbao1_LaRia_B1_ES",
+      "lane": "6",
+      "duration_sec": 263.84,
+      "duration_hms": "4:24"
+    },
+    {
+      "trip_id": "Cordoba_CascoHistorico_A12_ES",
+      "lane": "6",
+      "duration_sec": 49.16,
+      "duration_hms": "0:49"
+    },
+    {
+      "trip_id": "Cuevas_Altamira_A12_ES",
+      "lane": "6",
+      "duration_sec": 40.05,
+      "duration_hms": "0:40"
+    },
+    {
+      "trip_id": "Jerez_CascoAntiguo_A12_ES",
+      "lane": "6",
+      "duration_sec": 37.07,
+      "duration_hms": "0:37"
+    },
+    {
       "trip_id": "Jerez_CascoAntiguo_B1_ES",
       "lane": "6",
-      "duration_sec": 73.01,
-      "duration_hms": "1:13"
+      "duration_sec": 72.46,
+      "duration_hms": "1:12"
     },
     {
-      "trip_id": "Monaco1_Beg_FR",
-      "lane": "7",
-      "duration_sec": 244.92,
-      "duration_hms": "4:05"
+      "trip_id": "LasFallas2019_A12_ES",
+      "lane": "6",
+      "duration_sec": 12.7,
+      "duration_hms": "0:13"
     },
     {
-      "trip_id": "Monaco1_FR",
-      "lane": "7",
-      "duration_sec": 585.59,
-      "duration_hms": "9:46"
+      "trip_id": "LosPirineos_Aventura_A12_ES",
+      "lane": "6",
+      "duration_sec": 28.94,
+      "duration_hms": "0:29"
+    },
+    {
+      "trip_id": "Merida3_Anfiteatro_A12_ES",
+      "lane": "6",
+      "duration_sec": 36.18,
+      "duration_hms": "0:36"
+    },
+    {
+      "trip_id": "Merida3_Anfiteatro_B1_ES",
+      "lane": "6",
+      "duration_sec": 134.5,
+      "duration_hms": "2:14"
+    },
+    {
+      "trip_id": "Merida2_Acueducto_A12_ES",
+      "lane": "6",
+      "duration_sec": 19.62,
+      "duration_hms": "0:20"
+    },
+    {
+      "trip_id": "Merida2_Acueducto_B1_ES",
+      "lane": "6",
+      "duration_sec": 180.66,
+      "duration_hms": "3:01"
+    },
+    {
+      "trip_id": "Merida1_PuenteYAlcazaba_A12_ES",
+      "lane": "6",
+      "duration_sec": 10.89,
+      "duration_hms": "0:11"
+    },
+    {
+      "trip_id": "Merida1_PuenteYAlcazaba_B1_ES",
+      "lane": "6",
+      "duration_sec": 145.08,
+      "duration_hms": "2:25"
+    },
+    {
+      "trip_id": "Salamanca2_Catedrales_A12_ES",
+      "lane": "6",
+      "duration_sec": 37.43,
+      "duration_hms": "0:37"
+    },
+    {
+      "trip_id": "Salamanca2_Catedrales_B1_ES",
+      "lane": "6",
+      "duration_sec": 228.47,
+      "duration_hms": "3:48"
+    },
+    {
+      "trip_id": "Salamanca1_Universidad_A12_ES",
+      "lane": "6",
+      "duration_sec": 36.18,
+      "duration_hms": "0:36"
+    },
+    {
+      "trip_id": "SanSebastian2_ParteVieja_A12_ES",
+      "lane": "6",
+      "duration_sec": 15.86,
+      "duration_hms": "0:16"
+    },
+    {
+      "trip_id": "SanSebastian1_LaConcha_A12_ES",
+      "lane": "6",
+      "duration_sec": 71.47,
+      "duration_hms": "1:11"
+    },
+    {
+      "trip_id": "Santiago3_Catedral_A12_ES",
+      "lane": "6",
+      "duration_sec": 54.86,
+      "duration_hms": "0:55"
+    },
+    {
+      "trip_id": "Santiago3_Catedral_B1_ES",
+      "lane": "6",
+      "duration_sec": 187.12,
+      "duration_hms": "3:07"
+    },
+    {
+      "trip_id": "Santiago2_Patrimonio_A12_ES",
+      "lane": "6",
+      "duration_sec": 13.04,
+      "duration_hms": "0:13"
+    },
+    {
+      "trip_id": "Santiago2_Patrimonio_B1_ES",
+      "lane": "6",
+      "duration_sec": 115.2,
+      "duration_hms": "1:55"
+    },
+    {
+      "trip_id": "Santiago1_CiudadVieja_A12_ES",
+      "lane": "6",
+      "duration_sec": 24.24,
+      "duration_hms": "0:24"
+    },
+    {
+      "trip_id": "Tenerife3_SantaCruz_A12_ES",
+      "lane": "6",
+      "duration_sec": 26.7,
+      "duration_hms": "0:27"
+    },
+    {
+      "trip_id": "Tenerife3_SantaCruz_B1_ES",
+      "lane": "6",
+      "duration_sec": 233.93,
+      "duration_hms": "3:54"
+    },
+    {
+      "trip_id": "Tenerife2_Teno_A12_ES",
+      "lane": "6",
+      "duration_sec": 33.36,
+      "duration_hms": "0:33"
+    },
+    {
+      "trip_id": "Tenerife2_Teno_B1_ES",
+      "lane": "6",
+      "duration_sec": 186.64,
+      "duration_hms": "3:07"
+    },
+    {
+      "trip_id": "Tenerife4_Volcanes_A12_ES",
+      "lane": "6",
+      "duration_sec": 10.24,
+      "duration_hms": "0:10"
+    },
+    {
+      "trip_id": "Tenerife1_ElTeide_A12_ES",
+      "lane": "6",
+      "duration_sec": 61.6,
+      "duration_hms": "1:02"
+    },
+    {
+      "trip_id": "Tenerife1_ElTeide_B1_ES",
+      "lane": "6",
+      "duration_sec": 151.43,
+      "duration_hms": "2:31"
+    },
+    {
+      "trip_id": "Tenerife5_Anaga_A12_ES",
+      "lane": "6",
+      "duration_sec": 36.99,
+      "duration_hms": "0:37"
+    },
+    {
+      "trip_id": "Tenerife5_Anaga_B1_ES",
+      "lane": "6",
+      "duration_sec": 104.72,
+      "duration_hms": "1:45"
+    },
+    {
+      "trip_id": "VitoriaGasteiz_CascoMedieval_A12_ES",
+      "lane": "6",
+      "duration_sec": 52.95,
+      "duration_hms": "0:53"
     },
     {
       "trip_id": "Busan_Oryukdo_EN",
@@ -1267,18 +1364,6 @@
       "duration_hms": "3:31"
     },
     {
-      "trip_id": "Monaco2_Beg_FR",
-      "lane": "7",
-      "duration_sec": 276.92,
-      "duration_hms": "4:37"
-    },
-    {
-      "trip_id": "Monaco2_FR",
-      "lane": "7",
-      "duration_sec": 560.56,
-      "duration_hms": "9:21"
-    },
-    {
       "trip_id": "Busan_Songdo2_SkyPark_EN",
       "lane": "7",
       "duration_sec": 371.93,
@@ -1303,10 +1388,46 @@
       "duration_hms": "11:39"
     },
     {
+      "trip_id": "Jedburgh1_TownAbbey_A12_EN",
+      "lane": "7",
+      "duration_sec": 178.18,
+      "duration_hms": "2:58"
+    },
+    {
+      "trip_id": "Jedburgh1_TownAbbey_B1_EN",
+      "lane": "7",
+      "duration_sec": 340.77,
+      "duration_hms": "5:41"
+    },
+    {
+      "trip_id": "Jedburgh1_TownAbbey_EN",
+      "lane": "7",
+      "duration_sec": 424.88,
+      "duration_hms": "7:05"
+    },
+    {
       "trip_id": "Taichung_EN",
       "lane": "7",
       "duration_sec": 438.02,
       "duration_hms": "7:18"
+    },
+    {
+      "trip_id": "Melrose_A12_EN",
+      "lane": "7",
+      "duration_sec": 246.44,
+      "duration_hms": "4:06"
+    },
+    {
+      "trip_id": "Melrose_B1_EN",
+      "lane": "7",
+      "duration_sec": 535.85,
+      "duration_hms": "8:56"
+    },
+    {
+      "trip_id": "Melrose_EN",
+      "lane": "7",
+      "duration_sec": 669.68,
+      "duration_hms": "11:10"
     },
     {
       "trip_id": "LunarNewYear_EN",
