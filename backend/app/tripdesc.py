@@ -124,12 +124,17 @@ def _seed_trip(tid: str, language: str, family_hint: str, by_trip: dict,
     if not language:
         from . import audio_core
         language = audio_core.language_of(tid)
+    # UK/Scotland TripGroups (target = EN) hold their description in descriptionTarget
+    # ONLY — descriptionHome is empty there, so an EN-target family seeds its English
+    # text from the target field (found on the 5-family backfill, 2026-08-14).
+    en = doc.get("descriptionHome") or (
+        doc.get("descriptionTarget") if language == "English" else "") or ""
     db.execute(
         "INSERT INTO tripgroup_reviews(tg_id, language, family, rep_trip_id, "
         "status, en_text, en_original, tl_text, tl_original, categories_json, "
         "created_at, updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
         (tg_id, language, family_hint or fam, tid, "pending_en",
-         doc.get("descriptionHome") or "", doc.get("descriptionHome") or "",
+         en, en,
          doc.get("descriptionTarget") or "", doc.get("descriptionTarget") or "",
          json.dumps(doc.get("tripCategories") or [], ensure_ascii=False),
          now, now))

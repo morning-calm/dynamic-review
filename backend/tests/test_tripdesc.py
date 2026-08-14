@@ -164,9 +164,11 @@ def test_counts_are_role_and_language_scoped(staged):
 
 
 def test_seed_trips_backfill_is_idempotent(staged, monkeypatch):
+    # UK-style TripGroup: description lives in descriptionTarget only (target = EN);
+    # an EN-target family must seed its English text from there.
     monkeypatch.setattr(tripdesc, "_tripgroup_index", lambda force=False: (
         {"Melrose_EN": "Melrose"},
-        {"Melrose": {"descriptionHome": "A town. More.", "descriptionTarget": "",
+        {"Melrose": {"descriptionHome": "", "descriptionTarget": "A town. More.",
                      "tripCategories": ["History"]}}))
     out = tripdesc.seed_trips(["Melrose_EN", "Unknown_EN"])
     assert out["seeded"] == ["Melrose"]

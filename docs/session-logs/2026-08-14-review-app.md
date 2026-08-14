@@ -61,4 +61,23 @@ Not yet exercised against live staging / the real claude CLI.
   translation consistency proves insufficient.
 - First real translation run should be watched (claude CLI login state on the laptop).
 
-**Next steps:** dave's backfill list; deploy; re-approve Monaco2_A12_FR.
+## Deploy + backfill (session close)
+
+- Committed + pushed `a8a8ddf`; laptop: pulled, `npm run build`, restarted
+  `review-app.service` — service + `review-tunnel.service` both active, health 200.
+- Ran `scripts/backfill_tripdesc.py` on the laptop: all 5 confirmed families seeded
+  (Jedburgh1_TownAbbey, Jedburgh2_CastleJail, HadriansWall, Melrose, Abbotsford —
+  all English, pending_en).
+- **Found & fixed at backfill:** UK TripGroups hold their description in
+  `descriptionTarget` ONLY (target = EN; `descriptionHome` empty), so EN-target
+  families seeded an empty `en_text`. `_seed_trip` now falls back to
+  `descriptionTarget` for English families (test updated, 183 pass); the 5 live rows
+  were repaired in place (guarded UPDATE, en_text ← tl_original, verified lengths
+  323–430 chars). Fix deployed in the closing commit.
+
+**Verified at close:** laptop health 200, tunnel active, 5 rows pending_en with text.
+
+**Next steps:** re-approve Monaco2_A12_FR (yesterday's partial approve — masters not
+yet promoted); admin works through the 5 UK description checks + the manifest-seeded
+queue; watch the first real EN→TL translation run (claude CLI login on the laptop);
+dave's call on the reopen-re-translate overwrite question (red-team deferred item).
