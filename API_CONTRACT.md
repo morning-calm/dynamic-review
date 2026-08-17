@@ -56,6 +56,10 @@ The atom the UI renders/edits. One per editable thing.
     "candidate": null,                // set after /regenerate
     "fallback":  null                 // set after /fallback
   },
+  "audio_changed": false,             // working take differs from the pristine v0 master
+                                      // (server hash compare — the same test approve uses
+                                      // to decide what to promote). The Changes page
+                                      // badges audio-only alterations with it.
   "versions": [                       // archived takes, newest last
     { "label": "3v0", "kind": "v0_original", "url": "/audio/{sid}/12/v/0" },
     { "label": "3v1", "kind": "splice",      "url": "/audio/{sid}/12/v/1" }

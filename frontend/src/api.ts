@@ -504,6 +504,10 @@ export interface Field {
   can_undo: boolean;
   can_redo: boolean;
   audio: AudioLinks;
+  /** The working take differs from the pristine v0 master (server hash compare — the
+   * same test approve uses to decide what to promote). Badges audio-only alterations
+   * on the Changes page, which the text diff misses. */
+  audio_changed: boolean;
   versions: AudioVersion[];
   manual_clips: ManualClip[];
   /** The filename this field's take carries inside the per-scene download zip (e.g.

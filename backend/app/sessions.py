@@ -153,6 +153,26 @@ def _file_hash(path: Path) -> str | None:
     return hashlib.sha1(path.read_bytes()).hexdigest()[:16]
 
 
+_ORIG_HASH_CACHE: dict[tuple[str, int, int], str] = {}
+
+
+def _orig_hash_cached(path: Path) -> str | None:
+    """Hash of a pristine v0 mp3. serialize_field needs it once per FIELD per session
+    GET, and v0 never changes in normal use — but a reseed DOES replace it, so the
+    cache key carries (mtime, size) rather than trusting the path alone."""
+    try:
+        st = path.stat()
+    except OSError:
+        return None
+    key = (str(path), st.st_mtime_ns, st.st_size)
+    h = _ORIG_HASH_CACHE.get(key)
+    if h is None:
+        h = _file_hash(path)
+        if h is not None:
+            _ORIG_HASH_CACHE[key] = h
+    return h
+
+
 def _next_version_suffix(ver_dir: Path, stem: str) -> int:
     """Highest existing {stem}v<N>.mp3 suffix + 1 (S6: len()+1 overwrites on gaps
     like v1, v3)."""
@@ -1180,6 +1200,14 @@ def serialize_field(sid: str, frow) -> dict:
             fh = (_file_hash(Path(fb)) or "")[:8]
             audio["fallback"] = f"/audio/{sid}/{fid}/fallback?v={fh}"
 
+    # Did the review change this field's AUDIO? (working take differs from the pristine
+    # v0 master — the same test approve uses to decide what to promote). The Changes
+    # page badges it so the admin sees audio-only alterations, which a text diff misses.
+    audio_changed = False
+    if has_audio and frow["mp3_name"] and frow["working_audio_hash"]:
+        oh = _orig_hash_cached(work_dirs(sid)["orig"] / frow["mp3_name"])
+        audio_changed = oh is not None and frow["working_audio_hash"] != oh
+
     versions = []
     kind_by_n: dict[int, str] = {}
     for v in db.query(
@@ -1228,6 +1256,7 @@ def serialize_field(sid: str, frow) -> dict:
         "can_undo": can_undo,
         "can_redo": can_redo,
         "audio": audio,
+        "audio_changed": audio_changed,
         "versions": versions,
         "manual_clips": _clips_for(sid, fid) if has_audio else [],
         # The filename this field's take carries in the per-scene download zip. The FE

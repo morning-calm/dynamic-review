@@ -193,11 +193,13 @@ const RegenerateControls = ({
   };
 
   // Whole-field alt text (question options / Q&A — no selection): voice it as the whole block.
+  // Prefill with the block's current text (ZH: the voiced Hans script) so the reviewer
+  // edits the tricky word's spelling in place instead of retyping the whole question.
   const onAltTextWhole = () => {
     setAltWhole(true);
     setAltV3(false);
     setAltRange(null);
-    setAltText('');
+    setAltText((selectionSourceText ?? field.current_text).trim());
     setAltOpen(true);
   };
 

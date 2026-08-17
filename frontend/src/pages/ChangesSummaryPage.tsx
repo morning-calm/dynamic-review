@@ -192,7 +192,27 @@ const ChangesSummaryPage = () => {
   const onUpdate = (f: Field) => setSession((s) => (s ? replaceField(s, f) : s));
 
   const all = useMemo(() => (session ? flatten(session) : []), [session]);
-  const changed = useMemo(() => all.filter((ff) => fieldChanged(ff.field)), [all]);
+  // "Changed" = anything the admin must look at: a text edit, an AUDIO edit (working
+  // take differs from the pristine master — invisible to a text diff), or a comment.
+  const changed = useMemo(
+    () =>
+      all.filter(
+        (ff) => fieldChanged(ff.field) || ff.field.audio_changed || ff.field.comment.trim() !== '',
+      ),
+    [all],
+  );
+  // Per-scene "what was altered" strip — the admin's first read of the trip.
+  const glance = useMemo(() => {
+    const by = new Map<number | null, { text: boolean; audio: boolean; comments: number }>();
+    for (const ff of changed) {
+      const g = by.get(ff.sceneIndex) ?? { text: false, audio: false, comments: 0 };
+      if (fieldChanged(ff.field)) g.text = true;
+      if (ff.field.audio_changed) g.audio = true;
+      if (ff.field.comment.trim()) g.comments += 1;
+      by.set(ff.sceneIndex, g);
+    }
+    return [...by.entries()].sort(([a], [b]) => (a ?? -1) - (b ?? -1));
+  }, [changed]);
   const editRequired = useMemo(() => all.filter((ff) => ff.field.flag === 'edit_required'), [all]);
   const notDone = useMemo(() => all.filter((ff) => ff.field.flag !== 'done').length, [all]);
   const allDone = all.length > 0 && notDone === 0;
@@ -630,6 +650,25 @@ const ChangesSummaryPage = () => {
               edit-required only
             </label>
           </div>
+          {glance.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-1.5">
+              {glance.map(([idx, g]) => (
+                <span
+                  key={idx ?? 'trip'}
+                  className="rounded border border-gray-600 bg-gray-900/50 px-2 py-1 text-[11px] text-gray-300"
+                >
+                  <span className="font-medium text-gray-200">{idx === null ? 'Trip' : `Scene ${idx}`}</span>
+                  {g.text && <span className="ml-1.5 text-emerald-300">text</span>}
+                  {g.audio && <span className="ml-1.5 text-sky-300">audio</span>}
+                  {g.comments > 0 && (
+                    <span className="ml-1.5 text-amber-300">
+                      {g.comments} comment{g.comments === 1 ? '' : 's'}
+                    </span>
+                  )}
+                </span>
+              ))}
+            </div>
+          )}
           {shown.length === 0 && <p className="text-xs text-gray-500">No changes to show.</p>}
           <ul className="space-y-3">
             {shown.map((ff) => (
@@ -643,6 +682,14 @@ const ChangesSummaryPage = () => {
                       {ff.field.flag}
                     </span>
                   )}
+                  {ff.field.audio_changed && (
+                    <span
+                      className="rounded bg-sky-700 px-1.5 py-0.5 text-[10px] text-white"
+                      title="The working take differs from the pristine master — listen below"
+                    >
+                      audio edited
+                    </span>
+                  )}
                   {ff.field.edited_by && session.submitted_by && ff.field.edited_by !== session.submitted_by && (
                     <span
                       className="rounded bg-purple-800/70 px-1.5 py-0.5 text-[10px] text-purple-200"
@@ -652,20 +699,42 @@ const ChangesSummaryPage = () => {
                     </span>
                   )}
                 </div>
-                {ff.field.localization ? (
-                  <div className="mt-1 space-y-1.5">
-                    {zhChangedScripts(ff.field.localization).map(([s, label]) => (
-                      <div key={s}>
-                        <span className="text-[10px] uppercase tracking-wide text-gray-500">{label}</span>
-                        <InlineDiff
-                          original={ff.field.localization!.orig[s] ?? ''}
-                          current={ff.field.localization!.cur[s] ?? ''}
-                        />
-                      </div>
-                    ))}
+                {fieldChanged(ff.field) &&
+                  (ff.field.localization ? (
+                    <div className="mt-1 space-y-1.5">
+                      {zhChangedScripts(ff.field.localization).map(([s, label]) => (
+                        <div key={s}>
+                          <span className="text-[10px] uppercase tracking-wide text-gray-500">{label}</span>
+                          <InlineDiff
+                            original={ff.field.localization!.orig[s] ?? ''}
+                            current={ff.field.localization!.cur[s] ?? ''}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <InlineDiff original={ff.field.original_text} current={ff.field.current_text} />
+                  ))}
+                {ff.field.comment.trim() && (
+                  <p className="mt-1 rounded bg-amber-900/20 px-2 py-1 text-xs text-amber-200">
+                    <span className="font-medium">Comment:</span> {ff.field.comment}
+                  </p>
+                )}
+                {ff.field.audio_changed && (
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
+                    {ff.field.audio.original && (
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-[10px] uppercase tracking-wide text-gray-500">original</span>
+                        <audio controls preload="none" src={ff.field.audio.original} className="h-8" />
+                      </span>
+                    )}
+                    {ff.field.audio.working && (
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-[10px] uppercase tracking-wide text-sky-400">current</span>
+                        <audio controls preload="none" src={ff.field.audio.working} className="h-8" />
+                      </span>
+                    )}
                   </div>
-                ) : (
-                  <InlineDiff original={ff.field.original_text} current={ff.field.current_text} />
                 )}
               </li>
             ))}
