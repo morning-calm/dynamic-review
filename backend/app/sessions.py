@@ -1119,7 +1119,7 @@ def _original_done(sid: str, frow) -> bool:
     if frow["current_text"] != frow["original_text"] or frow["candidate_mp3_path"]:
         return False
     orig = _orig_path(sid, frow)
-    if orig is None or (frow["working_audio_hash"] or "") != _file_hash(orig):
+    if orig is None or (frow["working_audio_hash"] or "") != _orig_hash_cached(orig):
         return False
     ranges = (json.loads(frow["original_coverage_json"] or "{}")).get("ranges", [])
     dur = audio_io.mp3_duration_seconds(orig)

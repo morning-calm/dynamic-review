@@ -912,6 +912,18 @@ const RegenerateControls = ({
           autoFocus
           className="mb-3 w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-base sm:text-sm"
         />
+        {/* Alt text on the v2 pipeline is voiced VERBATIM — the backend deliberately
+            skips number cleaning so a phonetic respelling survives. Now that the
+            whole-block variant prefills the field's text, a number-dense quiz line
+            arrives with its raw digits, so warn before ElevenLabs reads "1868" as
+            digits. CJK (v3 end-to-end) alt runs through the cleaner — no warning. */}
+        {narration?.model !== V3_MODEL && /\d/.test(altText) && (
+          <p className="mb-3 text-xs text-amber-300">
+            This text contains digits — here they are spoken exactly as written. Spell
+            out numbers, years and units as words (e.g. “eighteen sixty-eight”) so they
+            are read naturally.
+          </p>
+        )}
         {v3Offer && (
           <div className="mb-3 space-y-1">
             <label className="flex items-center gap-2 text-xs text-gray-300">
