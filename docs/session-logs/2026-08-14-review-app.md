@@ -81,3 +81,39 @@ Not yet exercised against live staging / the real claude CLI.
 yet promoted); admin works through the 5 UK description checks + the manifest-seeded
 queue; watch the first real EN→TL translation run (claude CLI login on the laptop);
 dave's call on the reopen-re-translate overwrite question (red-team deferred item).
+
+## UK/Scotland finalise handshake + re-queue of 3 missed rungs
+
+**Goals:** (1) how to signal the Scripts repo to fetch only finalised R2 audio for the 5
+UK/Scotland trips (Hadrian's Wall, Jedburgh ×2, Melrose, Abbotsford, 3 levels each);
+(2) prioritise 3 rungs at score 100.
+
+**What I found / did**
+- **Finalise method is already built end-to-end — no bespoke prompt needed.** Review-app on
+  approve mirrors corrected mp3s to R2 `review-audio/<cid>/` + writes the cross-machine bus
+  `review-audio/_bus/completed_trips.json`. Scripts side: `stage9_finalise.py --from-review`
+  reads that bus, keeps `method="approved"` rows newer than `stage9/finalise_ledger.json`, its
+  first `fetch` step downloads ONLY the corrected R2 mp3s, then mp3→ogg+subs+S3, then ledgers.
+  Refuses to run off the stale local snapshot. Handoff doc written to scratchpad.
+- **Only 12 of the expected 15 rungs were approved.** Live `review.db` (laptop) had NO session
+  for `Jedburgh1_TownAbbey_A12_EN`, `Jedburgh1_TownAbbey_B1_EN`, `Melrose_B1_EN` — never
+  reviewed. Content exists (R2 audio 43/31/43 mp3s). Their family cards had rolled to Trello
+  lane 9 (Finalise) with those rungs unreviewed, so they were absent from the manifest.
+- **Re-queued:** `trello_move.py --to 7 "Town & Abbey" "Melrose and Surroundings"` (lane 9→7,
+  the EN-CEFR convention — all 119 EN `_EN` trips sit on 7). Re-ran `export_review_trips.py`
+  (committed+pushed, review-dynamic `4a8cdf1..cb02e3c`). `git pull` on laptop. Manifest now
+  lists all 3 rungs on lane 7.
+- **Priority 100:** upserted `score=100` into `trip_priority` on the laptop review.db for the 3
+  rungs (matches `sessions.set_trip_priority`). Rows pre-existed with a pin timestamp (already
+  pinned earlier) — only score updated. `list_trips` reads the manifest live per request → no
+  restart needed.
+
+**Verified**
+- Manifest on laptop contains the 3 rungs (lane 7). R2 has full audio for each. `trip_priority`
+  rows read back score=100 for all 3.
+
+**Open / next**
+- Moving the family cards re-listed the already-approved rungs (`Jedburgh1_TownAbbey_EN`,
+  `Melrose_EN`, `Melrose_A12_EN`) — harmless (show as approved); return family to lane 9 after
+  the 3 stragglers are reviewed.
+- The 12 approved UK/Scotland rungs can be finalised any time: `stage9_finalise.py --from-review`.

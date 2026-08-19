@@ -16,6 +16,8 @@ backend/thumb_upload_cache.json
 backend/notifier_state.json
 backend/autoreview_state.json
 scripts/notifier_config.json
+scripts/.tunnel_watch_state.json
+scripts/.tunnel_watch_state.tmp
 .env
 .env.*
 *.log
