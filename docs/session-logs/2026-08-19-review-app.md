@@ -9,3 +9,11 @@
 ## 10:55 — Tunnel watch retired; Cloudflare notification takes over
 - dave enabled Cloudflare's "Tunnel status change" notification in the dashboard (edge-side, no local machine needed) — the right fit since this workstation is often off.
 - Deleted the `ReviewAppTunnelWatch` scheduled task (confirmed gone). Scripts + recipe kept in repo; `docs/tunnel-watch.md` now carries a RETIRED banner noting the one uncovered case (uvicorn wedged while the tunnel is up).
+
+## 11:10 — Scripts-repo guidance for setting trip priority
+- Wrote `Scripts/Trello/SET_TRIP_PRIORITY.md` + a pointer in the Scripts CLAUDE.md (review-app workflow block): a Claude session in the Scripts repo can now action "prioritise trip X" — ssh review-laptop, upsert `trip_priority.score` on the live review.db with the exact SQL of `sessions.set_trip_priority` (pinned_at=0 sentinel; clear = the app's two-statement form). Verified laptop DB path + python3 over ssh. App reads the table live — no restart.
+- Scripts-repo changes NOT committed there (dave commits dynamic-content via GitHub Desktop). Review-app tunnel-watch commit: 886aac5 (unpushed).
+
+## 11:20 — Priority write path verified live; committed both repos
+- **Verified:** the SET_TRIP_PRIORITY.md snippet works end-to-end on the live laptop DB — inserted an inert `_priority_test` row (score 1.0), read it back, deleted it, confirmed gone. 77 real scored trips currently in `trip_priority` (Melrose_A12_EN at 1000 on top).
+- Committed `SET_TRIP_PRIORITY.md` + the CLAUDE.md pointer in dynamic-content, and this session log here.
