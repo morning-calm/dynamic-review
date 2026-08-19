@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-08-14T22:25:55+01:00",
-  "total_hms": "30h 05m",
-  "total_sec": 108338.2,
+  "generated_at": "2026-08-19T10:47:25+01:00",
+  "total_hms": "31h 16m",
+  "total_sec": 112618.7,
   "unmeasured": [
     "Taichung_HSK3_ZH",
     "Tokyo_08_ImperialPalace_EN"
@@ -998,6 +998,24 @@
       "duration_hms": "3:59"
     },
     {
+      "trip_id": "KyotoArashiyama_Beg_JP",
+      "lane": "6",
+      "duration_sec": 199.84,
+      "duration_hms": "3:20"
+    },
+    {
+      "trip_id": "KyotoArashiyama_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 319.82,
+      "duration_hms": "5:20"
+    },
+    {
+      "trip_id": "KyotoArashiyama_N3_JP",
+      "lane": "6",
+      "duration_sec": 441.42,
+      "duration_hms": "7:21"
+    },
+    {
       "trip_id": "Madrid1_A12_ES",
       "lane": "6",
       "duration_sec": 134.06,
@@ -1010,10 +1028,46 @@
       "duration_hms": "2:17"
     },
     {
+      "trip_id": "KyotoNishikiGion_Beg_JP",
+      "lane": "6",
+      "duration_sec": 162.01,
+      "duration_hms": "2:42"
+    },
+    {
+      "trip_id": "KyotoNishikiGion_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 270.18,
+      "duration_hms": "4:30"
+    },
+    {
+      "trip_id": "KyotoNishikiGion_N3_JP",
+      "lane": "6",
+      "duration_sec": 519.86,
+      "duration_hms": "8:40"
+    },
+    {
       "trip_id": "Madrid3_A12_ES",
       "lane": "6",
       "duration_sec": 148.66,
       "duration_hms": "2:29"
+    },
+    {
+      "trip_id": "KyotoTemples1a_KiyomizuKinkaku_Beg_JP",
+      "lane": "6",
+      "duration_sec": 195.92,
+      "duration_hms": "3:16"
+    },
+    {
+      "trip_id": "KyotoTemples1a_KiyomizuKinkaku_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 415.09,
+      "duration_hms": "6:55"
+    },
+    {
+      "trip_id": "KyotoTemples1a_KiyomizuKinkaku_N3_JP",
+      "lane": "6",
+      "duration_sec": 590.29,
+      "duration_hms": "9:50"
     },
     {
       "trip_id": "Montserrat_A12_ES",
@@ -1026,6 +1080,24 @@
       "lane": "6",
       "duration_sec": 152.32,
       "duration_hms": "2:32"
+    },
+    {
+      "trip_id": "KyotoTemples2a_Fushimi_Beg_JP",
+      "lane": "6",
+      "duration_sec": 156.97,
+      "duration_hms": "2:37"
+    },
+    {
+      "trip_id": "KyotoTemples2a_Fushimi_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 382.28,
+      "duration_hms": "6:22"
+    },
+    {
+      "trip_id": "KyotoTemples2a_Fushimi_N3_JP",
+      "lane": "6",
+      "duration_sec": 472.48,
+      "duration_hms": "7:52"
     },
     {
       "trip_id": "Sevilla2_A12_ES",
@@ -1050,6 +1122,24 @@
       "lane": "6",
       "duration_sec": 165.72,
       "duration_hms": "2:46"
+    },
+    {
+      "trip_id": "NijoCastle_Beg_JP",
+      "lane": "6",
+      "duration_sec": 151.04,
+      "duration_hms": "2:31"
+    },
+    {
+      "trip_id": "NijoCastle_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 364.75,
+      "duration_hms": "6:05"
+    },
+    {
+      "trip_id": "NijoCastle_N3_JP",
+      "lane": "6",
+      "duration_sec": 554.16,
+      "duration_hms": "9:14"
     },
     {
       "trip_id": "Valencia2_A12_ES",
@@ -1388,46 +1478,10 @@
       "duration_hms": "11:39"
     },
     {
-      "trip_id": "Jedburgh1_TownAbbey_A12_EN",
-      "lane": "7",
-      "duration_sec": 178.18,
-      "duration_hms": "2:58"
-    },
-    {
-      "trip_id": "Jedburgh1_TownAbbey_B1_EN",
-      "lane": "7",
-      "duration_sec": 340.77,
-      "duration_hms": "5:41"
-    },
-    {
-      "trip_id": "Jedburgh1_TownAbbey_EN",
-      "lane": "7",
-      "duration_sec": 424.88,
-      "duration_hms": "7:05"
-    },
-    {
       "trip_id": "Taichung_EN",
       "lane": "7",
       "duration_sec": 438.02,
       "duration_hms": "7:18"
-    },
-    {
-      "trip_id": "Melrose_A12_EN",
-      "lane": "7",
-      "duration_sec": 246.44,
-      "duration_hms": "4:06"
-    },
-    {
-      "trip_id": "Melrose_B1_EN",
-      "lane": "7",
-      "duration_sec": 535.85,
-      "duration_hms": "8:56"
-    },
-    {
-      "trip_id": "Melrose_EN",
-      "lane": "7",
-      "duration_sec": 669.68,
-      "duration_hms": "11:10"
     },
     {
       "trip_id": "LunarNewYear_EN",
@@ -1988,6 +2042,12 @@
       "duration_hms": "11:48"
     },
     {
+      "trip_id": "KyotoArashiyama_EN",
+      "lane": "7",
+      "duration_sec": 363.86,
+      "duration_hms": "6:04"
+    },
+    {
       "trip_id": "Madrid1_EN",
       "lane": "7",
       "duration_sec": 510.85,
@@ -2000,10 +2060,22 @@
       "duration_hms": "8:59"
     },
     {
+      "trip_id": "KyotoNishikiGion_EN",
+      "lane": "7",
+      "duration_sec": 250.93,
+      "duration_hms": "4:11"
+    },
+    {
       "trip_id": "Madrid3_EN",
       "lane": "7",
       "duration_sec": 520.7,
       "duration_hms": "8:41"
+    },
+    {
+      "trip_id": "KyotoTemples1a_KiyomizuKinkaku_EN",
+      "lane": "7",
+      "duration_sec": 316.37,
+      "duration_hms": "5:16"
     },
     {
       "trip_id": "Montserrat_EN",
@@ -2016,6 +2088,12 @@
       "lane": "7",
       "duration_sec": 594.49,
       "duration_hms": "9:54"
+    },
+    {
+      "trip_id": "KyotoTemples2a_Fushimi_EN",
+      "lane": "7",
+      "duration_sec": 246.65,
+      "duration_hms": "4:07"
     },
     {
       "trip_id": "Sevilla2_EN",
@@ -2034,6 +2112,12 @@
       "lane": "7",
       "duration_sec": 585.53,
       "duration_hms": "9:46"
+    },
+    {
+      "trip_id": "NijoCastle_EN",
+      "lane": "7",
+      "duration_sec": 302.34,
+      "duration_hms": "5:02"
     },
     {
       "trip_id": "Valencia2_EN",

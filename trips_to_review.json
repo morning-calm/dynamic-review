@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-14T22:25:55+01:00",
+  "generated_at": "2026-08-19T10:47:25+01:00",
   "source": "trello 6,7",
   "trips": [
     {
@@ -2493,6 +2493,51 @@
       "duration_sec": 239.15
     },
     {
+      "trip_id": "KyotoArashiyama_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "KyotoArashiyama",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KyotoArashiyama_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/X5PnvKcF",
+      "pos": 140737490247680,
+      "duration_sec": 199.84
+    },
+    {
+      "trip_id": "KyotoArashiyama_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "KyotoArashiyama",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KyotoArashiyama_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/X5PnvKcF",
+      "pos": 140737490247680,
+      "duration_sec": 319.82
+    },
+    {
+      "trip_id": "KyotoArashiyama_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "KyotoArashiyama",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KyotoArashiyama_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/X5PnvKcF",
+      "pos": 140737490247680,
+      "duration_sec": 441.42
+    },
+    {
       "trip_id": "Madrid1_A12_ES",
       "lane": "6",
       "level": "ES-A12",
@@ -2523,6 +2568,51 @@
       "duration_sec": 136.78
     },
     {
+      "trip_id": "KyotoNishikiGion_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "KyotoNishikiGion",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KyotoNishikiGion_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/lku19s0K",
+      "pos": 140737490280448,
+      "duration_sec": 162.01
+    },
+    {
+      "trip_id": "KyotoNishikiGion_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "KyotoNishikiGion",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KyotoNishikiGion_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/lku19s0K",
+      "pos": 140737490280448,
+      "duration_sec": 270.18
+    },
+    {
+      "trip_id": "KyotoNishikiGion_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "KyotoNishikiGion",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KyotoNishikiGion_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/lku19s0K",
+      "pos": 140737490280448,
+      "duration_sec": 519.86
+    },
+    {
       "trip_id": "Madrid3_A12_ES",
       "lane": "6",
       "level": "ES-A12",
@@ -2536,6 +2626,51 @@
       "card_url": "https://trello.com/c/Z84LzItx",
       "pos": 140737490288640,
       "duration_sec": 148.66
+    },
+    {
+      "trip_id": "KyotoTemples1a_KiyomizuKinkaku_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "KyotoTemples1a_KiyomizuKinkaku",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KyotoTemples1a_KiyomizuKinkaku_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/STIQk8Ue",
+      "pos": 140737490296832,
+      "duration_sec": 195.92
+    },
+    {
+      "trip_id": "KyotoTemples1a_KiyomizuKinkaku_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "KyotoTemples1a_KiyomizuKinkaku",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KyotoTemples1a_KiyomizuKinkaku_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/STIQk8Ue",
+      "pos": 140737490296832,
+      "duration_sec": 415.09
+    },
+    {
+      "trip_id": "KyotoTemples1a_KiyomizuKinkaku_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "KyotoTemples1a_KiyomizuKinkaku",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KyotoTemples1a_KiyomizuKinkaku_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/STIQk8Ue",
+      "pos": 140737490296832,
+      "duration_sec": 590.29
     },
     {
       "trip_id": "Montserrat_A12_ES",
@@ -2566,6 +2701,51 @@
       "card_url": "https://trello.com/c/itv8zOY0",
       "pos": 140737490321408,
       "duration_sec": 152.32
+    },
+    {
+      "trip_id": "KyotoTemples2a_Fushimi_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "KyotoTemples2a_Fushimi",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KyotoTemples2a_Fushimi_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/Iv3pWQaU",
+      "pos": 140737490329600,
+      "duration_sec": 156.97
+    },
+    {
+      "trip_id": "KyotoTemples2a_Fushimi_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "KyotoTemples2a_Fushimi",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KyotoTemples2a_Fushimi_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/Iv3pWQaU",
+      "pos": 140737490329600,
+      "duration_sec": 382.28
+    },
+    {
+      "trip_id": "KyotoTemples2a_Fushimi_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "KyotoTemples2a_Fushimi",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KyotoTemples2a_Fushimi_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/Iv3pWQaU",
+      "pos": 140737490329600,
+      "duration_sec": 472.48
     },
     {
       "trip_id": "Sevilla2_A12_ES",
@@ -2626,6 +2806,51 @@
       "card_url": "https://trello.com/c/0wbYHPz5",
       "pos": 140737490386944,
       "duration_sec": 165.72
+    },
+    {
+      "trip_id": "NijoCastle_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "NijoCastle",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "NijoCastle_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/WQlEcqY9",
+      "pos": 140737490395136,
+      "duration_sec": 151.04
+    },
+    {
+      "trip_id": "NijoCastle_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "NijoCastle",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "NijoCastle_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/WQlEcqY9",
+      "pos": 140737490395136,
+      "duration_sec": 364.75
+    },
+    {
+      "trip_id": "NijoCastle_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "NijoCastle",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "NijoCastle_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/WQlEcqY9",
+      "pos": 140737490395136,
+      "duration_sec": 554.16
     },
     {
       "trip_id": "Valencia2_A12_ES",
@@ -3468,51 +3693,6 @@
       "duration_sec": 698.78
     },
     {
-      "trip_id": "Jedburgh1_TownAbbey_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Jedburgh1_TownAbbey",
-      "voice": "isla",
-      "gender": "female",
-      "title": "Jedburgh1_TownAbbey_A12_EN",
-      "labels": [
-        "UK"
-      ],
-      "card_url": "https://trello.com/c/pabZS5gO",
-      "pos": 140737488359424,
-      "duration_sec": 178.18
-    },
-    {
-      "trip_id": "Jedburgh1_TownAbbey_B1_EN",
-      "lane": "7",
-      "level": "B1",
-      "family": "Jedburgh1_TownAbbey",
-      "voice": "isla",
-      "gender": "female",
-      "title": "Jedburgh1_TownAbbey_B1_EN",
-      "labels": [
-        "UK"
-      ],
-      "card_url": "https://trello.com/c/pabZS5gO",
-      "pos": 140737488359424,
-      "duration_sec": 340.77
-    },
-    {
-      "trip_id": "Jedburgh1_TownAbbey_EN",
-      "lane": "7",
-      "level": "EN",
-      "family": "Jedburgh1_TownAbbey",
-      "voice": "isla",
-      "gender": "female",
-      "title": "Jedburgh1_TownAbbey_EN",
-      "labels": [
-        "UK"
-      ],
-      "card_url": "https://trello.com/c/pabZS5gO",
-      "pos": 140737488359424,
-      "duration_sec": 424.88
-    },
-    {
       "trip_id": "Taichung_EN",
       "lane": "7",
       "level": "EN",
@@ -3526,51 +3706,6 @@
       "card_url": "https://trello.com/c/Iu0gKxqs",
       "pos": 140737488363520,
       "duration_sec": 438.02
-    },
-    {
-      "trip_id": "Melrose_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Melrose",
-      "voice": "isla",
-      "gender": "female",
-      "title": "Melrose_A12_EN",
-      "labels": [
-        "UK"
-      ],
-      "card_url": "https://trello.com/c/LvllBus3",
-      "pos": 140737488412672,
-      "duration_sec": 246.44
-    },
-    {
-      "trip_id": "Melrose_B1_EN",
-      "lane": "7",
-      "level": "B1",
-      "family": "Melrose",
-      "voice": "isla",
-      "gender": "female",
-      "title": "Melrose_B1_EN",
-      "labels": [
-        "UK"
-      ],
-      "card_url": "https://trello.com/c/LvllBus3",
-      "pos": 140737488412672,
-      "duration_sec": 535.85
-    },
-    {
-      "trip_id": "Melrose_EN",
-      "lane": "7",
-      "level": "EN",
-      "family": "Melrose",
-      "voice": "isla",
-      "gender": "female",
-      "title": "Melrose_EN",
-      "labels": [
-        "UK"
-      ],
-      "card_url": "https://trello.com/c/LvllBus3",
-      "pos": 140737488412672,
-      "duration_sec": 669.68
     },
     {
       "trip_id": "LunarNewYear_EN",
@@ -4983,6 +5118,21 @@
       "duration_sec": 707.5
     },
     {
+      "trip_id": "KyotoArashiyama_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "KyotoArashiyama",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "KyotoArashiyama_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/X5PnvKcF",
+      "pos": 140737490247680,
+      "duration_sec": 363.86
+    },
+    {
       "trip_id": "Madrid1_EN",
       "lane": "7",
       "level": "EN",
@@ -5013,6 +5163,21 @@
       "duration_sec": 538.75
     },
     {
+      "trip_id": "KyotoNishikiGion_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "KyotoNishikiGion",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "KyotoNishikiGion_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/lku19s0K",
+      "pos": 140737490280448,
+      "duration_sec": 250.93
+    },
+    {
       "trip_id": "Madrid3_EN",
       "lane": "7",
       "level": "EN",
@@ -5026,6 +5191,21 @@
       "card_url": "https://trello.com/c/Z84LzItx",
       "pos": 140737490288640,
       "duration_sec": 520.7
+    },
+    {
+      "trip_id": "KyotoTemples1a_KiyomizuKinkaku_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "KyotoTemples1a_KiyomizuKinkaku",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "KyotoTemples1a_KiyomizuKinkaku_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/STIQk8Ue",
+      "pos": 140737490296832,
+      "duration_sec": 316.37
     },
     {
       "trip_id": "Montserrat_EN",
@@ -5056,6 +5236,21 @@
       "card_url": "https://trello.com/c/itv8zOY0",
       "pos": 140737490321408,
       "duration_sec": 594.49
+    },
+    {
+      "trip_id": "KyotoTemples2a_Fushimi_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "KyotoTemples2a_Fushimi",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "KyotoTemples2a_Fushimi_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/Iv3pWQaU",
+      "pos": 140737490329600,
+      "duration_sec": 246.65
     },
     {
       "trip_id": "Sevilla2_EN",
@@ -5101,6 +5296,21 @@
       "card_url": "https://trello.com/c/0wbYHPz5",
       "pos": 140737490386944,
       "duration_sec": 585.53
+    },
+    {
+      "trip_id": "NijoCastle_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "NijoCastle",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "NijoCastle_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/WQlEcqY9",
+      "pos": 140737490395136,
+      "duration_sec": 302.34
     },
     {
       "trip_id": "Valencia2_EN",
