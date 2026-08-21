@@ -279,3 +279,26 @@ def test_category_check_new_category_and_no_siblings(cat_indexes):
     out = tripdesc.category_check("Monaco2_Beg_FR", "Monastery")
     assert out["is_new"] is True
     assert out["siblings"] == []
+
+
+def test_used_categories_scoped_to_country(cat_indexes):
+    out = tripdesc.used_categories("Edinburgh1")
+    assert out["scope"] == "country:Scotland"
+    # Monaco's "History" must not inflate the count (3 globally, 2 in Scotland)...
+    assert {c["name"]: c["count"] for c in out["categories"]} == {
+        "History": 2, "Castle": 1, "Food & Drink": 1}
+    # ...and a France-only vocabulary never shows Scotland's categories.
+    fr = tripdesc.used_categories("Monaco2_Beg_FR")
+    assert {c["name"] for c in fr["categories"]} == {"History"}
+
+
+def test_used_categories_falls_back_to_global_without_location(cat_indexes):
+    out = tripdesc.used_categories("NoSuchGroup")
+    assert out["scope"] == "all"
+    assert {c["name"] for c in out["categories"]} == {"History", "Castle", "Food & Drink"}
+
+
+def test_category_check_is_new_judged_within_country(cat_indexes):
+    # "Castle" exists in Scotland's vocabulary but NOT France's → new for Monaco.
+    out = tripdesc.category_check("Monaco2_Beg_FR", "Castle")
+    assert out["is_new"] is True

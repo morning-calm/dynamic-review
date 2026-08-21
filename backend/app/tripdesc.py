@@ -139,11 +139,24 @@ def _triplocations_index(force: bool = False) -> dict[str, list[tuple[str, str]]
         return _loc_index["by_tg"]
 
 
-def used_categories() -> dict:
-    """Every category currently applied to ANY staging TripGroup, with how many
-    groups carry it. This is the app's live vocabulary — anything outside it is
-    'never used before'."""
+def used_categories(tg_id: str | None = None) -> dict:
+    """The live category vocabulary, with how many TripGroups carry each entry.
+
+    With `tg_id`, the vocabulary is scoped to that group's COUNTRY (via its
+    TripLocations): a Japanese trip must only offer categories that other Japanese
+    trips already use, never Spain's (dave, 2026-08-21). A group in no TripLocation
+    (or one whose locations carry no country) falls back to the global list —
+    showing everything beats showing nothing while the location doc is pending."""
     _by_trip, docs = _tripgroup_index()
+    scope = "all"
+    if tg_id:
+        by_tg = _triplocations_index()
+        countries = {c for _n, c in by_tg.get(tg_id, []) if c}
+        if countries:
+            in_country = {sid for sid, locs in by_tg.items()
+                          if any(c in countries for _n, c in locs)}
+            docs = {sid: d for sid, d in docs.items() if sid in in_country}
+            scope = "country:" + ",".join(sorted(countries))
     counts: dict[str, int] = {}
     canon: dict[str, str] = {}   # lower → first-seen spelling
     for d in docs.values():
@@ -155,7 +168,7 @@ def used_categories() -> dict:
             counts[k] = counts.get(k, 0) + 1
     items = [{"name": canon[k], "count": n} for k, n in counts.items()]
     items.sort(key=lambda i: (-i["count"], i["name"].lower()))
-    return {"categories": items}
+    return {"categories": items, "scope": scope}
 
 
 def _mention_snippet(text: str, needle: str) -> str | None:
@@ -184,7 +197,8 @@ def category_check(tg_id: str, category: str) -> dict:
     if not cat:
         raise HTTPException(422, detail={"error": "empty_category"})
     _by_trip, docs = _tripgroup_index()
-    used = {i["name"].lower() for i in used_categories()["categories"]}
+    # 'New' is judged against the same country-scoped vocabulary the chips offer.
+    used = {i["name"].lower() for i in used_categories(tg_id)["categories"]}
     by_tg = _triplocations_index()
     my_locs = by_tg.get(tg_id, [])
     sibling_ids = sorted({sid for sid, locs in by_tg.items()

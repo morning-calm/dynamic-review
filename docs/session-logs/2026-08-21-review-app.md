@@ -147,3 +147,13 @@ UI exists to copy). 5 decisions listed for dave at the end of the spec.
   new `/api/tripdesc/categories` route registered (401 unauthenticated).
 - **Session closed.** Next: dave reviews `docs/post-approval-admin-spec.md` in a
   higher-effort session before implementation (5 open decisions in its §6).
+
+## Follow-up — country-scope the category vocabulary
+
+Dave: Spanish categories must not show on Japanese trips. `used_categories` now takes
+`tg_id` and scopes the vocabulary to the group's country via `_triplocations_index`
+(global fallback + `scope` field when the group sits in no TripLocation);
+`category_check.is_new` judged against the same scoped set; route takes `?tg_id=`,
+FE passes it. Verified: 22 tripdesc tests (4 new: scoped counts, cross-country
+exclusion, fallback, country-scoped is_new), 201 total pass, ruff 7 pre-existing,
+FE build clean. Deployed to laptop.

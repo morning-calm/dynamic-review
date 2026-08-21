@@ -35,10 +35,11 @@ def list_tripdesc(request: Request):
 
 
 @router.get("/categories")
-def tripdesc_categories(request: Request):
-    """Every category currently in use across staging TripGroups (admin)."""
+def tripdesc_categories(request: Request, tg_id: str = ""):
+    """Categories in use across staging TripGroups (admin). With `tg_id`, scoped
+    to that group's country — Spanish categories never show on a Japanese trip."""
     auth.require_admin(request)
-    return tripdesc.used_categories()
+    return tripdesc.used_categories(tg_id or None)
 
 
 @router.get("/{tg_id}/category-check")

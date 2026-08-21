@@ -1274,9 +1274,12 @@ export const api = {
     postJson(`/api/tripdesc/${encodeURIComponent(tgId)}/retry-translate`),
   reopenTripDesc: (tgId: string): Promise<TripDescItem> =>
     postJson(`/api/tripdesc/${encodeURIComponent(tgId)}/reopen`),
-  /** Admin: every category currently applied to ANY staging TripGroup, with counts. */
-  tripDescCategories: (): Promise<{ categories: { name: string; count: number }[] }> =>
-    getJson('/api/tripdesc/categories'),
+  /** Admin: the category vocabulary with counts — scoped to `tgId`'s country when
+   * given (global fallback when the group sits in no TripLocation). */
+  tripDescCategories: (
+    tgId?: string,
+  ): Promise<{ categories: { name: string; count: number }[]; scope: string }> =>
+    getJson(`/api/tripdesc/categories${tgId ? `?tg_id=${encodeURIComponent(tgId)}` : ''}`),
   /** Admin: is this category new, and do same-location siblings look like they fit it? */
   tripDescCategoryCheck: (tgId: string, category: string): Promise<CategoryCheck> =>
     getJson(

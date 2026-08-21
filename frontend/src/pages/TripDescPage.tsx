@@ -61,14 +61,15 @@ const TripDescPage = () => {
       .catch(() => {});
   }, [isAdmin, itemStatus, repTripId]);
 
-  // The live category vocabulary (every category any staging TripGroup carries).
+  // The live category vocabulary, scoped to this trip's country (Japanese trips
+  // only offer categories other Japanese trips use — never Spain's).
   useEffect(() => {
     if (!isAdmin || itemStatus !== 'pending_en') return;
     api
-      .tripDescCategories()
+      .tripDescCategories(tgId)
       .then((r) => setUsedCats(r.categories))
       .catch(() => {});
-  }, [isAdmin, itemStatus]);
+  }, [isAdmin, itemStatus, tgId]);
 
   // While the machine translation runs, poll for its arrival.
   useEffect(() => {
