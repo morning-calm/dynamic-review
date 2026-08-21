@@ -89,6 +89,13 @@ async def unhandled(_: Request, exc: Exception):
 @app.on_event("startup")
 def _startup():
     db.init()
+    # Pre-warm the trip-list cache off-thread so the first GET /api/trips after a
+    # deploy/restart doesn't pay the full Firestore+R2 sweep (sessions.warm_trip_cache;
+    # lazy import — sessions pulls heavy Scripts modules and main deliberately doesn't).
+    import threading
+    from . import sessions
+    threading.Thread(target=sessions.warm_trip_cache,
+                     name="trip-cache-warm", daemon=True).start()
     # The number cleaner is imported from the Scripts repo, so it is exactly the class of
     # dependency that has failed SILENTLY on the live laptop before (jieba 2026-07-08,
     # opencc 2026-07-29 — checks that had never once run in production). Say on every boot

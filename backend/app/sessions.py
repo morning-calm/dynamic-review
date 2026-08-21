@@ -609,11 +609,28 @@ def _apply_priority_order(trips: list[dict], prio: dict[str, dict]) -> None:
         trips.sort(key=_rank)
 
 
+def _session_meta_map() -> dict[str, tuple[bool, str | None, bool]]:
+    """Bulk `_session_meta` for the whole listing: 2 queries total instead of 2 per
+    trip. Same semantics — latest session per trip + whether it has any
+    edit_required flag."""
+    latest: dict[str, tuple[str, str | None]] = {}
+    for r in db.query(
+            "SELECT s.trip_id, s.id, s.status FROM sessions s JOIN "
+            "(SELECT trip_id, MAX(created_at) mc FROM sessions GROUP BY trip_id) m "
+            "ON s.trip_id=m.trip_id AND s.created_at=m.mc"):
+        latest[r["trip_id"]] = (r["id"], r["status"])
+    er_sids = {r["session_id"] for r in db.query(
+        "SELECT DISTINCT session_id FROM field_edits WHERE flag='edit_required'")}
+    return {tid: (True, status, sid in er_sids)
+            for tid, (sid, status) in latest.items()}
+
+
 def _fetch_trip_and_reviewable(entry: dict) -> tuple[dict | None, bool, float | None]:
     """Off-thread I/O for one manifest entry: the staging Firestore read plus
     (best-effort) audio resolution, including ``resolve_audio_dir``'s R2 seed-cache
     download fallback. Both are blocking network calls, so this is run in a thread
-    pool by ``_list_trips_from_manifest`` rather than serially per trip.
+    pool (first-seen entries synchronously in ``_list_trips_from_manifest``, known
+    ones by the background refresher) rather than serially per trip.
 
     Also resolves the trip's total review-audio duration: the manifest's own
     ``duration_sec`` (stamped by the Scripts-side export, which has the masters) wins;
@@ -637,44 +654,135 @@ def _fetch_trip_and_reviewable(entry: dict) -> tuple[dict | None, bool, float | 
     return trip, reviewable, duration
 
 
+def _store_trip_cache(tid: str, trip: dict | None, reviewable: bool,
+                      duration: float | None) -> None:
+    db.execute(
+        "INSERT INTO trip_list_cache(trip_id,title,folder_name,reviewable,duration_sec,"
+        "fetched_at) VALUES(?,?,?,?,?,?) ON CONFLICT(trip_id) DO UPDATE SET "
+        "title=excluded.title, folder_name=excluded.folder_name, "
+        "reviewable=excluded.reviewable, duration_sec=excluded.duration_sec, "
+        "fetched_at=excluded.fetched_at",
+        (tid, (trip.get("contentTitleKey") if trip else None),
+         (trip.get("folderName") or "") if trip else "",
+         int(bool(reviewable)), duration, time.time()))
+
+
+def _trip_cache_fresh(row: dict, now: float) -> bool:
+    ttl = (config.TRIP_CACHE_TTL_REVIEWABLE if row["reviewable"]
+           else config.TRIP_CACHE_TTL_UNREVIEWABLE)
+    return (now - (row["fetched_at"] or 0)) < ttl
+
+
+def invalidate_trip_cache(trip_ids: list[str] | None = None) -> int:
+    """Drop cached listing rows so the next listing re-probes staging + audio NOW
+    (rather than at TTL expiry). None = the whole cache."""
+    if trip_ids is None:
+        return db.execute_rowcount("DELETE FROM trip_list_cache")
+    n = 0
+    for tid in trip_ids:
+        n += db.execute_rowcount("DELETE FROM trip_list_cache WHERE trip_id=?", (tid,))
+    return n
+
+
+# Single-flight guard for the background refresher — a burst of listings while a
+# refresh runs must not stack N identical Firestore/R2 sweeps.
+_TRIP_REFRESH_LOCK = threading.Lock()
+_TRIP_REFRESH_ACTIVE = False
+
+
+def _refresh_entries(entries: list[dict]) -> None:
+    """Fetch + cache the given manifest entries (blocking; call off-request)."""
+    # stage9.common.db()'s lazy singleton init isn't lock-guarded, so the first
+    # Firestore call must happen alone before concurrent get_trip() calls.
+    try:
+        fb_db()
+    except Exception:  # noqa: BLE001 - per-trip fetches handle their own failures
+        pass
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        for e, (trip, reviewable, duration) in zip(
+                entries, pool.map(_fetch_trip_and_reviewable, entries)):
+            _store_trip_cache(e["trip_id"], trip, reviewable, duration)
+
+
+def _refresh_trip_cache_async(entries: list[dict]) -> None:
+    global _TRIP_REFRESH_ACTIVE
+    if not entries:
+        return
+    with _TRIP_REFRESH_LOCK:
+        if _TRIP_REFRESH_ACTIVE:
+            return
+        _TRIP_REFRESH_ACTIVE = True
+
+    def run() -> None:
+        global _TRIP_REFRESH_ACTIVE
+        t0 = time.time()
+        try:
+            _refresh_entries(entries)
+            print(f"[trips] cache refresh: {len(entries)} trips in "
+                  f"{time.time() - t0:.1f}s", flush=True)
+        except Exception as e:  # noqa: BLE001 - background; never crash the server
+            print(f"[trips] cache refresh FAILED: {e}", flush=True)
+        finally:
+            with _TRIP_REFRESH_LOCK:
+                _TRIP_REFRESH_ACTIVE = False
+
+    threading.Thread(target=run, name="trip-cache-refresh", daemon=True).start()
+
+
+def warm_trip_cache() -> None:
+    """Startup pre-warm (run in a daemon thread by app.main): fill/refresh the listing
+    cache so the first request after a deploy doesn't pay the full network sweep."""
+    if not config.MANIFEST_PATH.exists():
+        return
+    try:
+        _list_trips_from_manifest()
+    except Exception as e:  # noqa: BLE001
+        print(f"[trips] cache warm failed: {e}", flush=True)
+
+
 def _list_trips_from_manifest() -> list[dict]:
     data = json.loads(config.MANIFEST_PATH.read_text(encoding="utf-8"))
     # Tolerate both the canonical {"trips":[…]} and a bare […] list.
     entries = data if isinstance(data, list) else (data.get("trips") or [])
     entries = [t for t in entries if t.get("trip_id")]
-    # stage9.common.db()'s lazy singleton init (`if _DB is None: ... initialize_app()`)
-    # isn't lock-guarded — read-only reused code, not ours to change — so the first
-    # Firestore call must happen alone, on this thread, before any concurrent get_trip()
-    # calls race on initialize_app() and crash with "default app already exists".
-    try:
-        fb_db()
-    except Exception:  # noqa: BLE001 - individual per-trip fetches handle their own failures
-        pass
-    # get_trip (Firestore) + resolve_audio_dir (R2 fallback download on a host with no
-    # local masters, e.g. this one) are per-trip network I/O — sequentially that's
-    # ~0.4s/trip (tens of seconds for a full manifest on modest hardware, enough to trip
-    # the tunnel/edge timeout). Both release the GIL on I/O and use shared, thread-safe
-    # clients (boto3, the Firestore client), so fan them out instead.
-    with ThreadPoolExecutor(max_workers=16) as pool:
-        fetched = list(pool.map(_fetch_trip_and_reviewable, entries))
+    # The per-trip network I/O (Firestore get_trip + resolve_audio_dir's R2 probe) is
+    # served from trip_list_cache. Never-seen trips are fetched synchronously ONCE
+    # (they'd otherwise list with a wrong title/reviewable); stale rows are served
+    # as-is and re-fetched by a background single-flight refresher, so a warm listing
+    # does zero network work. Fetching every listing scaled at ~N×latency/16 and hit
+    # ~90s once the manifest passed ~600 trips (2026-08-21).
+    cache = {r["trip_id"]: dict(r) for r in db.query("SELECT * FROM trip_list_cache")}
+    now = time.time()
+    missing = [e for e in entries if e["trip_id"] not in cache]
+    if missing:
+        _refresh_entries(missing)
+        cache.update({r["trip_id"]: dict(r) for r in db.query(
+            "SELECT * FROM trip_list_cache")})
+    stale = [e for e in entries
+             if (row := cache.get(e["trip_id"])) and not _trip_cache_fresh(row, now)]
+    _refresh_trip_cache_async(stale)
+    smeta = _session_meta_map()
     out: list[dict] = []
-    for t, (trip, reviewable, duration) in zip(entries, fetched):
+    for t in entries:
         tid = t["trip_id"]
-        folder_name = (trip.get("folderName") or "") if trip else ""
-        title = (trip.get("contentTitleKey") if trip else None) or t.get("title") or tid
-        has_session, status, edit_required = _session_meta(tid)
+        row = cache.get(tid) or {"title": None, "folder_name": "",
+                                 "reviewable": 0, "duration_sec": None}
+        has_session, status, edit_required = smeta.get(tid, (False, None, False))
         lvl, fam = _level_family(tid)
+        duration = t.get("duration_sec")
+        if duration is None:
+            duration = row["duration_sec"]
         out.append({
             "trip_id": tid,
-            "title": title,
-            "folder_name": folder_name,
+            "title": row["title"] or t.get("title") or tid,
+            "folder_name": row["folder_name"],
             "lane": t.get("lane"),
             "level": t.get("level") or lvl,        # prefer the manifest's own (export-set)
             "family": t.get("family") or fam,
             "has_session": has_session,
             "status": status,
             "edit_required": edit_required,
-            "reviewable": reviewable,
+            "reviewable": bool(row["reviewable"]),
             "duration_sec": duration,
         })
     return out

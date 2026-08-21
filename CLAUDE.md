@@ -82,6 +82,13 @@ list, then pins (newest first), then Trello card order (`sessions._apply_priorit
 `pinned_at=0` is the not-pinned sentinel, never NULL — old DBs have NOT NULL on it). The
 admin's list also has a **language filter** (each trip carries `language`) to see exactly
 what one translator sees.
+**The listing is served from the `trip_list_cache` table since 2026-08-21** (the per-trip
+Firestore read + audio probe made every listing scale linearly — ~90s at ~600 trips):
+never-seen trips fetch synchronously once, stale rows serve cached and re-fetch in a
+background single-flight thread (reviewable rows TTL 12h, unreviewable 30 min —
+`config.TRIP_CACHE_TTL_*`, env-overridable), startup pre-warms off-thread, and
+`refresh_trips.py clear` / `sessions.invalidate_trip_cache` force an immediate re-probe.
+Tests: `backend/tests/test_trip_list_cache.py`.
 `reviewable` = the trip's mp3 masters resolve locally. Excludes are in the export's
 `EXCLUDE` set (currently `LionDance_EN` + 4 retired EN B1/B2 rungs — see
 `export_review_trips.EXCLUDE`). Re-run `py -3.12 Trello/export_review_trips.py`

@@ -45,3 +45,40 @@ go to the Ubuntu laptop.
 - Scripts-side change uncommitted (dave commits dynamic-content via GitHub Desktop).
 - Pre-existing export audit still lists many audio-ready drafts on no lane-6/7 card
   (Yokohama/Yamanakako/Xiangde/etc.) — untouched by this work.
+
+## Trip-list cache (90s listing fix)
+
+**Goal:** `GET /api/trips` went 15s → ~90s after a few-hundred-trip JP batch landed —
+every listing did a Firestore `get_trip` + an audio probe (incl. the R2 seed-cache
+fallback, which re-LISTs R2 on every request for trips whose audio isn't up yet) per
+manifest entry. Fix the latency and cut the Firebase staging reads.
+
+**What I did:**
+- New `trip_list_cache` table (`db.py` schema — plain CREATE IF NOT EXISTS, no
+  migration needed): trip_id, title, folder_name, reviewable, duration_sec, fetched_at.
+- `sessions._list_trips_from_manifest` now serves ENTIRELY from that table (+ manifest
+  + one bulk `_session_meta_map()` — 2 queries instead of 2/trip). Never-seen entries
+  are fetched synchronously once; stale rows are served as-is and re-fetched by a
+  background single-flight daemon thread (`_refresh_trip_cache_async`).
+- TTLs in `config.py`, env-overridable: `TRIP_CACHE_TTL_REVIEWABLE` = **12h** (present
+  audio stays present, titles effectively immutable), `TRIP_CACHE_TTL_UNREVIEWABLE` =
+  **30 min** (those rows are waiting for audio/staging to land; this also
+  negative-caches the fruitless R2 probes that dominated the 90s). At ~300 pending
+  trips that's ~14k background Firestore reads/day worst-case, and only while people
+  are actually listing (refresh piggybacks on requests) — vs ~600 reads per listing
+  before.
+- Startup pre-warm thread (`main.py` → `sessions.warm_trip_cache`) so the first
+  request after a deploy is fast too.
+- Immediate invalidation: `sessions.invalidate_trip_cache(ids)`; `refresh_trips.py
+  clear` now also deletes the trips' cache rows (best-effort, pre-migration-safe).
+- CLAUDE.md trip-list section updated.
+
+**Verified:** new regression tests `backend/tests/test_trip_list_cache.py` (4 tests:
+warm listing = zero fetches, TTL asymmetry + stale-served-then-refreshed, invalidate,
+missing staging doc). Full suite: **195 passed**. `from app import main` boots clean.
+Not yet verified on the laptop (needs deploy + restart).
+
+**Next steps:** deploy to the laptop (git pull in `~/Desktop/Server/review-app`,
+restart uvicorn, confirm cloudflared still up), then time `GET /api/trips` warm —
+expect sub-second. First listing after deploy pays the one-time sweep unless the warm
+thread finishes first.

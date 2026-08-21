@@ -168,6 +168,21 @@ CREATE TABLE IF NOT EXISTS trip_durations (
     computed_at REAL NOT NULL
 );
 
+-- Trip-list cache: the per-trip NETWORK results GET /api/trips needs — the staging
+-- Firestore read (title/folderName) and the audio probe (reviewable, incl. the R2
+-- seed-cache fallback). The listing serves from this table only; stale rows are
+-- re-fetched by a background refresher (sessions._refresh_trip_cache_async). A
+-- reviewable=0 row goes stale on a much shorter TTL — those are the trips waiting
+-- for audio/staging to land (config.TRIP_CACHE_TTL_*).
+CREATE TABLE IF NOT EXISTS trip_list_cache (
+    trip_id      TEXT PRIMARY KEY,
+    title        TEXT,                    -- staging contentTitleKey; NULL = doc absent
+    folder_name  TEXT NOT NULL DEFAULT '',
+    reviewable   INTEGER NOT NULL DEFAULT 0,
+    duration_sec REAL,                    -- measured fallback; a manifest value wins at serve
+    fetched_at   REAL NOT NULL
+);
+
 -- Bug reports: a reviewer/admin flags a problem on a specific field, in any language.
 -- A snapshot of the field's text + working/candidate audio is captured at report time so
 -- we see exactly what they saw. bug_report_messages is the reply thread (reviewer <-> admin).

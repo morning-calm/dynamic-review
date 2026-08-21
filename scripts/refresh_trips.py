@@ -192,6 +192,19 @@ def cmd_clear(trips: list[str]) -> None:
         assert not (CACHE_ROOT / cid).exists(), f"{cid} still cached"
     for cid in protected:                       # nothing else may have moved
         assert (CACHE_ROOT / cid).is_dir() == before[cid], f"GUARD VIOLATED: {cid}"
+    # Also drop the trips' trip_list_cache rows so the NEXT listing re-probes staging +
+    # R2 immediately instead of serving the cached reviewable/title until TTL expiry
+    # (the listing serves from that table since 2026-08-21; best-effort — table may not
+    # exist on a pre-migration DB).
+    try:
+        con = sqlite3.connect(str(DB))
+        with con:
+            n = sum(con.execute("DELETE FROM trip_list_cache WHERE trip_id=?",
+                                (cid,)).rowcount for cid in trips)
+        con.close()
+        print(f"   invalidated {n} trip_list_cache rows")
+    except sqlite3.Error as e:
+        print(f"   (trip_list_cache not invalidated: {e})")
     print(f"\ncleared {cleared}/{len(trips)} | {len(protected)} other trip caches untouched")
     print("NOTE: the cache refills on the next trip-list load — run `verify` to prove the "
           "refilled bytes match R2 (that, not absence, is the success condition).")

@@ -60,6 +60,18 @@ WORK_ROOT.mkdir(parents=True, exist_ok=True)
 # it drives GET /api/trips; absent → fall back to the Quicktrips MP3-dir scan.
 MANIFEST_PATH = REVIEW_APP_ROOT / "trips_to_review.json"
 
+# Trip-list cache TTLs (trip_list_cache; see sessions._list_trips_from_manifest).
+# The per-trip Firestore read + audio probe are served from review.db and refreshed in
+# the background, so these bound STALENESS, not latency. Reviewable rows barely ever
+# change (present audio stays present; titles are effectively immutable) — 12h.
+# Unreviewable rows are the ones waiting for their audio/staging doc to land — 30 min,
+# so a fresh upload flips within half an hour without hammering Firestore/R2.
+# refresh_trips.py `clear` invalidates rows immediately when you KNOW content moved.
+TRIP_CACHE_TTL_REVIEWABLE = float(
+    os.environ.get("REVIEW_APP_TRIPCACHE_TTL_REVIEWABLE", str(12 * 3600)))
+TRIP_CACHE_TTL_UNREVIEWABLE = float(
+    os.environ.get("REVIEW_APP_TRIPCACHE_TTL_UNREVIEWABLE", str(30 * 60)))
+
 # Production TripGroup ids (written by the same export, next to the manifest) — a
 # TripGroup on PRODUCTION has shipped, so its description was already checked and
 # tripdesc seeding skips it. Ids only; the prod key never leaves the workstation.
