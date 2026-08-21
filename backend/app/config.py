@@ -60,6 +60,11 @@ WORK_ROOT.mkdir(parents=True, exist_ok=True)
 # it drives GET /api/trips; absent → fall back to the Quicktrips MP3-dir scan.
 MANIFEST_PATH = REVIEW_APP_ROOT / "trips_to_review.json"
 
+# Production TripGroup ids (written by the same export, next to the manifest) — a
+# TripGroup on PRODUCTION has shipped, so its description was already checked and
+# tripdesc seeding skips it. Ids only; the prod key never leaves the workstation.
+PROD_TRIPGROUPS_PATH = REVIEW_APP_ROOT / "prod_tripgroups.json"
+
 # Column-7 English trips (A12/B1) have NO masters under the Quicktrips tree — their
 # reviewed MP3s live here as Audio Generation/<trip_id>/{i}.mp3.
 AUDIO_GENERATION_ROOT = SCRIPTS_ROOT / "Audio Generation"

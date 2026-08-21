@@ -106,7 +106,35 @@ def _tripgroup_index(force: bool = False) -> tuple[dict, dict]:
 
 # --------------------------------------------------------------------------- #
 # Seeding — every family in the current review manifest (NO historical backfill)
+#
+# Since 2026-08-21 a family whose TripGroup is already on PRODUCTION Firebase is
+# NOT seeded: shipped ⇒ its description was checked when the group went live (dave).
+# The signal is the committed snapshot prod_tripgroups.json, exported by
+# Trello/export_review_trips.py on the WORKSTATION (the prod key never goes to the
+# laptop). Missing/unreadable snapshot degrades to seed-everything, with a warning —
+# a broken export must never silently suppress reviews. The explicit seed_trips()
+# backfill path deliberately IGNORES the snapshot ("review this one anyway").
 # --------------------------------------------------------------------------- #
+_prod_warned = False
+
+
+def _prod_tripgroup_ids() -> frozenset[str]:
+    global _prod_warned
+    try:
+        data = json.loads(config.PROD_TRIPGROUPS_PATH.read_text(encoding="utf-8"))
+        ids = frozenset(data.get("tripgroup_ids") or [])
+        _prod_warned = False
+        return ids
+    except Exception as e:  # noqa: BLE001
+        if not _prod_warned:
+            log.warning("tripdesc: prod TripGroups snapshot unreadable (%s) — "
+                        "seeding ALL manifest families: %s",
+                        config.PROD_TRIPGROUPS_PATH, e)
+            _prod_warned = True
+        return frozenset()
+
+
+
 def _seed_trip(tid: str, language: str, family_hint: str, by_trip: dict,
                docs: dict, now: float) -> str | None:
     """Insert a tripgroup_reviews row for the TripGroup that lists `tid`, unless one
@@ -144,7 +172,8 @@ def _seed_trip(tid: str, language: str, family_hint: str, by_trip: dict,
 def seed_trips(trip_ids: list[str]) -> dict:
     """Explicit backfill: seed the TripGroups listing the given trips (used by
     scripts/backfill_tripdesc.py for the completed families dave confirmed —
-    NOT called from any route)."""
+    NOT called from any route). Deliberately ignores the production snapshot:
+    this is the "review it anyway" escape hatch."""
     by_trip, docs = _tripgroup_index()
     now = time.time()
     seeded, skipped = [], []
@@ -167,7 +196,8 @@ def seed_from_manifest() -> dict:
     entries = data if isinstance(data, list) else (data.get("trips") or [])
     entries = [t for t in entries if t.get("trip_id")]
     by_trip, docs = _tripgroup_index()
-    seeded = skipped = 0
+    prod_ids = _prod_tripgroup_ids()
+    seeded = skipped = skipped_prod = 0
     now = time.time()
     seen: set[str] = set()
     for t in entries:
@@ -180,10 +210,15 @@ def seed_from_manifest() -> dict:
         if tg_id in seen:
             continue
         seen.add(tg_id)
+        if tg_id in prod_ids:
+            skipped_prod += 1
+            log.info("tripdesc: %s is on production — description already checked, "
+                     "not seeded (explicit backfill_tripdesc.py overrides)", tg_id)
+            continue
         if _seed_trip(tid, t.get("language") or "", t.get("family") or "",
                       by_trip, docs, now):
             seeded += 1
-    return {"seeded": seeded, "skipped": skipped}
+    return {"seeded": seeded, "skipped": skipped, "skipped_prod": skipped_prod}
 
 
 # --------------------------------------------------------------------------- #

@@ -181,6 +181,51 @@ def test_seed_trips_backfill_is_idempotent(staged, monkeypatch):
     assert out2["seeded"] == [] and out2["skipped"] == ["Melrose_EN"]
 
 
+# -------------------------------------------------- production-snapshot seed guard
+def _manifest_env(tmp_path, monkeypatch, trips, prod_ids=None):
+    from app import config
+    man = tmp_path / "trips_to_review.json"
+    man.write_text(json.dumps({"trips": trips}), encoding="utf-8")
+    monkeypatch.setattr(config, "MANIFEST_PATH", man)
+    prod = tmp_path / "prod_tripgroups.json"
+    if prod_ids is not None:
+        prod.write_text(json.dumps({"tripgroup_ids": prod_ids}), encoding="utf-8")
+    monkeypatch.setattr(config, "PROD_TRIPGROUPS_PATH", prod)
+    monkeypatch.setattr(tripdesc, "_tripgroup_index", lambda force=False: (
+        {"Monaco2_A12_IT": "Monaco_IT", "Kyoto1_Beg_N5_JP": "Kyoto1_Beg_JP"},
+        {"Monaco_IT": {"descriptionHome": "En.", "descriptionTarget": "It.",
+                       "tripCategories": []},
+         "Kyoto1_Beg_JP": {"descriptionHome": "En.", "descriptionTarget": "",
+                           "tripCategories": []}}))
+
+
+def test_seed_skips_tripgroups_already_on_production(tmp_path, monkeypatch, staged):
+    _manifest_env(tmp_path, monkeypatch,
+                  [{"trip_id": "Monaco2_A12_IT", "language": "Italian"},
+                   {"trip_id": "Kyoto1_Beg_N5_JP", "language": "Japanese"}],
+                  prod_ids=["Monaco_IT"])
+    out = tripdesc.seed_from_manifest()
+    assert out == {"seeded": 1, "skipped": 0, "skipped_prod": 1}
+    assert appdb.query_one(
+        "SELECT 1 FROM tripgroup_reviews WHERE tg_id='Monaco_IT'") is None
+    assert appdb.query_one(
+        "SELECT 1 FROM tripgroup_reviews WHERE tg_id='Kyoto1_Beg_JP'") is not None
+
+
+def test_seed_missing_snapshot_degrades_to_seed_everything(tmp_path, monkeypatch, staged):
+    _manifest_env(tmp_path, monkeypatch,
+                  [{"trip_id": "Monaco2_A12_IT", "language": "Italian"}],
+                  prod_ids=None)   # no snapshot file at all
+    out = tripdesc.seed_from_manifest()
+    assert out["seeded"] == 1 and out["skipped_prod"] == 0
+
+
+def test_explicit_backfill_ignores_prod_snapshot(tmp_path, monkeypatch, staged):
+    _manifest_env(tmp_path, monkeypatch, [], prod_ids=["Monaco_IT"])
+    out = tripdesc.seed_trips(["Monaco2_A12_IT"])
+    assert out["seeded"] == ["Monaco_IT"]   # the "review it anyway" escape hatch
+
+
 def test_reopen_returns_to_pending_en(staged):
     tg = _seed_row()
     _to_pending_tl(tg)
