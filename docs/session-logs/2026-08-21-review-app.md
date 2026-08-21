@@ -32,5 +32,20 @@ unmount; server merge idempotent). The Revert/URL-change path remains a `cancel(
 it clears the dirty flags first, so the unmount flush can't resurrect stale ranges.
 `tsc -b` clean again.
 
-**Open / deferred:** deploy to the laptop still pending (this is the dev checkout) —
-rebuild `frontend/dist` there.
+## Deploy (same session, ~10:23 laptop time)
+
+- Committed `6763269` on main, pushed to `morning-calm/dynamic-review`.
+- Laptop: `git pull` (fast-forward to 6763269) → `npm run build` (fresh
+  `dist/assets/index-DHpb5feh.js`, new max-wait constant confirmed in bundle) →
+  `sudo -n /usr/bin/systemctl restart review-app.service`.
+- **Verified:** `review-app.service` AND `review-tunnel.service` both active;
+  local `127.0.0.1:8000` → 200; `https://review.dynamiclanguages.org/` → 200 and
+  serving the NEW bundle (`index-DHpb5feh.js`).
+- Not verified end-to-end by ear: an actual listen-and-watch-coverage-post test
+  needs a logged-in browser session — dave's next review pass is the real test.
+  If a clip still fails to register, check the browser console for
+  `played POST failed` (now retried 3×) and the network tab for `/played` posts
+  every ≤5 s during playback.
+
+**Open / deferred:** none new. Watch for reviewer reports confirming the
+"listened but not recognised" symptom is gone.
