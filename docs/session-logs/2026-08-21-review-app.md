@@ -131,3 +131,19 @@ library-app speechCheck.ts + mic stack are the reusable keyword pieces (no autho
 UI exists to copy). 5 decisions listed for dave at the end of the spec.
 
 **Next:** await dave's approval + answers to the 5 decision points; then Phase 1.
+
+## Wrap-up — red-team, commit, deploy
+
+- **Red-team (clean-context Fable):** one edit — E741 rename `l`→`loc` in
+  tripdesc.py (my new code had added an 8th ruff violation). Findings triaged, none
+  acted on: `mentions` field is currently always true (kept — API shape, future-proofs
+  non-mentioning siblings); `_mention_snippet` lower()-offset nit (cosmetic);
+  FE `usedCats` not refreshed after adding a new category within the session
+  (informational panel, acceptable). Independently verified: ruff = 7 pre-existing
+  only, pytest 198 passed, FE build clean.
+- **Committed & pushed** `219a299` (code + tests + spec + this log).
+- **Deployed to the laptop:** git pull, `npm run build`, `sudo -n systemctl restart
+  review-app.service`. Verified: review-app + review-tunnel both `active`, app 200,
+  new `/api/tripdesc/categories` route registered (401 unauthenticated).
+- **Session closed.** Next: dave reviews `docs/post-approval-admin-spec.md` in a
+  higher-effort session before implementation (5 open decisions in its §6).
