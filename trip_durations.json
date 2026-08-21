@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-08-19T10:47:25+01:00",
-  "total_hms": "31h 16m",
-  "total_sec": 112618.7,
+  "generated_at": "2026-08-21T10:43:45+01:00",
+  "total_hms": "30h 47m",
+  "total_sec": 110837.6,
   "unmeasured": [
     "Taichung_HSK3_ZH",
     "Tokyo_08_ImperialPalace_EN"
@@ -1502,46 +1502,10 @@
       "duration_hms": "11:39"
     },
     {
-      "trip_id": "Plymouth_A12_EN",
-      "lane": "7",
-      "duration_sec": 149.39,
-      "duration_hms": "2:29"
-    },
-    {
-      "trip_id": "Polperro_A12_EN",
-      "lane": "7",
-      "duration_sec": 73.14,
-      "duration_hms": "1:13"
-    },
-    {
-      "trip_id": "St Michaels Mount_A12_EN",
-      "lane": "7",
-      "duration_sec": 114.96,
-      "duration_hms": "1:55"
-    },
-    {
-      "trip_id": "Tintagel_Castle_A12_EN",
-      "lane": "7",
-      "duration_sec": 174.89,
-      "duration_hms": "2:55"
-    },
-    {
-      "trip_id": "Westminster_A12_EN",
-      "lane": "7",
-      "duration_sec": 253.65,
-      "duration_hms": "4:14"
-    },
-    {
       "trip_id": "KochiCity_EN",
       "lane": "7",
       "duration_sec": 516.52,
       "duration_hms": "8:37"
-    },
-    {
-      "trip_id": "Abergavenny_A12_EN",
-      "lane": "7",
-      "duration_sec": 134.74,
-      "duration_hms": "2:15"
     },
     {
       "trip_id": "KochiOutskirts_EN",
@@ -1550,34 +1514,16 @@
       "duration_hms": "7:58"
     },
     {
-      "trip_id": "Alexandra_Palace_A12_EN",
-      "lane": "7",
-      "duration_sec": 70.5,
-      "duration_hms": "1:10"
-    },
-    {
       "trip_id": "Shikoku_Karst_EN",
       "lane": "7",
       "duration_sec": 402.89,
       "duration_hms": "6:43"
     },
     {
-      "trip_id": "Battle_A12_EN",
-      "lane": "7",
-      "duration_sec": 168.33,
-      "duration_hms": "2:48"
-    },
-    {
       "trip_id": "Yusuhara_EN",
       "lane": "7",
       "duration_sec": 507.92,
       "duration_hms": "8:28"
-    },
-    {
-      "trip_id": "Bude_A12_EN",
-      "lane": "7",
-      "duration_sec": 245.6,
-      "duration_hms": "4:06"
     },
     {
       "trip_id": "Tokyo_06_HieShrine_EN",
@@ -1742,12 +1688,6 @@
       "duration_hms": "4:55"
     },
     {
-      "trip_id": "Kent_Coastline I_A12_EN",
-      "lane": "7",
-      "duration_sec": 187.82,
-      "duration_hms": "3:08"
-    },
-    {
       "trip_id": "Lake_District1_A12_EN",
       "lane": "7",
       "duration_sec": 293.54,
@@ -1800,12 +1740,6 @@
       "lane": "7",
       "duration_sec": 79.12,
       "duration_hms": "1:19"
-    },
-    {
-      "trip_id": "Manchester_I_A12_EN",
-      "lane": "7",
-      "duration_sec": 208.07,
-      "duration_hms": "3:28"
     },
     {
       "trip_id": "Newquay_A12_EN",

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-19T10:47:25+01:00",
+  "generated_at": "2026-08-21T10:43:45+01:00",
   "source": "trello 6,7",
   "trips": [
     {
@@ -3753,81 +3753,6 @@
       "duration_sec": 699.27
     },
     {
-      "trip_id": "Plymouth_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Plymouth",
-      "voice": "andrea",
-      "gender": "female",
-      "title": "Plymouth_A12_EN",
-      "labels": [
-        "UK"
-      ],
-      "card_url": "https://trello.com/c/pJpHN58H",
-      "pos": 140737488568320,
-      "duration_sec": 149.39
-    },
-    {
-      "trip_id": "Polperro_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Polperro",
-      "voice": "andrea",
-      "gender": "female",
-      "title": "Polperro_A12_EN",
-      "labels": [
-        "UK"
-      ],
-      "card_url": "https://trello.com/c/X4PLNk7r",
-      "pos": 140737488584704,
-      "duration_sec": 73.14
-    },
-    {
-      "trip_id": "St Michaels Mount_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "StMichaelsMount",
-      "voice": "andrea",
-      "gender": "female",
-      "title": "St Michaels Mount_A12_EN",
-      "labels": [
-        "UK"
-      ],
-      "card_url": "https://trello.com/c/fSlqjvBC",
-      "pos": 140737488601088,
-      "duration_sec": 114.96
-    },
-    {
-      "trip_id": "Tintagel_Castle_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Tintagel_Castle",
-      "voice": "andrea",
-      "gender": "female",
-      "title": "Tintagel_Castle_A12_EN",
-      "labels": [
-        "UK"
-      ],
-      "card_url": "https://trello.com/c/IYdskkGQ",
-      "pos": 140737488617472,
-      "duration_sec": 174.89
-    },
-    {
-      "trip_id": "Westminster_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Westminster",
-      "voice": "harry",
-      "gender": "male",
-      "title": "Westminster_A12_EN",
-      "labels": [
-        "UK"
-      ],
-      "card_url": "https://trello.com/c/ftGbaQ1Z",
-      "pos": 140737488633856,
-      "duration_sec": 253.65
-    },
-    {
       "trip_id": "KochiCity_EN",
       "lane": "7",
       "level": "EN",
@@ -3841,21 +3766,6 @@
       "card_url": "https://trello.com/c/qPuxApEa",
       "pos": 140737488650240,
       "duration_sec": 516.52
-    },
-    {
-      "trip_id": "Abergavenny_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Abergavenny",
-      "voice": "andrea",
-      "gender": "female",
-      "title": "Abergavenny_A12_EN",
-      "labels": [
-        "UK"
-      ],
-      "card_url": "https://trello.com/c/MbCWcVIH",
-      "pos": 140737488666624,
-      "duration_sec": 134.74
     },
     {
       "trip_id": "KochiOutskirts_EN",
@@ -3873,21 +3783,6 @@
       "duration_sec": 478.25
     },
     {
-      "trip_id": "Alexandra_Palace_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Alexandra_Palace",
-      "voice": "harry",
-      "gender": "male",
-      "title": "Alexandra_Palace_A12_EN",
-      "labels": [
-        "UK"
-      ],
-      "card_url": "https://trello.com/c/YtrMPkYS",
-      "pos": 140737488683008,
-      "duration_sec": 70.5
-    },
-    {
       "trip_id": "Shikoku_Karst_EN",
       "lane": "7",
       "level": "EN",
@@ -3903,21 +3798,6 @@
       "duration_sec": 402.89
     },
     {
-      "trip_id": "Battle_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Battle",
-      "voice": "harry",
-      "gender": "male",
-      "title": "Battle_A12_EN",
-      "labels": [
-        "UK"
-      ],
-      "card_url": "https://trello.com/c/oEkkGJg4",
-      "pos": 140737488699392,
-      "duration_sec": 168.33
-    },
-    {
       "trip_id": "Yusuhara_EN",
       "lane": "7",
       "level": "EN",
@@ -3931,21 +3811,6 @@
       "card_url": "https://trello.com/c/kBensxAN",
       "pos": 140737488699392,
       "duration_sec": 507.92
-    },
-    {
-      "trip_id": "Bude_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Bude",
-      "voice": "andrea",
-      "gender": "female",
-      "title": "Bude_A12_EN",
-      "labels": [
-        "UK"
-      ],
-      "card_url": "https://trello.com/c/7jVceRMG",
-      "pos": 140737488715776,
-      "duration_sec": 245.6
     },
     {
       "trip_id": "Tokyo_06_HieShrine_EN",
@@ -4368,21 +4233,6 @@
       "duration_sec": 295.42
     },
     {
-      "trip_id": "Kent_Coastline I_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Kent_Coastline I",
-      "voice": "andrea",
-      "gender": "female",
-      "title": "Kent_Coastline I_A12_EN",
-      "labels": [
-        "UK"
-      ],
-      "card_url": "https://trello.com/c/DwcKCzA7",
-      "pos": 140737488994304,
-      "duration_sec": 187.82
-    },
-    {
       "trip_id": "Lake_District1_A12_EN",
       "lane": "7",
       "level": "A12",
@@ -4516,21 +4366,6 @@
       "card_url": "https://trello.com/c/PnCNVq5E",
       "pos": 140737489141760,
       "duration_sec": 79.12
-    },
-    {
-      "trip_id": "Manchester_I_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Manchester_I",
-      "voice": "andrea",
-      "gender": "female",
-      "title": "Manchester_I_A12_EN",
-      "labels": [
-        "UK"
-      ],
-      "card_url": "https://trello.com/c/QpG96a61",
-      "pos": 140737489158144,
-      "duration_sec": 208.07
     },
     {
       "trip_id": "Newquay_A12_EN",
