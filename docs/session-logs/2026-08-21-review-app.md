@@ -1,51 +1,47 @@
-# review-app — 2026-08-21
+# 2026-08-21 — review-app
 
-## Playback-coverage loss fix ("listened whole clip, app didn't register")
+## Tripdesc: production-existence seed guard + cleanup
 
-**Goal:** dave (reviewing English A1-2 trips) reported clips occasionally finishing
-without being recognised as played — only fix was re-listening to the whole clip.
-Often correlated with starting a second clip during the trailing silence.
+**Goal:** stop the family-description queue seeding TripGroups that were already
+checked (any group live on production Firebase has shipped ⇒ checked — dave's rule);
+clean out the ~wrongly-seeded backlog. Constraint: the prod Firebase key must NOT
+go to the Ubuntu laptop.
 
-**Root cause:** coverage posting in `AudioReview.tsx` used a 700 ms *trailing*
-debounce that every `timeupdate` (~250 ms apart) reset — so an entire listen was
-sent to the server as EXACTLY ONE POST, ~700 ms after playback stopped. Any loss of
-that single request lost the whole listen: (a) a failed POST was only console-warned,
-never retried; (b) unmount `cancel()`s the debounce; (c) the working-URL reset effect
-cancels it. Starting a second clip's audio fetches through the tunnel at exactly that
-moment is a plausible trigger for (a).
+**What I did**
+- `Scripts/Trello/export_review_trips.py` (dynamic-content): new
+  `export_prod_tripgroups()` — streams PRODUCTION `TripGroups` ids (ids only,
+  `select([])`) using the workstation-only `firebase_production_key2.json`, writes
+  `prod_tripgroups.json` at this repo's root, committed/pushed with the manifest.
+  Best-effort: key missing / auth failure / EMPTY listing keeps the previous
+  snapshot (a wrongly-empty snapshot would over-seed; stale only over-seeds
+  recently-published groups — safe direction).
+- `backend/app/config.py`: `PROD_TRIPGROUPS_PATH`.
+- `backend/app/tripdesc.py`: `seed_from_manifest` skips (with log line) any family
+  whose tg_id is in the snapshot; returns `skipped_prod` count. Missing/unreadable
+  snapshot degrades loudly to seed-everything (warn once). `seed_trips` /
+  `backfill_tripdesc.py` deliberately ignore the snapshot — the "review it anyway"
+  escape hatch.
+- `backend/scripts/cleanup_tripdesc_prod.py`: deletes UNTOUCHED rows only
+  (`pending_en` + `en_by IS NULL` + `en_text = en_original`) whose group is on
+  prod; dry-run default, refuses without a snapshot.
+- Commits: review-app `619336b` (code) + export commit (manifest + snapshot,
+  320 prod ids); Scripts change left for dave to commit via GitHub Desktop.
 
-**What I did (fixes 1–3 of the proposal):**
-- `hooks.ts`: `useDebouncedCallback` gained an optional `maxWaitMs` — the oldest
-  un-fired call can't be starved past that bound (fires immediately with freshest args).
-- `AudioReview.tsx`: both coverage posters (working + original) now use
-  `maxWaitMs=5000` → server receives coverage every ≤5 s of continuous play
-  (merge is idempotent); `pause`/`ended` handlers flush the debounce immediately;
-  a failed POST is retried up to 3 times from the client-side ranges, with a
-  `workingGen` generation guard so a retry can't post old-take ranges under a
-  new take's hash (the URL-reset effect bumps the gen).
+**Verified**
+- `pytest tests/test_tripdesc.py` → 16 passed (3 new: prod-skip, missing-snapshot
+  degrade, backfill-ignores-snapshot).
+- Export run: 320 prod TripGroup ids written.
+- Deployed to laptop (git pull, `sudo -n systemctl restart review-app.service`);
+  review-app + review-tunnel both active.
+- Cleanup dry-run then `--apply` on live review.db: **168 rows deleted** (JP
+  Tokyo/Shikoku, EU Beg families, all UK trips — exactly the wrongly-seeded class).
+  31 rows remain: Kyoto batch, Monaco FR/IT, Tokyo_06-10, Hida/Takayama, Korean,
+  Mandarin, + the 5 deliberately-backfilled Scotland families.
 
-**Verified:** `npx tsc -b` clean. No backend change (server merge already idempotent).
-
-**Fix 4 (added same session):** unmount cleanup in `AudioReview` now flushes
-still-dirty coverage via the existing `flushPlayedBeacon` (fire-and-forget survives
-unmount; server merge idempotent). The Revert/URL-change path remains a `cancel()` —
-it clears the dirty flags first, so the unmount flush can't resurrect stale ranges.
-`tsc -b` clean again.
-
-## Deploy (same session, ~10:23 laptop time)
-
-- Committed `6763269` on main, pushed to `morning-calm/dynamic-review`.
-- Laptop: `git pull` (fast-forward to 6763269) → `npm run build` (fresh
-  `dist/assets/index-DHpb5feh.js`, new max-wait constant confirmed in bundle) →
-  `sudo -n /usr/bin/systemctl restart review-app.service`.
-- **Verified:** `review-app.service` AND `review-tunnel.service` both active;
-  local `127.0.0.1:8000` → 200; `https://review.dynamiclanguages.org/` → 200 and
-  serving the NEW bundle (`index-DHpb5feh.js`).
-- Not verified end-to-end by ear: an actual listen-and-watch-coverage-post test
-  needs a logged-in browser session — dave's next review pass is the real test.
-  If a clip still fails to register, check the browser console for
-  `played POST failed` (now retried 3×) and the network tab for `/played` posts
-  every ≤5 s during playback.
-
-**Open / deferred:** none new. Watch for reviewer reports confirming the
-"listened but not recognised" symptom is gone.
+**Open / low-urgency**
+- **Monaco1IT/Monaco2IT survived** — dave named Monaco IT as already-checked, but
+  those groups are NOT in the prod snapshot, so by the agreed rule they stay
+  pending_en (one redundant admin approval each, or approve/ignore). Flagged to dave.
+- Scripts-side change uncommitted (dave commits dynamic-content via GitHub Desktop).
+- Pre-existing export audit still lists many audio-ready drafts on no lane-6/7 card
+  (Yokohama/Yamanakako/Xiangde/etc.) — untouched by this work.
