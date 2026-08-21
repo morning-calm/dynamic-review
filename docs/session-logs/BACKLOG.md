@@ -515,3 +515,14 @@ Scripts note via GitHub Desktop.
 - [x] Block 4 PHASE 1 (search/open) BUILT 2026-07-08 on feature/blocks-3-5. [x] Phase 2 BUILT 2026-07-08 late session (structure.py direct editor, 20/20 live checks vs disposable staging trip). Remaining phase-3 wire-up: build_locstrings recompile hook on approve/publish (blocked on bucket IAM grant) + sceneId-keyed localization (lands with compiler integration)
 - [x] Block 5 BUILT 2026-07-08 (feature/blocks-3-5 + Scripts publish_inbox.py be823f2) — verified dry-run-only end-to-end; real publishes remain human-gated (--apply --i-am-sure)
 - [ ] request_changes allows status='approving' (pre-existing, flagged by red-team 2026-07-08): same clobber shape as the fixed resolve_recall race — BUT it doubles as the only unstick path if an approve crashes mid-flight (session stranded in 'approving'). Fix needs design, not a blanket 409: e.g. allow from 'approving' only when updated_at is older than ~5 min (a live approve finishes in seconds), else 409 approve_in_progress.
+
+- **2026-08-21 — post-approval admin spec awaiting approval.**
+  `docs/post-approval-admin-spec.md`: Final-check UI (7 checks) + workstation
+  Publisher console. Dave to review in a higher-effort session; 5 decisions open
+  (§6: Credits doc shape, capped Azure key, prod pin write, check seeding source,
+  optional LLM category pass). Nothing implemented yet.
+- **2026-08-21 — category sibling-check niceties (low).** From the red-team pass:
+  `CategoryCheck.mentions` is currently always true (kept for a future
+  include-non-mentioning variant); FE `usedCats` doesn't refresh within a session
+  after adding a brand-new category; `_mention_snippet` offsets computed on
+  lower()ed text (cosmetic off-by-a-char on exotic Unicode). All acceptable as-is.
