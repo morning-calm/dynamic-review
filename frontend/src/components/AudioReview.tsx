@@ -15,6 +15,15 @@ type Range = [number, number];
 const MERGE_GAP = 0.1; // seconds — join ranges within 100 ms
 const MAX_STEP = 1.5; // a jump bigger than this is a seek, not contiguous play
 
+// Coverage posting: `timeupdate` fires ~every 250 ms during playback, which
+// resets a plain 700 ms trailing debounce forever — so a whole listen used to
+// reach the server as ONE post after playback stopped, and losing that one
+// request lost the entire listen. The max-wait forces a post every few seconds
+// of continuous play (server merge is idempotent), and a failed post is
+// retried a bounded number of times from the client-side ranges.
+const COVERAGE_POST_MAX_WAIT_MS = 5000;
+const COVERAGE_POST_RETRIES = 3;
+
 const mergeRanges = (ranges: Range[]): Range[] => {
   if (ranges.length === 0) return [];
   const sorted = [...ranges].sort((a, b) => a[0] - b[0]);
@@ -250,19 +259,33 @@ const AudioReview = ({ field, sid, onFieldUpdate }: AudioReviewProps) => {
   // keepalive beacon if the tab hides first (mobile screen-lock/backgrounding).
   const origDirty = useRef(false);
 
-  const { call: postOrigCall } = useDebouncedCallback((ranges: Range[]) => {
-    origDirty.current = false;
-    api
-      .postPlayed(sid, field.fid, ranges, 'original')
-      .then((res) => {
-        origRanges.current = res.played_coverage as Range[];
-        setOrigCoverage(res.played_coverage as Range[]);
-        onFieldUpdate({ ...field, can_mark_done: res.can_mark_done });
-      })
-      .catch((e: unknown) => {
-        if (e instanceof ApiError && e.status !== 0) console.warn('played(original) failed', e.detail);
-      });
-  }, 700);
+  const origRetries = useRef(0);
+
+  const { call: postOrigCall, flush: postOrigFlush } = useDebouncedCallback(
+    (ranges: Range[]) => {
+      origDirty.current = false;
+      api
+        .postPlayed(sid, field.fid, ranges, 'original')
+        .then((res) => {
+          origRetries.current = 0;
+          origRanges.current = res.played_coverage as Range[];
+          setOrigCoverage(res.played_coverage as Range[]);
+          onFieldUpdate({ ...field, can_mark_done: res.can_mark_done });
+        })
+        .catch((e: unknown) => {
+          if (e instanceof ApiError && e.status !== 0) console.warn('played(original) failed', e.detail);
+          // A lost POST must not eat the listen: the full ranges still live in
+          // origRanges — re-schedule (bounded; the server merge is idempotent).
+          if (origRetries.current < COVERAGE_POST_RETRIES) {
+            origRetries.current += 1;
+            origDirty.current = true;
+            postOrigCall(origRanges.current);
+          }
+        });
+    },
+    700,
+    COVERAGE_POST_MAX_WAIT_MS,
+  );
 
   const handleOrigTimeUpdate = () => {
     const el = origEl.current;
@@ -293,22 +316,40 @@ const AudioReview = ({ field, sid, onFieldUpdate }: AudioReviewProps) => {
   playedCoverageRef.current = field.played_coverage;
 
   const workingDirty = useRef(false);
+  // Bumped whenever the working take changes (the URL-keyed reset effect below):
+  // a retry scheduled against the OLD take must die rather than write its ranges
+  // under the NEW take's hash.
+  const workingGen = useRef(0);
+  const workingRetries = useRef(0);
 
-  const { call: postPlayedCall, cancel: postPlayedCancel } = useDebouncedCallback((ranges: Range[]) => {
-    workingDirty.current = false;
-    api
-      .postPlayed(sid, field.fid, ranges)
-      .then((res) => {
-        coveredRanges.current = res.played_coverage as Range[];
-        setCoverage(res.played_coverage as Range[]);
-        // Reflect server-merged coverage + the authoritative can_mark_done flag.
-        onFieldUpdate({ ...field, played_coverage: res.played_coverage, can_mark_done: res.can_mark_done });
-      })
-      .catch((e: unknown) => {
-        // Coverage is best-effort; the server re-checks on /flag. Log only.
-        if (e instanceof ApiError && e.status !== 0) console.warn('played POST failed', e.detail);
-      });
-  }, 700);
+  const { call: postPlayedCall, flush: postPlayedFlush, cancel: postPlayedCancel } = useDebouncedCallback(
+    (ranges: Range[]) => {
+      workingDirty.current = false;
+      const gen = workingGen.current;
+      api
+        .postPlayed(sid, field.fid, ranges)
+        .then((res) => {
+          if (gen !== workingGen.current) return; // take changed mid-flight — state already reset
+          workingRetries.current = 0;
+          coveredRanges.current = res.played_coverage as Range[];
+          setCoverage(res.played_coverage as Range[]);
+          // Reflect server-merged coverage + the authoritative can_mark_done flag.
+          onFieldUpdate({ ...field, played_coverage: res.played_coverage, can_mark_done: res.can_mark_done });
+        })
+        .catch((e: unknown) => {
+          if (e instanceof ApiError && e.status !== 0) console.warn('played POST failed', e.detail);
+          // Don't drop the listen on a lost request — the full ranges still live in
+          // coveredRanges; re-schedule (bounded, and only for the same take).
+          if (gen === workingGen.current && workingRetries.current < COVERAGE_POST_RETRIES) {
+            workingRetries.current += 1;
+            workingDirty.current = true;
+            postPlayedCall(coveredRanges.current);
+          }
+        });
+    },
+    700,
+    COVERAGE_POST_MAX_WAIT_MS,
+  );
 
   // The backend changes `?v=<hash>` on the working URL whenever the take's
   // content changes OR coverage is reset server-side (combine/import/revert/edit).
@@ -317,6 +358,8 @@ const AudioReview = ({ field, sid, onFieldUpdate }: AudioReviewProps) => {
   const workingUrl = field.audio.working;
   useEffect(() => {
     postPlayedCancel(); // S1: stop an in-flight debounce reposting stale ranges
+    workingGen.current += 1; // and kill any retry scheduled against the old take
+    workingRetries.current = 0;
     workingDirty.current = false;
     coveredRanges.current = mergeRanges(playedCoverageRef.current as Range[]);
     setCoverage(coveredRanges.current);
@@ -406,6 +449,27 @@ const AudioReview = ({ field, sid, onFieldUpdate }: AudioReviewProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sid, field.fid]);
 
+  // Fix 4: unmount must FLUSH pending coverage, not drop it. The debounce hook's
+  // own cleanup cancel()s the timer, so a listener who pauses and immediately
+  // collapses the scene / navigates would lose everything since the last post.
+  // The keepalive beacon is the right vehicle (fire-and-forget survives unmount;
+  // the server merges idempotently). The Revert/URL-change path stays a cancel():
+  // it clears the dirty flags first, so this cleanup won't resurrect stale ranges.
+  useEffect(
+    () => () => {
+      if (workingDirty.current) {
+        workingDirty.current = false;
+        flushPlayedBeacon(sid, field.fid, coveredRanges.current);
+      }
+      if (origDirty.current) {
+        origDirty.current = false;
+        flushPlayedBeacon(sid, field.fid, origRanges.current, 'original');
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sid, field.fid],
+  );
+
   return (
     <div className="space-y-2 rounded border border-gray-700 bg-gray-900/40 p-2">
       {field.audio.original && (
@@ -416,8 +480,14 @@ const AudioReview = ({ field, sid, onFieldUpdate }: AudioReviewProps) => {
           preload="none"
           onTimeUpdate={handleOrigTimeUpdate}
           onPlay={acquireWakeLock}
-          onPause={releaseWakeLockIfIdle}
-          onEnded={releaseWakeLockIfIdle}
+          onPause={() => {
+            releaseWakeLockIfIdle();
+            postOrigFlush(); // don't leave the tail of the listen in the debounce window
+          }}
+          onEnded={() => {
+            releaseWakeLockIfIdle();
+            postOrigFlush();
+          }}
           onSeeking={() => {
             origSeeking.current = true;
           }}
@@ -448,8 +518,14 @@ const AudioReview = ({ field, sid, onFieldUpdate }: AudioReviewProps) => {
           preload="metadata"
           onTimeUpdate={handleTimeUpdate}
           onPlay={acquireWakeLock}
-          onPause={releaseWakeLockIfIdle}
-          onEnded={releaseWakeLockIfIdle}
+          onPause={() => {
+            releaseWakeLockIfIdle();
+            postPlayedFlush(); // post the tail immediately — no 700 ms window to lose
+          }}
+          onEnded={() => {
+            releaseWakeLockIfIdle();
+            postPlayedFlush();
+          }}
           onSeeking={() => {
             seeking.current = true;
           }}

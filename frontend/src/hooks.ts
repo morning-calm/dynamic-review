@@ -6,16 +6,24 @@ import { useCallback, useEffect, useMemo, useRef, useState, type TextareaHTMLAtt
  * the timer. `flush()` invokes immediately with the last args; `cancel()` drops
  * a pending call AND its args — a later flush() must not resurrect a cancelled
  * save (a stale re-save after Revert is how an edit survives being reverted).
+ *
+ * `maxWaitMs` (optional) bounds how long a steady stream of calls can starve
+ * the trailing timer: once the OLDEST un-fired call is `maxWaitMs` old, the
+ * next call() fires immediately instead of re-arming. Without it, a caller
+ * invoked more often than `delayMs` (e.g. per audio `timeupdate`) never fires
+ * until the stream stops.
  */
 export const useDebouncedCallback = <A extends unknown[]>(
   fn: (...args: A) => void,
   delayMs: number,
+  maxWaitMs?: number,
 ): { call: (...args: A) => void; flush: () => void; cancel: () => void } => {
   const fnRef = useRef(fn);
   fnRef.current = fn;
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastArgs = useRef<A | null>(null);
+  const pendingSince = useRef<number | null>(null); // when the oldest un-fired call() happened
 
   const cancel = useCallback(() => {
     if (timer.current !== null) {
@@ -23,6 +31,7 @@ export const useDebouncedCallback = <A extends unknown[]>(
       timer.current = null;
     }
     lastArgs.current = null;
+    pendingSince.current = null;
   }, []);
 
   const flush = useCallback(() => {
@@ -33,21 +42,40 @@ export const useDebouncedCallback = <A extends unknown[]>(
     if (lastArgs.current !== null) {
       const args = lastArgs.current;
       lastArgs.current = null;
+      pendingSince.current = null;
       fnRef.current(...args);
     }
   }, []);
 
   const call = useCallback(
     (...args: A) => {
+      const now = Date.now();
+      if (
+        maxWaitMs !== undefined &&
+        pendingSince.current !== null &&
+        now - pendingSince.current >= maxWaitMs
+      ) {
+        // Max-wait exceeded: fire NOW with the freshest args instead of re-arming.
+        if (timer.current !== null) {
+          clearTimeout(timer.current);
+          timer.current = null;
+        }
+        lastArgs.current = null;
+        pendingSince.current = null;
+        fnRef.current(...args);
+        return;
+      }
+      if (pendingSince.current === null) pendingSince.current = now;
       lastArgs.current = args;
       if (timer.current !== null) clearTimeout(timer.current);
       timer.current = setTimeout(() => {
         timer.current = null;
         lastArgs.current = null;
+        pendingSince.current = null;
         fnRef.current(...args);
       }, delayMs);
     },
-    [delayMs],
+    [delayMs, maxWaitMs],
   );
 
   // Clear any pending timer on unmount.
