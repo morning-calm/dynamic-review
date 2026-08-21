@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-08-21T10:43:45+01:00",
-  "total_hms": "30h 47m",
-  "total_sec": 110837.6,
+  "generated_at": "2026-08-21T15:43:11+01:00",
+  "total_hms": "53h 18m",
+  "total_sec": 191892.9,
   "unmeasured": [
     "Taichung_HSK3_ZH",
     "Tokyo_08_ImperialPalace_EN"
@@ -168,6 +168,60 @@
       "lane": "6",
       "duration_sec": 432.56,
       "duration_hms": "7:13"
+    },
+    {
+      "trip_id": "Fuji_Beg_JP",
+      "lane": "6",
+      "duration_sec": 193.2,
+      "duration_hms": "3:13"
+    },
+    {
+      "trip_id": "Fuji_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 396.36,
+      "duration_hms": "6:36"
+    },
+    {
+      "trip_id": "Fuji_N3_JP",
+      "lane": "6",
+      "duration_sec": 604.53,
+      "duration_hms": "10:05"
+    },
+    {
+      "trip_id": "Kobe_Beg_JP",
+      "lane": "6",
+      "duration_sec": 280.95,
+      "duration_hms": "4:41"
+    },
+    {
+      "trip_id": "Kobe_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 522.92,
+      "duration_hms": "8:43"
+    },
+    {
+      "trip_id": "Kobe_N3_JP",
+      "lane": "6",
+      "duration_sec": 805.43,
+      "duration_hms": "13:25"
+    },
+    {
+      "trip_id": "KobeForeignSettlements_Beg_JP",
+      "lane": "6",
+      "duration_sec": 245.73,
+      "duration_hms": "4:06"
+    },
+    {
+      "trip_id": "KobeForeignSettlements_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 474.31,
+      "duration_hms": "7:54"
+    },
+    {
+      "trip_id": "KobeForeignSettlements_N3_JP",
+      "lane": "6",
+      "duration_sec": 669.99,
+      "duration_hms": "11:10"
     },
     {
       "trip_id": "LunarNewYear_HSK12_ZH",
@@ -812,6 +866,24 @@
       "duration_hms": "4:20"
     },
     {
+      "trip_id": "Kofu_Beg_JP",
+      "lane": "6",
+      "duration_sec": 270.76,
+      "duration_hms": "4:31"
+    },
+    {
+      "trip_id": "Kofu_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 470.54,
+      "duration_hms": "7:51"
+    },
+    {
+      "trip_id": "Kofu_N3_JP",
+      "lane": "6",
+      "duration_sec": 625.01,
+      "duration_hms": "10:25"
+    },
+    {
       "trip_id": "Strasbourg1_A12_FR",
       "lane": "6",
       "duration_sec": 267.13,
@@ -824,10 +896,46 @@
       "duration_hms": "8:52"
     },
     {
+      "trip_id": "Matsumoto_Beg_JP",
+      "lane": "6",
+      "duration_sec": 276.53,
+      "duration_hms": "4:37"
+    },
+    {
+      "trip_id": "Matsumoto_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 579.45,
+      "duration_hms": "9:39"
+    },
+    {
+      "trip_id": "Matsumoto_N3_JP",
+      "lane": "6",
+      "duration_sec": 899.06,
+      "duration_hms": "14:59"
+    },
+    {
       "trip_id": "Strasbourg3_A12_FR",
       "lane": "6",
       "duration_sec": 318.98,
       "duration_hms": "5:19"
+    },
+    {
+      "trip_id": "HidaMountains_Beg_JP",
+      "lane": "6",
+      "duration_sec": 220.37,
+      "duration_hms": "3:40"
+    },
+    {
+      "trip_id": "HidaMountains_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 383.29,
+      "duration_hms": "6:23"
+    },
+    {
+      "trip_id": "HidaMountains_N3_JP",
+      "lane": "6",
+      "duration_sec": 534.02,
+      "duration_hms": "8:54"
     },
     {
       "trip_id": "Strasbourg4_A12_FR",
@@ -866,10 +974,46 @@
       "duration_hms": "5:01"
     },
     {
+      "trip_id": "GujoHachiman_Beg_JP",
+      "lane": "6",
+      "duration_sec": 200.52,
+      "duration_hms": "3:21"
+    },
+    {
+      "trip_id": "GujoHachiman_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 521.64,
+      "duration_hms": "8:42"
+    },
+    {
+      "trip_id": "GujoHachiman_N3_JP",
+      "lane": "6",
+      "duration_sec": 772.83,
+      "duration_hms": "12:53"
+    },
+    {
       "trip_id": "El_Planeta_A12_ES",
       "lane": "6",
       "duration_sec": 235.08,
       "duration_hms": "3:55"
+    },
+    {
+      "trip_id": "PlasticFoodMuseum_Beg_JP",
+      "lane": "6",
+      "duration_sec": 156.42,
+      "duration_hms": "2:36"
+    },
+    {
+      "trip_id": "PlasticFoodMuseum_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 288.78,
+      "duration_hms": "4:49"
+    },
+    {
+      "trip_id": "PlasticFoodMuseum_N3_JP",
+      "lane": "6",
+      "duration_sec": 433.24,
+      "duration_hms": "7:13"
     },
     {
       "trip_id": "Ingenio_Humano1_A12_ES",
@@ -878,10 +1022,46 @@
       "duration_hms": "3:46"
     },
     {
+      "trip_id": "TsukechiGorge_Beg_JP",
+      "lane": "6",
+      "duration_sec": 34.04,
+      "duration_hms": "0:34"
+    },
+    {
+      "trip_id": "TsukechiGorge_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 46.86,
+      "duration_hms": "0:47"
+    },
+    {
+      "trip_id": "TsukechiGorge_N3_JP",
+      "lane": "6",
+      "duration_sec": 72.54,
+      "duration_hms": "1:13"
+    },
+    {
       "trip_id": "Ingenio_Humano2_A12_ES",
       "lane": "6",
       "duration_sec": 302.63,
       "duration_hms": "5:03"
+    },
+    {
+      "trip_id": "NakasendoMagome_Beg_JP",
+      "lane": "6",
+      "duration_sec": 193.59,
+      "duration_hms": "3:14"
+    },
+    {
+      "trip_id": "NakasendoMagome_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 420.83,
+      "duration_hms": "7:01"
+    },
+    {
+      "trip_id": "NakasendoMagome_N3_JP",
+      "lane": "6",
+      "duration_sec": 762.7,
+      "duration_hms": "12:43"
     },
     {
       "trip_id": "Mercados_A12_ES",
@@ -890,10 +1070,46 @@
       "duration_hms": "5:32"
     },
     {
+      "trip_id": "NaegiCastle_Beg_JP",
+      "lane": "6",
+      "duration_sec": 89.97,
+      "duration_hms": "1:30"
+    },
+    {
+      "trip_id": "NaegiCastle_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 153.47,
+      "duration_hms": "2:33"
+    },
+    {
+      "trip_id": "NaegiCastle_N3_JP",
+      "lane": "6",
+      "duration_sec": 362.95,
+      "duration_hms": "6:03"
+    },
+    {
       "trip_id": "Moros_y_Cristianos_A12_ES",
       "lane": "6",
       "duration_sec": 305.68,
       "duration_hms": "5:06"
+    },
+    {
+      "trip_id": "MinoFestival_Beg_JP",
+      "lane": "6",
+      "duration_sec": 107.26,
+      "duration_hms": "1:47"
+    },
+    {
+      "trip_id": "MinoFestival_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 192.97,
+      "duration_hms": "3:13"
+    },
+    {
+      "trip_id": "MinoFestival_N3_JP",
+      "lane": "6",
+      "duration_sec": 243.88,
+      "duration_hms": "4:04"
     },
     {
       "trip_id": "Org_Social1_A12_ES",
@@ -902,10 +1118,46 @@
       "duration_hms": "4:03"
     },
     {
+      "trip_id": "TejikaraFireFestival_Beg_JP",
+      "lane": "6",
+      "duration_sec": 117.73,
+      "duration_hms": "1:58"
+    },
+    {
+      "trip_id": "TejikaraFireFestival_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 196.08,
+      "duration_hms": "3:16"
+    },
+    {
+      "trip_id": "TejikaraFireFestival_N3_JP",
+      "lane": "6",
+      "duration_sec": 241.82,
+      "duration_hms": "4:02"
+    },
+    {
       "trip_id": "Org_Social2_A12_ES",
       "lane": "6",
       "duration_sec": 194.38,
       "duration_hms": "3:14"
+    },
+    {
+      "trip_id": "LakeBiwa_Beg_JP",
+      "lane": "6",
+      "duration_sec": 184.22,
+      "duration_hms": "3:04"
+    },
+    {
+      "trip_id": "LakeBiwa_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 372.77,
+      "duration_hms": "6:13"
+    },
+    {
+      "trip_id": "LakeBiwa_N3_JP",
+      "lane": "6",
+      "duration_sec": 693.73,
+      "duration_hms": "11:34"
     },
     {
       "trip_id": "Sanguesa_A12_ES",
@@ -944,6 +1196,24 @@
       "duration_hms": "7:01"
     },
     {
+      "trip_id": "UjiByodoin_Beg_JP",
+      "lane": "6",
+      "duration_sec": 255.4,
+      "duration_hms": "4:15"
+    },
+    {
+      "trip_id": "UjiByodoin_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 570.2,
+      "duration_hms": "9:30"
+    },
+    {
+      "trip_id": "UjiByodoin_N3_JP",
+      "lane": "6",
+      "duration_sec": 1035.89,
+      "duration_hms": "17:16"
+    },
+    {
       "trip_id": "Toledo2_A12_ES",
       "lane": "6",
       "duration_sec": 360.1,
@@ -954,6 +1224,24 @@
       "lane": "6",
       "duration_sec": 407.17,
       "duration_hms": "6:47"
+    },
+    {
+      "trip_id": "Sakai_Beg_JP",
+      "lane": "6",
+      "duration_sec": 155.17,
+      "duration_hms": "2:35"
+    },
+    {
+      "trip_id": "Sakai_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 306.83,
+      "duration_hms": "5:07"
+    },
+    {
+      "trip_id": "Sakai_N3_JP",
+      "lane": "6",
+      "duration_sec": 430.47,
+      "duration_hms": "7:10"
     },
     {
       "trip_id": "Vic_A12_ES",
@@ -974,10 +1262,46 @@
       "duration_hms": "3:09"
     },
     {
+      "trip_id": "Azumino1_DaioWasabi_Beg_JP",
+      "lane": "6",
+      "duration_sec": 128.37,
+      "duration_hms": "2:08"
+    },
+    {
+      "trip_id": "Azumino1_DaioWasabi_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 168.33,
+      "duration_hms": "2:48"
+    },
+    {
+      "trip_id": "Azumino1_DaioWasabi_N3_JP",
+      "lane": "6",
+      "duration_sec": 405.66,
+      "duration_hms": "6:46"
+    },
+    {
       "trip_id": "Cordoba1_A12_ES",
       "lane": "6",
       "duration_sec": 146.7,
       "duration_hms": "2:27"
+    },
+    {
+      "trip_id": "Azumino2_NationalPark_Beg_JP",
+      "lane": "6",
+      "duration_sec": 140.28,
+      "duration_hms": "2:20"
+    },
+    {
+      "trip_id": "Azumino2_NationalPark_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 332.07,
+      "duration_hms": "5:32"
+    },
+    {
+      "trip_id": "Azumino2_NationalPark_N3_JP",
+      "lane": "6",
+      "duration_sec": 498.89,
+      "duration_hms": "8:19"
     },
     {
       "trip_id": "Cordoba2_A12_ES",
@@ -986,10 +1310,46 @@
       "duration_hms": "2:25"
     },
     {
+      "trip_id": "Hikone1_Castle_Beg_JP",
+      "lane": "6",
+      "duration_sec": 208.12,
+      "duration_hms": "3:28"
+    },
+    {
+      "trip_id": "Hikone1_Castle_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 356.26,
+      "duration_hms": "5:56"
+    },
+    {
+      "trip_id": "Hikone1_Castle_N3_JP",
+      "lane": "6",
+      "duration_sec": 519.92,
+      "duration_hms": "8:40"
+    },
+    {
       "trip_id": "Cordoba4_A12_ES",
       "lane": "6",
       "duration_sec": 119.82,
       "duration_hms": "2:00"
+    },
+    {
+      "trip_id": "Hikone2_OmiHachiman_Beg_JP",
+      "lane": "6",
+      "duration_sec": 202.61,
+      "duration_hms": "3:23"
+    },
+    {
+      "trip_id": "Hikone2_OmiHachiman_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 396.17,
+      "duration_hms": "6:36"
+    },
+    {
+      "trip_id": "Hikone2_OmiHachiman_N3_JP",
+      "lane": "6",
+      "duration_sec": 618.95,
+      "duration_hms": "10:19"
     },
     {
       "trip_id": "Los_Escobazos_A12_ES",
@@ -1020,6 +1380,24 @@
       "lane": "6",
       "duration_sec": 134.06,
       "duration_hms": "2:14"
+    },
+    {
+      "trip_id": "KyotoImperialPalace_Beg_JP",
+      "lane": "6",
+      "duration_sec": 183.2,
+      "duration_hms": "3:03"
+    },
+    {
+      "trip_id": "KyotoImperialPalace_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 330.06,
+      "duration_hms": "5:30"
+    },
+    {
+      "trip_id": "KyotoImperialPalace_N3_JP",
+      "lane": "6",
+      "duration_sec": 487.47,
+      "duration_hms": "8:07"
     },
     {
       "trip_id": "Madrid2_A12_ES",
@@ -1076,6 +1454,24 @@
       "duration_hms": "3:47"
     },
     {
+      "trip_id": "KyotoTemples1b_GinkakuNanzen_Beg_JP",
+      "lane": "6",
+      "duration_sec": 169.69,
+      "duration_hms": "2:50"
+    },
+    {
+      "trip_id": "KyotoTemples1b_GinkakuNanzen_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 391.52,
+      "duration_hms": "6:32"
+    },
+    {
+      "trip_id": "KyotoTemples1b_GinkakuNanzen_N3_JP",
+      "lane": "6",
+      "duration_sec": 544.13,
+      "duration_hms": "9:04"
+    },
+    {
       "trip_id": "Sevilla1_A12_ES",
       "lane": "6",
       "duration_sec": 152.32,
@@ -1106,16 +1502,70 @@
       "duration_hms": "2:30"
     },
     {
+      "trip_id": "KyotoTemples2b_TojiHeianOkazaki_Beg_JP",
+      "lane": "6",
+      "duration_sec": 170.92,
+      "duration_hms": "2:51"
+    },
+    {
+      "trip_id": "KyotoTemples2b_TojiHeianOkazaki_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 515.24,
+      "duration_hms": "8:35"
+    },
+    {
+      "trip_id": "KyotoTemples2b_TojiHeianOkazaki_N3_JP",
+      "lane": "6",
+      "duration_sec": 582.37,
+      "duration_hms": "9:42"
+    },
+    {
       "trip_id": "Sevilla3_A12_ES",
       "lane": "6",
       "duration_sec": 158.93,
       "duration_hms": "2:39"
     },
     {
+      "trip_id": "Nara1_ParkTown_Beg_JP",
+      "lane": "6",
+      "duration_sec": 175.23,
+      "duration_hms": "2:55"
+    },
+    {
+      "trip_id": "Nara1_ParkTown_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 289.49,
+      "duration_hms": "4:49"
+    },
+    {
+      "trip_id": "Nara1_ParkTown_N3_JP",
+      "lane": "6",
+      "duration_sec": 405.39,
+      "duration_hms": "6:45"
+    },
+    {
       "trip_id": "Tossa_de_Mar_A12_ES",
       "lane": "6",
       "duration_sec": 410.49,
       "duration_hms": "6:50"
+    },
+    {
+      "trip_id": "Nara2_TodaijiAndClose_Beg_JP",
+      "lane": "6",
+      "duration_sec": 326.79,
+      "duration_hms": "5:27"
+    },
+    {
+      "trip_id": "Nara2_TodaijiAndClose_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 749.84,
+      "duration_hms": "12:30"
+    },
+    {
+      "trip_id": "Nara2_TodaijiAndClose_N3_JP",
+      "lane": "6",
+      "duration_sec": 1107.85,
+      "duration_hms": "18:28"
     },
     {
       "trip_id": "Valencia1_A12_ES",
@@ -1148,10 +1598,64 @@
       "duration_hms": "3:30"
     },
     {
+      "trip_id": "OsakaAncient1_Temples_Beg_JP",
+      "lane": "6",
+      "duration_sec": 155.9,
+      "duration_hms": "2:36"
+    },
+    {
+      "trip_id": "OsakaAncient1_Temples_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 363.68,
+      "duration_hms": "6:04"
+    },
+    {
+      "trip_id": "OsakaAncient1_Temples_N3_JP",
+      "lane": "6",
+      "duration_sec": 511.92,
+      "duration_hms": "8:32"
+    },
+    {
       "trip_id": "Girona_A12_ES",
       "lane": "6",
       "duration_sec": 407.33,
       "duration_hms": "6:47"
+    },
+    {
+      "trip_id": "OsakaAncient2_CastleSumiyoshi_Beg_JP",
+      "lane": "6",
+      "duration_sec": 124.45,
+      "duration_hms": "2:04"
+    },
+    {
+      "trip_id": "OsakaAncient2_CastleSumiyoshi_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 336.4,
+      "duration_hms": "5:36"
+    },
+    {
+      "trip_id": "OsakaAncient2_CastleSumiyoshi_N3_JP",
+      "lane": "6",
+      "duration_sec": 432.95,
+      "duration_hms": "7:13"
+    },
+    {
+      "trip_id": "Kagawa_Beg_JP",
+      "lane": "6",
+      "duration_sec": 204.88,
+      "duration_hms": "3:25"
+    },
+    {
+      "trip_id": "Kagawa_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 572.08,
+      "duration_hms": "9:32"
+    },
+    {
+      "trip_id": "Kagawa_N3_JP",
+      "lane": "6",
+      "duration_sec": 824.56,
+      "duration_hms": "13:45"
     },
     {
       "trip_id": "Salvador_Dali_A12_ES",
@@ -1160,16 +1664,88 @@
       "duration_hms": "6:33"
     },
     {
+      "trip_id": "OsakaModern1_SouthCentral_Beg_JP",
+      "lane": "6",
+      "duration_sec": 191.63,
+      "duration_hms": "3:12"
+    },
+    {
+      "trip_id": "OsakaModern1_SouthCentral_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 315.01,
+      "duration_hms": "5:15"
+    },
+    {
+      "trip_id": "OsakaModern1_SouthCentral_N3_JP",
+      "lane": "6",
+      "duration_sec": 559.46,
+      "duration_hms": "9:19"
+    },
+    {
+      "trip_id": "KagawaToShodoshima_Beg_JP",
+      "lane": "6",
+      "duration_sec": 212.27,
+      "duration_hms": "3:32"
+    },
+    {
+      "trip_id": "KagawaToShodoshima_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 574.04,
+      "duration_hms": "9:34"
+    },
+    {
+      "trip_id": "KagawaToShodoshima_N3_JP",
+      "lane": "6",
+      "duration_sec": 739.0,
+      "duration_hms": "12:19"
+    },
+    {
       "trip_id": "Sant_Felíu_de_Guíxols_A12_ES",
       "lane": "6",
       "duration_sec": 251.53,
       "duration_hms": "4:12"
     },
     {
+      "trip_id": "OsakaModern2_UmedaSky_Beg_JP",
+      "lane": "6",
+      "duration_sec": 150.1,
+      "duration_hms": "2:30"
+    },
+    {
+      "trip_id": "OsakaModern2_UmedaSky_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 293.88,
+      "duration_hms": "4:54"
+    },
+    {
+      "trip_id": "OsakaModern2_UmedaSky_N3_JP",
+      "lane": "6",
+      "duration_sec": 372.56,
+      "duration_hms": "6:13"
+    },
+    {
       "trip_id": "Valencia3_A12_ES",
       "lane": "6",
       "duration_sec": 142.13,
       "duration_hms": "2:22"
+    },
+    {
+      "trip_id": "Shodoshima1_Tonosho_Beg_JP",
+      "lane": "6",
+      "duration_sec": 179.1,
+      "duration_hms": "2:59"
+    },
+    {
+      "trip_id": "Shodoshima1_Tonosho_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 295.5,
+      "duration_hms": "4:56"
+    },
+    {
+      "trip_id": "Shodoshima1_Tonosho_N3_JP",
+      "lane": "6",
+      "duration_sec": 465.19,
+      "duration_hms": "7:45"
     },
     {
       "trip_id": "Valencia4_A12_ES",
@@ -1184,10 +1760,46 @@
       "duration_hms": "2:28"
     },
     {
+      "trip_id": "Naruto_Beg_JP",
+      "lane": "6",
+      "duration_sec": 146.86,
+      "duration_hms": "2:27"
+    },
+    {
+      "trip_id": "Naruto_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 205.79,
+      "duration_hms": "3:26"
+    },
+    {
+      "trip_id": "Naruto_N3_JP",
+      "lane": "6",
+      "duration_sec": 322.66,
+      "duration_hms": "5:23"
+    },
+    {
       "trip_id": "Zaragoza2_A12_ES",
       "lane": "6",
       "duration_sec": 104.7,
       "duration_hms": "1:45"
+    },
+    {
+      "trip_id": "Awaji_Beg_JP",
+      "lane": "6",
+      "duration_sec": 158.82,
+      "duration_hms": "2:39"
+    },
+    {
+      "trip_id": "Awaji_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 267.81,
+      "duration_hms": "4:28"
+    },
+    {
+      "trip_id": "Awaji_N3_JP",
+      "lane": "6",
+      "duration_sec": 491.21,
+      "duration_hms": "8:11"
     },
     {
       "trip_id": "Zaragoza3_A12_ES",
@@ -1196,10 +1808,118 @@
       "duration_hms": "1:55"
     },
     {
+      "trip_id": "DogoOnsenMatsuyama_Beg_JP",
+      "lane": "6",
+      "duration_sec": 205.3,
+      "duration_hms": "3:25"
+    },
+    {
+      "trip_id": "DogoOnsenMatsuyama_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 342.41,
+      "duration_hms": "5:42"
+    },
+    {
+      "trip_id": "DogoOnsenMatsuyama_N3_JP",
+      "lane": "6",
+      "duration_sec": 749.01,
+      "duration_hms": "12:29"
+    },
+    {
       "trip_id": "Sevilla4_B1_ES",
       "lane": "6",
       "duration_sec": 307.88,
       "duration_hms": "5:08"
+    },
+    {
+      "trip_id": "MatsuyamaCastle_Beg_JP",
+      "lane": "6",
+      "duration_sec": 152.22,
+      "duration_hms": "2:32"
+    },
+    {
+      "trip_id": "MatsuyamaCastle_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 423.68,
+      "duration_hms": "7:04"
+    },
+    {
+      "trip_id": "MatsuyamaCastle_N3_JP",
+      "lane": "6",
+      "duration_sec": 586.55,
+      "duration_hms": "9:47"
+    },
+    {
+      "trip_id": "YokohamaCity_Beg_JP",
+      "lane": "6",
+      "duration_sec": 200.78,
+      "duration_hms": "3:21"
+    },
+    {
+      "trip_id": "YokohamaCity_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 409.29,
+      "duration_hms": "6:49"
+    },
+    {
+      "trip_id": "YokohamaCity_N3_JP",
+      "lane": "6",
+      "duration_sec": 563.83,
+      "duration_hms": "9:24"
+    },
+    {
+      "trip_id": "YokohamaForeign_Beg_JP",
+      "lane": "6",
+      "duration_sec": 232.44,
+      "duration_hms": "3:52"
+    },
+    {
+      "trip_id": "YokohamaForeign_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 377.26,
+      "duration_hms": "6:17"
+    },
+    {
+      "trip_id": "YokohamaForeign_N3_JP",
+      "lane": "6",
+      "duration_sec": 610.43,
+      "duration_hms": "10:10"
+    },
+    {
+      "trip_id": "TsukijiOdaiba_Beg_JP",
+      "lane": "6",
+      "duration_sec": 175.1,
+      "duration_hms": "2:55"
+    },
+    {
+      "trip_id": "TsukijiOdaiba_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 382.2,
+      "duration_hms": "6:22"
+    },
+    {
+      "trip_id": "TsukijiOdaiba_N3_JP",
+      "lane": "6",
+      "duration_sec": 536.92,
+      "duration_hms": "8:57"
+    },
+    {
+      "trip_id": "Shinjuku_Beg_JP",
+      "lane": "6",
+      "duration_sec": 204.9,
+      "duration_hms": "3:25"
+    },
+    {
+      "trip_id": "Shinjuku_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 488.65,
+      "duration_hms": "8:09"
+    },
+    {
+      "trip_id": "Shinjuku_N3_JP",
+      "lane": "6",
+      "duration_sec": 644.96,
+      "duration_hms": "10:45"
     },
     {
       "trip_id": "Sevilla5_B1_ES",
@@ -1208,10 +1928,46 @@
       "duration_hms": "4:14"
     },
     {
+      "trip_id": "ShinjukuNightShibuya_Beg_JP",
+      "lane": "6",
+      "duration_sec": 119.01,
+      "duration_hms": "1:59"
+    },
+    {
+      "trip_id": "ShinjukuNightShibuya_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 272.77,
+      "duration_hms": "4:33"
+    },
+    {
+      "trip_id": "ShinjukuNightShibuya_N3_JP",
+      "lane": "6",
+      "duration_sec": 385.02,
+      "duration_hms": "6:25"
+    },
+    {
       "trip_id": "Cassis_Calanques_A12_FR",
       "lane": "6",
       "duration_sec": 1142.8,
       "duration_hms": "19:03"
+    },
+    {
+      "trip_id": "UenoAkihabara_Beg_JP",
+      "lane": "6",
+      "duration_sec": 215.33,
+      "duration_hms": "3:35"
+    },
+    {
+      "trip_id": "UenoAkihabara_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 685.53,
+      "duration_hms": "11:26"
+    },
+    {
+      "trip_id": "UenoAkihabara_N3_JP",
+      "lane": "6",
+      "duration_sec": 872.62,
+      "duration_hms": "14:33"
     },
     {
       "trip_id": "Andorra_Pirineos_A12_ES",
@@ -1220,10 +1976,46 @@
       "duration_hms": "0:23"
     },
     {
+      "trip_id": "ShinjukuGyoen_Beg_JP",
+      "lane": "6",
+      "duration_sec": 155.3,
+      "duration_hms": "2:35"
+    },
+    {
+      "trip_id": "ShinjukuGyoen_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 253.52,
+      "duration_hms": "4:14"
+    },
+    {
+      "trip_id": "ShinjukuGyoen_N3_JP",
+      "lane": "6",
+      "duration_sec": 482.9,
+      "duration_hms": "8:03"
+    },
+    {
       "trip_id": "Bilbao2_Guggenheim_A12_ES",
       "lane": "6",
       "duration_sec": 12.98,
       "duration_hms": "0:13"
+    },
+    {
+      "trip_id": "KamakuraHakoneWaterfall_Beg_JP",
+      "lane": "6",
+      "duration_sec": 289.91,
+      "duration_hms": "4:50"
+    },
+    {
+      "trip_id": "KamakuraHakoneWaterfall_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 590.94,
+      "duration_hms": "9:51"
+    },
+    {
+      "trip_id": "KamakuraHakoneWaterfall_N3_JP",
+      "lane": "6",
+      "duration_sec": 866.82,
+      "duration_hms": "14:27"
     },
     {
       "trip_id": "Bilbao1_LaRia_A12_ES",
@@ -1238,16 +2030,70 @@
       "duration_hms": "4:24"
     },
     {
+      "trip_id": "Hakone_Beg_JP",
+      "lane": "6",
+      "duration_sec": 197.69,
+      "duration_hms": "3:18"
+    },
+    {
+      "trip_id": "Hakone_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 447.45,
+      "duration_hms": "7:27"
+    },
+    {
+      "trip_id": "Hakone_N3_JP",
+      "lane": "6",
+      "duration_sec": 628.95,
+      "duration_hms": "10:29"
+    },
+    {
       "trip_id": "Cordoba_CascoHistorico_A12_ES",
       "lane": "6",
       "duration_sec": 49.16,
       "duration_hms": "0:49"
     },
     {
+      "trip_id": "YamanakakoOshino_Beg_JP",
+      "lane": "6",
+      "duration_sec": 279.61,
+      "duration_hms": "4:40"
+    },
+    {
+      "trip_id": "YamanakakoOshino_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 552.78,
+      "duration_hms": "9:13"
+    },
+    {
+      "trip_id": "YamanakakoOshino_N3_JP",
+      "lane": "6",
+      "duration_sec": 715.76,
+      "duration_hms": "11:56"
+    },
+    {
       "trip_id": "Cuevas_Altamira_A12_ES",
       "lane": "6",
       "duration_sec": 40.05,
       "duration_hms": "0:40"
+    },
+    {
+      "trip_id": "NaritaSan_Beg_JP",
+      "lane": "6",
+      "duration_sec": 168.96,
+      "duration_hms": "2:49"
+    },
+    {
+      "trip_id": "NaritaSan_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 433.87,
+      "duration_hms": "7:14"
+    },
+    {
+      "trip_id": "NaritaSan_N3_JP",
+      "lane": "6",
+      "duration_sec": 639.14,
+      "duration_hms": "10:39"
     },
     {
       "trip_id": "Jerez_CascoAntiguo_A12_ES",
@@ -1262,6 +2108,24 @@
       "duration_hms": "1:12"
     },
     {
+      "trip_id": "KagawaShiudeBeach_Beg_JP",
+      "lane": "6",
+      "duration_sec": 106.53,
+      "duration_hms": "1:47"
+    },
+    {
+      "trip_id": "KagawaShiudeBeach_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 247.67,
+      "duration_hms": "4:08"
+    },
+    {
+      "trip_id": "KagawaShiudeBeach_N3_JP",
+      "lane": "6",
+      "duration_sec": 350.54,
+      "duration_hms": "5:51"
+    },
+    {
       "trip_id": "LasFallas2019_A12_ES",
       "lane": "6",
       "duration_sec": 12.7,
@@ -1272,6 +2136,24 @@
       "lane": "6",
       "duration_sec": 28.94,
       "duration_hms": "0:29"
+    },
+    {
+      "trip_id": "SetoOhashiMarugame_Beg_JP",
+      "lane": "6",
+      "duration_sec": 176.09,
+      "duration_hms": "2:56"
+    },
+    {
+      "trip_id": "SetoOhashiMarugame_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 510.15,
+      "duration_hms": "8:30"
+    },
+    {
+      "trip_id": "SetoOhashiMarugame_N3_JP",
+      "lane": "6",
+      "duration_sec": 649.51,
+      "duration_hms": "10:50"
     },
     {
       "trip_id": "Merida3_Anfiteatro_A12_ES",
@@ -1286,6 +2168,24 @@
       "duration_hms": "2:14"
     },
     {
+      "trip_id": "Shodoshima2a_SouthArt_Beg_JP",
+      "lane": "6",
+      "duration_sec": 131.0,
+      "duration_hms": "2:11"
+    },
+    {
+      "trip_id": "Shodoshima2a_SouthArt_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 347.45,
+      "duration_hms": "5:47"
+    },
+    {
+      "trip_id": "Shodoshima2a_SouthArt_N3_JP",
+      "lane": "6",
+      "duration_sec": 409.26,
+      "duration_hms": "6:49"
+    },
+    {
       "trip_id": "Merida2_Acueducto_A12_ES",
       "lane": "6",
       "duration_sec": 19.62,
@@ -1296,6 +2196,24 @@
       "lane": "6",
       "duration_sec": 180.66,
       "duration_hms": "3:01"
+    },
+    {
+      "trip_id": "Shodoshima2b_OlivePark_Beg_JP",
+      "lane": "6",
+      "duration_sec": 131.08,
+      "duration_hms": "2:11"
+    },
+    {
+      "trip_id": "Shodoshima2b_OlivePark_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 250.75,
+      "duration_hms": "4:11"
+    },
+    {
+      "trip_id": "Shodoshima2b_OlivePark_N3_JP",
+      "lane": "6",
+      "duration_sec": 345.91,
+      "duration_hms": "5:46"
     },
     {
       "trip_id": "Merida1_PuenteYAlcazaba_A12_ES",
@@ -1310,6 +2228,24 @@
       "duration_hms": "2:25"
     },
     {
+      "trip_id": "Shodoshima3a_MovieSoyQuarry_Beg_JP",
+      "lane": "6",
+      "duration_sec": 162.35,
+      "duration_hms": "2:42"
+    },
+    {
+      "trip_id": "Shodoshima3a_MovieSoyQuarry_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 174.34,
+      "duration_hms": "2:54"
+    },
+    {
+      "trip_id": "Shodoshima3a_MovieSoyQuarry_N3_JP",
+      "lane": "6",
+      "duration_sec": 528.51,
+      "duration_hms": "8:49"
+    },
+    {
       "trip_id": "Salamanca2_Catedrales_A12_ES",
       "lane": "6",
       "duration_sec": 37.43,
@@ -1320,6 +2256,24 @@
       "lane": "6",
       "duration_sec": 228.47,
       "duration_hms": "3:48"
+    },
+    {
+      "trip_id": "Shodoshima3b_KankakeiHighlands_Beg_JP",
+      "lane": "6",
+      "duration_sec": 161.99,
+      "duration_hms": "2:42"
+    },
+    {
+      "trip_id": "Shodoshima3b_KankakeiHighlands_Beg_N4_JP",
+      "lane": "6",
+      "duration_sec": 387.32,
+      "duration_hms": "6:27"
+    },
+    {
+      "trip_id": "Shodoshima3b_KankakeiHighlands_N3_JP",
+      "lane": "6",
+      "duration_sec": 463.18,
+      "duration_hms": "7:43"
     },
     {
       "trip_id": "Salamanca1_Universidad_A12_ES",
@@ -1484,6 +2438,24 @@
       "duration_hms": "7:18"
     },
     {
+      "trip_id": "Fuji_EN",
+      "lane": "7",
+      "duration_sec": 310.2,
+      "duration_hms": "5:10"
+    },
+    {
+      "trip_id": "Kobe_EN",
+      "lane": "7",
+      "duration_sec": 553.77,
+      "duration_hms": "9:14"
+    },
+    {
+      "trip_id": "KobeForeignSettlements_EN",
+      "lane": "7",
+      "duration_sec": 343.95,
+      "duration_hms": "5:44"
+    },
+    {
       "trip_id": "LunarNewYear_EN",
       "lane": "7",
       "duration_sec": 582.32,
@@ -1530,12 +2502,6 @@
       "lane": "7",
       "duration_sec": 286.48,
       "duration_hms": "4:46"
-    },
-    {
-      "trip_id": "Camden_A12_EN",
-      "lane": "7",
-      "duration_sec": 260.05,
-      "duration_hms": "4:20"
     },
     {
       "trip_id": "Canary_Wharf_A12_EN",
@@ -1868,10 +2834,34 @@
       "duration_hms": "2:55"
     },
     {
+      "trip_id": "Kofu_EN",
+      "lane": "7",
+      "duration_sec": 322.82,
+      "duration_hms": "5:23"
+    },
+    {
+      "trip_id": "Matsumoto_EN",
+      "lane": "7",
+      "duration_sec": 683.1,
+      "duration_hms": "11:23"
+    },
+    {
+      "trip_id": "HidaMountains_EN",
+      "lane": "7",
+      "duration_sec": 459.52,
+      "duration_hms": "7:40"
+    },
+    {
       "trip_id": "ElCamino_EN",
       "lane": "7",
       "duration_sec": 954.07,
       "duration_hms": "15:54"
+    },
+    {
+      "trip_id": "GujoHachiman_EN",
+      "lane": "7",
+      "duration_sec": 706.51,
+      "duration_hms": "11:47"
     },
     {
       "trip_id": "El_Planeta_EN",
@@ -1880,10 +2870,22 @@
       "duration_hms": "10:02"
     },
     {
+      "trip_id": "PlasticFoodMuseum_EN",
+      "lane": "7",
+      "duration_sec": 367.99,
+      "duration_hms": "6:08"
+    },
+    {
       "trip_id": "Ingenio_Humano1_EN",
       "lane": "7",
       "duration_sec": 503.25,
       "duration_hms": "8:23"
+    },
+    {
+      "trip_id": "TsukechiGorge_EN",
+      "lane": "7",
+      "duration_sec": 63.35,
+      "duration_hms": "1:03"
     },
     {
       "trip_id": "Ingenio_Humano2_EN",
@@ -1892,10 +2894,22 @@
       "duration_hms": "10:22"
     },
     {
+      "trip_id": "NakasendoMagome_EN",
+      "lane": "7",
+      "duration_sec": 733.07,
+      "duration_hms": "12:13"
+    },
+    {
       "trip_id": "Mercados_EN",
       "lane": "7",
       "duration_sec": 837.3,
       "duration_hms": "13:57"
+    },
+    {
+      "trip_id": "NaegiCastle_EN",
+      "lane": "7",
+      "duration_sec": 288.99,
+      "duration_hms": "4:49"
     },
     {
       "trip_id": "Moros_y_Cristianos_EN",
@@ -1904,16 +2918,34 @@
       "duration_hms": "15:43"
     },
     {
+      "trip_id": "MinoFestival_EN",
+      "lane": "7",
+      "duration_sec": 202.87,
+      "duration_hms": "3:23"
+    },
+    {
       "trip_id": "Org_Social1_EN",
       "lane": "7",
       "duration_sec": 578.04,
       "duration_hms": "9:38"
     },
     {
+      "trip_id": "TejikaraFireFestival_EN",
+      "lane": "7",
+      "duration_sec": 175.15,
+      "duration_hms": "2:55"
+    },
+    {
       "trip_id": "Org_Social2_EN",
       "lane": "7",
       "duration_sec": 432.82,
       "duration_hms": "7:13"
+    },
+    {
+      "trip_id": "LakeBiwa_EN",
+      "lane": "7",
+      "duration_sec": 411.45,
+      "duration_hms": "6:51"
     },
     {
       "trip_id": "Sanguesa_EN",
@@ -1934,6 +2966,18 @@
       "duration_hms": "13:41"
     },
     {
+      "trip_id": "UjiByodoin_EN",
+      "lane": "7",
+      "duration_sec": 568.97,
+      "duration_hms": "9:29"
+    },
+    {
+      "trip_id": "Sakai_EN",
+      "lane": "7",
+      "duration_sec": 356.1,
+      "duration_hms": "5:56"
+    },
+    {
       "trip_id": "Vic_EN",
       "lane": "7",
       "duration_sec": 336.82,
@@ -1952,10 +2996,22 @@
       "duration_hms": "10:00"
     },
     {
+      "trip_id": "Azumino1_DaioWasabi_EN",
+      "lane": "7",
+      "duration_sec": 443.64,
+      "duration_hms": "7:24"
+    },
+    {
       "trip_id": "Cordoba1_EN",
       "lane": "7",
       "duration_sec": 484.52,
       "duration_hms": "8:05"
+    },
+    {
+      "trip_id": "Azumino2_NationalPark_EN",
+      "lane": "7",
+      "duration_sec": 396.38,
+      "duration_hms": "6:36"
     },
     {
       "trip_id": "Cordoba2_EN",
@@ -1964,10 +3020,22 @@
       "duration_hms": "9:10"
     },
     {
+      "trip_id": "Hikone1_Castle_EN",
+      "lane": "7",
+      "duration_sec": 308.69,
+      "duration_hms": "5:09"
+    },
+    {
       "trip_id": "Cordoba4_EN",
       "lane": "7",
       "duration_sec": 453.93,
       "duration_hms": "7:34"
+    },
+    {
+      "trip_id": "Hikone2_OmiHachiman_EN",
+      "lane": "7",
+      "duration_sec": 335.73,
+      "duration_hms": "5:36"
     },
     {
       "trip_id": "Los_Escobazos_EN",
@@ -1986,6 +3054,12 @@
       "lane": "7",
       "duration_sec": 510.85,
       "duration_hms": "8:31"
+    },
+    {
+      "trip_id": "KyotoImperialPalace_EN",
+      "lane": "7",
+      "duration_sec": 263.78,
+      "duration_hms": "4:24"
     },
     {
       "trip_id": "Madrid2_EN",
@@ -2018,6 +3092,12 @@
       "duration_hms": "9:09"
     },
     {
+      "trip_id": "KyotoTemples1b_GinkakuNanzen_EN",
+      "lane": "7",
+      "duration_sec": 302.68,
+      "duration_hms": "5:03"
+    },
+    {
       "trip_id": "Sevilla1_EN",
       "lane": "7",
       "duration_sec": 594.49,
@@ -2036,10 +3116,28 @@
       "duration_hms": "9:50"
     },
     {
+      "trip_id": "KyotoTemples2b_TojiHeianOkazaki_EN",
+      "lane": "7",
+      "duration_sec": 318.41,
+      "duration_hms": "5:18"
+    },
+    {
       "trip_id": "Sevilla3_EN",
       "lane": "7",
       "duration_sec": 559.39,
       "duration_hms": "9:19"
+    },
+    {
+      "trip_id": "Nara1_ParkTown_EN",
+      "lane": "7",
+      "duration_sec": 241.42,
+      "duration_hms": "4:01"
+    },
+    {
+      "trip_id": "Nara2_TodaijiAndClose_EN",
+      "lane": "7",
+      "duration_sec": 576.05,
+      "duration_hms": "9:36"
     },
     {
       "trip_id": "Valencia1_EN",
@@ -2060,10 +3158,52 @@
       "duration_hms": "12:38"
     },
     {
+      "trip_id": "OsakaAncient1_Temples_EN",
+      "lane": "7",
+      "duration_sec": 409.81,
+      "duration_hms": "6:50"
+    },
+    {
+      "trip_id": "OsakaAncient2_CastleSumiyoshi_EN",
+      "lane": "7",
+      "duration_sec": 345.91,
+      "duration_hms": "5:46"
+    },
+    {
+      "trip_id": "Kagawa_EN",
+      "lane": "7",
+      "duration_sec": 659.67,
+      "duration_hms": "11:00"
+    },
+    {
+      "trip_id": "OsakaModern1_SouthCentral_EN",
+      "lane": "7",
+      "duration_sec": 616.18,
+      "duration_hms": "10:16"
+    },
+    {
+      "trip_id": "KagawaToShodoshima_EN",
+      "lane": "7",
+      "duration_sec": 565.55,
+      "duration_hms": "9:26"
+    },
+    {
+      "trip_id": "OsakaModern2_UmedaSky_EN",
+      "lane": "7",
+      "duration_sec": 366.79,
+      "duration_hms": "6:07"
+    },
+    {
       "trip_id": "Valencia3_EN",
       "lane": "7",
       "duration_sec": 494.37,
       "duration_hms": "8:14"
+    },
+    {
+      "trip_id": "Shodoshima1_Tonosho_EN",
+      "lane": "7",
+      "duration_sec": 386.98,
+      "duration_hms": "6:27"
     },
     {
       "trip_id": "Valencia4_EN",
@@ -2078,10 +3218,22 @@
       "duration_hms": "9:16"
     },
     {
+      "trip_id": "Naruto_EN",
+      "lane": "7",
+      "duration_sec": 438.36,
+      "duration_hms": "7:18"
+    },
+    {
       "trip_id": "Zaragoza2_EN",
       "lane": "7",
       "duration_sec": 356.05,
       "duration_hms": "5:56"
+    },
+    {
+      "trip_id": "Awaji_EN",
+      "lane": "7",
+      "duration_sec": 505.84,
+      "duration_hms": "8:26"
     },
     {
       "trip_id": "Zaragoza3_EN",
@@ -2090,16 +3242,130 @@
       "duration_hms": "7:15"
     },
     {
+      "trip_id": "DogoOnsenMatsuyama_EN",
+      "lane": "7",
+      "duration_sec": 600.24,
+      "duration_hms": "10:00"
+    },
+    {
       "trip_id": "Sevilla4_EN",
       "lane": "7",
       "duration_sec": 479.56,
       "duration_hms": "8:00"
     },
     {
+      "trip_id": "MatsuyamaCastle_EN",
+      "lane": "7",
+      "duration_sec": 466.96,
+      "duration_hms": "7:47"
+    },
+    {
+      "trip_id": "YokohamaCity_EN",
+      "lane": "7",
+      "duration_sec": 290.17,
+      "duration_hms": "4:50"
+    },
+    {
+      "trip_id": "YokohamaForeign_EN",
+      "lane": "7",
+      "duration_sec": 301.43,
+      "duration_hms": "5:01"
+    },
+    {
+      "trip_id": "TsukijiOdaiba_EN",
+      "lane": "7",
+      "duration_sec": 275.51,
+      "duration_hms": "4:36"
+    },
+    {
+      "trip_id": "Shinjuku_EN",
+      "lane": "7",
+      "duration_sec": 343.82,
+      "duration_hms": "5:44"
+    },
+    {
       "trip_id": "Sevilla5_EN",
       "lane": "7",
       "duration_sec": 296.2,
       "duration_hms": "4:56"
+    },
+    {
+      "trip_id": "ShinjukuNightShibuya_EN",
+      "lane": "7",
+      "duration_sec": 204.85,
+      "duration_hms": "3:25"
+    },
+    {
+      "trip_id": "UenoAkihabara_EN",
+      "lane": "7",
+      "duration_sec": 492.2,
+      "duration_hms": "8:12"
+    },
+    {
+      "trip_id": "ShinjukuGyoen_EN",
+      "lane": "7",
+      "duration_sec": 284.71,
+      "duration_hms": "4:45"
+    },
+    {
+      "trip_id": "KamakuraHakoneWaterfall_EN",
+      "lane": "7",
+      "duration_sec": 490.81,
+      "duration_hms": "8:11"
+    },
+    {
+      "trip_id": "Hakone_EN",
+      "lane": "7",
+      "duration_sec": 448.16,
+      "duration_hms": "7:28"
+    },
+    {
+      "trip_id": "YamanakakoOshino_EN",
+      "lane": "7",
+      "duration_sec": 386.14,
+      "duration_hms": "6:26"
+    },
+    {
+      "trip_id": "NaritaSan_EN",
+      "lane": "7",
+      "duration_sec": 391.16,
+      "duration_hms": "6:31"
+    },
+    {
+      "trip_id": "KagawaShiudeBeach_EN",
+      "lane": "7",
+      "duration_sec": 298.42,
+      "duration_hms": "4:58"
+    },
+    {
+      "trip_id": "SetoOhashiMarugame_EN",
+      "lane": "7",
+      "duration_sec": 497.87,
+      "duration_hms": "8:18"
+    },
+    {
+      "trip_id": "Shodoshima2a_SouthArt_EN",
+      "lane": "7",
+      "duration_sec": 300.88,
+      "duration_hms": "5:01"
+    },
+    {
+      "trip_id": "Shodoshima2b_OlivePark_EN",
+      "lane": "7",
+      "duration_sec": 351.63,
+      "duration_hms": "5:52"
+    },
+    {
+      "trip_id": "Shodoshima3a_MovieSoyQuarry_EN",
+      "lane": "7",
+      "duration_sec": 405.66,
+      "duration_hms": "6:46"
+    },
+    {
+      "trip_id": "Shodoshima3b_KankakeiHighlands_EN",
+      "lane": "7",
+      "duration_sec": 441.84,
+      "duration_hms": "7:22"
     }
   ]
 }

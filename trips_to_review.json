@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-21T10:43:45+01:00",
+  "generated_at": "2026-08-21T15:43:11+01:00",
   "source": "trello 6,7",
   "trips": [
     {
@@ -421,6 +421,141 @@
       "card_url": "https://trello.com/c/Iu0gKxqs",
       "pos": 140737488363520,
       "duration_sec": 432.56
+    },
+    {
+      "trip_id": "Fuji_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "Fuji",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Fuji_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/rGfozZj2",
+      "pos": 140737488388096,
+      "duration_sec": 193.2
+    },
+    {
+      "trip_id": "Fuji_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "Fuji",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Fuji_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/rGfozZj2",
+      "pos": 140737488388096,
+      "duration_sec": 396.36
+    },
+    {
+      "trip_id": "Fuji_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Fuji",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Fuji_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/rGfozZj2",
+      "pos": 140737488388096,
+      "duration_sec": 604.53
+    },
+    {
+      "trip_id": "Kobe_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "Kobe",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Kobe_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/vYmFZ5Kq",
+      "pos": 140737488388864,
+      "duration_sec": 280.95
+    },
+    {
+      "trip_id": "Kobe_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "Kobe",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Kobe_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/vYmFZ5Kq",
+      "pos": 140737488388864,
+      "duration_sec": 522.92
+    },
+    {
+      "trip_id": "Kobe_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Kobe",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Kobe_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/vYmFZ5Kq",
+      "pos": 140737488388864,
+      "duration_sec": 805.43
+    },
+    {
+      "trip_id": "KobeForeignSettlements_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "KobeForeignSettlements",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KobeForeignSettlements_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/gSYZzEOM",
+      "pos": 140737488412672,
+      "duration_sec": 245.73
+    },
+    {
+      "trip_id": "KobeForeignSettlements_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "KobeForeignSettlements",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KobeForeignSettlements_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/gSYZzEOM",
+      "pos": 140737488412672,
+      "duration_sec": 474.31
+    },
+    {
+      "trip_id": "KobeForeignSettlements_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "KobeForeignSettlements",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KobeForeignSettlements_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/gSYZzEOM",
+      "pos": 140737488412672,
+      "duration_sec": 669.99
     },
     {
       "trip_id": "LunarNewYear_HSK12_ZH",
@@ -2028,6 +2163,51 @@
       "duration_sec": 259.68
     },
     {
+      "trip_id": "Kofu_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "Kofu",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Kofu_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/QTqUvJr5",
+      "pos": 140737489739776,
+      "duration_sec": 270.76
+    },
+    {
+      "trip_id": "Kofu_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "Kofu",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Kofu_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/QTqUvJr5",
+      "pos": 140737489739776,
+      "duration_sec": 470.54
+    },
+    {
+      "trip_id": "Kofu_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Kofu",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Kofu_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/QTqUvJr5",
+      "pos": 140737489739776,
+      "duration_sec": 625.01
+    },
+    {
       "trip_id": "Strasbourg1_A12_FR",
       "lane": "6",
       "level": "FR-A12",
@@ -2058,6 +2238,51 @@
       "duration_sec": 531.98
     },
     {
+      "trip_id": "Matsumoto_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "Matsumoto",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Matsumoto_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/cAaAP5rd",
+      "pos": 140737489772544,
+      "duration_sec": 276.53
+    },
+    {
+      "trip_id": "Matsumoto_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "Matsumoto",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Matsumoto_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/cAaAP5rd",
+      "pos": 140737489772544,
+      "duration_sec": 579.45
+    },
+    {
+      "trip_id": "Matsumoto_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Matsumoto",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Matsumoto_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/cAaAP5rd",
+      "pos": 140737489772544,
+      "duration_sec": 899.06
+    },
+    {
       "trip_id": "Strasbourg3_A12_FR",
       "lane": "6",
       "level": "FR-A12",
@@ -2071,6 +2296,51 @@
       "card_url": "https://trello.com/c/vEcm8Xyl",
       "pos": 140737489780736,
       "duration_sec": 318.98
+    },
+    {
+      "trip_id": "HidaMountains_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "HidaMountains",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "HidaMountains_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/8Q1Z63qO",
+      "pos": 140737489788928,
+      "duration_sec": 220.37
+    },
+    {
+      "trip_id": "HidaMountains_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "HidaMountains",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "HidaMountains_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/8Q1Z63qO",
+      "pos": 140737489788928,
+      "duration_sec": 383.29
+    },
+    {
+      "trip_id": "HidaMountains_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "HidaMountains",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "HidaMountains_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/8Q1Z63qO",
+      "pos": 140737489788928,
+      "duration_sec": 534.02
     },
     {
       "trip_id": "Strasbourg4_A12_FR",
@@ -2163,6 +2433,51 @@
       "duration_sec": 301.09
     },
     {
+      "trip_id": "GujoHachiman_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "GujoHachiman",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "GujoHachiman_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/f0At9zyF",
+      "pos": 140737489887232,
+      "duration_sec": 200.52
+    },
+    {
+      "trip_id": "GujoHachiman_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "GujoHachiman",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "GujoHachiman_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/f0At9zyF",
+      "pos": 140737489887232,
+      "duration_sec": 521.64
+    },
+    {
+      "trip_id": "GujoHachiman_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "GujoHachiman",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "GujoHachiman_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/f0At9zyF",
+      "pos": 140737489887232,
+      "duration_sec": 772.83
+    },
+    {
       "trip_id": "El_Planeta_A12_ES",
       "lane": "6",
       "level": "ES-A12",
@@ -2176,6 +2491,51 @@
       "card_url": "https://trello.com/c/2QXkkBIE",
       "pos": 140737489895424,
       "duration_sec": 235.08
+    },
+    {
+      "trip_id": "PlasticFoodMuseum_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "PlasticFoodMuseum",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "PlasticFoodMuseum_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/TKlGsC6E",
+      "pos": 140737489903616,
+      "duration_sec": 156.42
+    },
+    {
+      "trip_id": "PlasticFoodMuseum_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "PlasticFoodMuseum",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "PlasticFoodMuseum_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/TKlGsC6E",
+      "pos": 140737489903616,
+      "duration_sec": 288.78
+    },
+    {
+      "trip_id": "PlasticFoodMuseum_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "PlasticFoodMuseum",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "PlasticFoodMuseum_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/TKlGsC6E",
+      "pos": 140737489903616,
+      "duration_sec": 433.24
     },
     {
       "trip_id": "Ingenio_Humano1_A12_ES",
@@ -2193,6 +2553,51 @@
       "duration_sec": 225.57
     },
     {
+      "trip_id": "TsukechiGorge_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "TsukechiGorge",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "TsukechiGorge_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/LCGdJJut",
+      "pos": 140737489920000,
+      "duration_sec": 34.04
+    },
+    {
+      "trip_id": "TsukechiGorge_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "TsukechiGorge",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "TsukechiGorge_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/LCGdJJut",
+      "pos": 140737489920000,
+      "duration_sec": 46.86
+    },
+    {
+      "trip_id": "TsukechiGorge_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "TsukechiGorge",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "TsukechiGorge_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/LCGdJJut",
+      "pos": 140737489920000,
+      "duration_sec": 72.54
+    },
+    {
       "trip_id": "Ingenio_Humano2_A12_ES",
       "lane": "6",
       "level": "ES-A12",
@@ -2206,6 +2611,51 @@
       "card_url": "https://trello.com/c/HwV9AFja",
       "pos": 140737489928192,
       "duration_sec": 302.63
+    },
+    {
+      "trip_id": "NakasendoMagome_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "NakasendoMagome",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "NakasendoMagome_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/8NATNhjk",
+      "pos": 140737489936384,
+      "duration_sec": 193.59
+    },
+    {
+      "trip_id": "NakasendoMagome_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "NakasendoMagome",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "NakasendoMagome_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/8NATNhjk",
+      "pos": 140737489936384,
+      "duration_sec": 420.83
+    },
+    {
+      "trip_id": "NakasendoMagome_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "NakasendoMagome",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "NakasendoMagome_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/8NATNhjk",
+      "pos": 140737489936384,
+      "duration_sec": 762.7
     },
     {
       "trip_id": "Mercados_A12_ES",
@@ -2223,6 +2673,51 @@
       "duration_sec": 332.33
     },
     {
+      "trip_id": "NaegiCastle_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "NaegiCastle",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "NaegiCastle_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/O7Zdmo05",
+      "pos": 140737489952768,
+      "duration_sec": 89.97
+    },
+    {
+      "trip_id": "NaegiCastle_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "NaegiCastle",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "NaegiCastle_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/O7Zdmo05",
+      "pos": 140737489952768,
+      "duration_sec": 153.47
+    },
+    {
+      "trip_id": "NaegiCastle_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "NaegiCastle",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "NaegiCastle_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/O7Zdmo05",
+      "pos": 140737489952768,
+      "duration_sec": 362.95
+    },
+    {
       "trip_id": "Moros_y_Cristianos_A12_ES",
       "lane": "6",
       "level": "ES-A12",
@@ -2236,6 +2731,51 @@
       "card_url": "https://trello.com/c/pseFq89n",
       "pos": 140737489960960,
       "duration_sec": 305.68
+    },
+    {
+      "trip_id": "MinoFestival_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "MinoFestival",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "MinoFestival_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/6GPCf38k",
+      "pos": 140737489969152,
+      "duration_sec": 107.26
+    },
+    {
+      "trip_id": "MinoFestival_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "MinoFestival",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "MinoFestival_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/6GPCf38k",
+      "pos": 140737489969152,
+      "duration_sec": 192.97
+    },
+    {
+      "trip_id": "MinoFestival_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "MinoFestival",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "MinoFestival_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/6GPCf38k",
+      "pos": 140737489969152,
+      "duration_sec": 243.88
     },
     {
       "trip_id": "Org_Social1_A12_ES",
@@ -2253,6 +2793,51 @@
       "duration_sec": 242.7
     },
     {
+      "trip_id": "TejikaraFireFestival_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "TejikaraFireFestival",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "TejikaraFireFestival_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/fs6jIylv",
+      "pos": 140737489985536,
+      "duration_sec": 117.73
+    },
+    {
+      "trip_id": "TejikaraFireFestival_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "TejikaraFireFestival",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "TejikaraFireFestival_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/fs6jIylv",
+      "pos": 140737489985536,
+      "duration_sec": 196.08
+    },
+    {
+      "trip_id": "TejikaraFireFestival_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "TejikaraFireFestival",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "TejikaraFireFestival_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/fs6jIylv",
+      "pos": 140737489985536,
+      "duration_sec": 241.82
+    },
+    {
       "trip_id": "Org_Social2_A12_ES",
       "lane": "6",
       "level": "ES-A12",
@@ -2266,6 +2851,51 @@
       "card_url": "https://trello.com/c/oKvEKhlA",
       "pos": 140737489993728,
       "duration_sec": 194.38
+    },
+    {
+      "trip_id": "LakeBiwa_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "LakeBiwa",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "LakeBiwa_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/jkKohARu",
+      "pos": 140737490001920,
+      "duration_sec": 184.22
+    },
+    {
+      "trip_id": "LakeBiwa_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "LakeBiwa",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "LakeBiwa_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/jkKohARu",
+      "pos": 140737490001920,
+      "duration_sec": 372.77
+    },
+    {
+      "trip_id": "LakeBiwa_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "LakeBiwa",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "LakeBiwa_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/jkKohARu",
+      "pos": 140737490001920,
+      "duration_sec": 693.73
     },
     {
       "trip_id": "Sanguesa_A12_ES",
@@ -2358,6 +2988,51 @@
       "duration_sec": 421.49
     },
     {
+      "trip_id": "UjiByodoin_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "UjiByodoin",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "UjiByodoin_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/aiPwu8Bc",
+      "pos": 140737490100224,
+      "duration_sec": 255.4
+    },
+    {
+      "trip_id": "UjiByodoin_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "UjiByodoin",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "UjiByodoin_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/aiPwu8Bc",
+      "pos": 140737490100224,
+      "duration_sec": 570.2
+    },
+    {
+      "trip_id": "UjiByodoin_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "UjiByodoin",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "UjiByodoin_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/aiPwu8Bc",
+      "pos": 140737490100224,
+      "duration_sec": 1035.89
+    },
+    {
       "trip_id": "Toledo2_A12_ES",
       "lane": "6",
       "level": "ES-A12",
@@ -2386,6 +3061,51 @@
       "card_url": "https://trello.com/c/uSw2dd1y",
       "pos": 140737490124800,
       "duration_sec": 407.17
+    },
+    {
+      "trip_id": "Sakai_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "Sakai",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Sakai_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/rPfp1ive",
+      "pos": 140737490132992,
+      "duration_sec": 155.17
+    },
+    {
+      "trip_id": "Sakai_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "Sakai",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Sakai_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/rPfp1ive",
+      "pos": 140737490132992,
+      "duration_sec": 306.83
+    },
+    {
+      "trip_id": "Sakai_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Sakai",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Sakai_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/rPfp1ive",
+      "pos": 140737490132992,
+      "duration_sec": 430.47
     },
     {
       "trip_id": "Vic_A12_ES",
@@ -2433,6 +3153,51 @@
       "duration_sec": 189.05
     },
     {
+      "trip_id": "Azumino1_DaioWasabi_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "Azumino1_DaioWasabi",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Azumino1_DaioWasabi_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/F32Bwxdo",
+      "pos": 140737490182144,
+      "duration_sec": 128.37
+    },
+    {
+      "trip_id": "Azumino1_DaioWasabi_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "Azumino1_DaioWasabi",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Azumino1_DaioWasabi_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/F32Bwxdo",
+      "pos": 140737490182144,
+      "duration_sec": 168.33
+    },
+    {
+      "trip_id": "Azumino1_DaioWasabi_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Azumino1_DaioWasabi",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Azumino1_DaioWasabi_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/F32Bwxdo",
+      "pos": 140737490182144,
+      "duration_sec": 405.66
+    },
+    {
       "trip_id": "Cordoba1_A12_ES",
       "lane": "6",
       "level": "ES-A12",
@@ -2446,6 +3211,51 @@
       "card_url": "https://trello.com/c/wJWUxjIr",
       "pos": 140737490190336,
       "duration_sec": 146.7
+    },
+    {
+      "trip_id": "Azumino2_NationalPark_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "Azumino2_NationalPark",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Azumino2_NationalPark_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/387kYlLs",
+      "pos": 140737490198528,
+      "duration_sec": 140.28
+    },
+    {
+      "trip_id": "Azumino2_NationalPark_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "Azumino2_NationalPark",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Azumino2_NationalPark_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/387kYlLs",
+      "pos": 140737490198528,
+      "duration_sec": 332.07
+    },
+    {
+      "trip_id": "Azumino2_NationalPark_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Azumino2_NationalPark",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Azumino2_NationalPark_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/387kYlLs",
+      "pos": 140737490198528,
+      "duration_sec": 498.89
     },
     {
       "trip_id": "Cordoba2_A12_ES",
@@ -2463,6 +3273,51 @@
       "duration_sec": 144.85
     },
     {
+      "trip_id": "Hikone1_Castle_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "Hikone1_Castle",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Hikone1_Castle_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/DPwILHGU",
+      "pos": 140737490214912,
+      "duration_sec": 208.12
+    },
+    {
+      "trip_id": "Hikone1_Castle_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "Hikone1_Castle",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Hikone1_Castle_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/DPwILHGU",
+      "pos": 140737490214912,
+      "duration_sec": 356.26
+    },
+    {
+      "trip_id": "Hikone1_Castle_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Hikone1_Castle",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Hikone1_Castle_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/DPwILHGU",
+      "pos": 140737490214912,
+      "duration_sec": 519.92
+    },
+    {
       "trip_id": "Cordoba4_A12_ES",
       "lane": "6",
       "level": "ES-A12",
@@ -2476,6 +3331,51 @@
       "card_url": "https://trello.com/c/NFbeBPVW",
       "pos": 140737490223104,
       "duration_sec": 119.82
+    },
+    {
+      "trip_id": "Hikone2_OmiHachiman_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "Hikone2_OmiHachiman",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Hikone2_OmiHachiman_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/HprNAbdJ",
+      "pos": 140737490231296,
+      "duration_sec": 202.61
+    },
+    {
+      "trip_id": "Hikone2_OmiHachiman_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "Hikone2_OmiHachiman",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Hikone2_OmiHachiman_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/HprNAbdJ",
+      "pos": 140737490231296,
+      "duration_sec": 396.17
+    },
+    {
+      "trip_id": "Hikone2_OmiHachiman_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Hikone2_OmiHachiman",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Hikone2_OmiHachiman_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/HprNAbdJ",
+      "pos": 140737490231296,
+      "duration_sec": 618.95
     },
     {
       "trip_id": "Los_Escobazos_A12_ES",
@@ -2551,6 +3451,51 @@
       "card_url": "https://trello.com/c/Apbt2Amx",
       "pos": 140737490255872,
       "duration_sec": 134.06
+    },
+    {
+      "trip_id": "KyotoImperialPalace_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "KyotoImperialPalace",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KyotoImperialPalace_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/TPxLcZ5P",
+      "pos": 140737490264064,
+      "duration_sec": 183.2
+    },
+    {
+      "trip_id": "KyotoImperialPalace_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "KyotoImperialPalace",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KyotoImperialPalace_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/TPxLcZ5P",
+      "pos": 140737490264064,
+      "duration_sec": 330.06
+    },
+    {
+      "trip_id": "KyotoImperialPalace_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "KyotoImperialPalace",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KyotoImperialPalace_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/TPxLcZ5P",
+      "pos": 140737490264064,
+      "duration_sec": 487.47
     },
     {
       "trip_id": "Madrid2_A12_ES",
@@ -2688,6 +3633,51 @@
       "duration_sec": 226.61
     },
     {
+      "trip_id": "KyotoTemples1b_GinkakuNanzen_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "KyotoTemples1b_GinkakuNanzen",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KyotoTemples1b_GinkakuNanzen_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/Ge0oAkp7",
+      "pos": 140737490313216,
+      "duration_sec": 169.69
+    },
+    {
+      "trip_id": "KyotoTemples1b_GinkakuNanzen_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "KyotoTemples1b_GinkakuNanzen",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KyotoTemples1b_GinkakuNanzen_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/Ge0oAkp7",
+      "pos": 140737490313216,
+      "duration_sec": 391.52
+    },
+    {
+      "trip_id": "KyotoTemples1b_GinkakuNanzen_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "KyotoTemples1b_GinkakuNanzen",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KyotoTemples1b_GinkakuNanzen_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/Ge0oAkp7",
+      "pos": 140737490313216,
+      "duration_sec": 544.13
+    },
+    {
       "trip_id": "Sevilla1_A12_ES",
       "lane": "6",
       "level": "ES-A12",
@@ -2763,6 +3753,51 @@
       "duration_sec": 150.2
     },
     {
+      "trip_id": "KyotoTemples2b_TojiHeianOkazaki_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "KyotoTemples2b_TojiHeianOkazaki",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KyotoTemples2b_TojiHeianOkazaki_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/hFRiYKWG",
+      "pos": 140737490345984,
+      "duration_sec": 170.92
+    },
+    {
+      "trip_id": "KyotoTemples2b_TojiHeianOkazaki_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "KyotoTemples2b_TojiHeianOkazaki",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KyotoTemples2b_TojiHeianOkazaki_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/hFRiYKWG",
+      "pos": 140737490345984,
+      "duration_sec": 515.24
+    },
+    {
+      "trip_id": "KyotoTemples2b_TojiHeianOkazaki_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "KyotoTemples2b_TojiHeianOkazaki",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KyotoTemples2b_TojiHeianOkazaki_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/hFRiYKWG",
+      "pos": 140737490345984,
+      "duration_sec": 582.37
+    },
+    {
       "trip_id": "Sevilla3_A12_ES",
       "lane": "6",
       "level": "ES-A12",
@@ -2778,6 +3813,51 @@
       "duration_sec": 158.93
     },
     {
+      "trip_id": "Nara1_ParkTown_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "Nara1_ParkTown",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Nara1_ParkTown_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/vhttovpV",
+      "pos": 140737490362368,
+      "duration_sec": 175.23
+    },
+    {
+      "trip_id": "Nara1_ParkTown_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "Nara1_ParkTown",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Nara1_ParkTown_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/vhttovpV",
+      "pos": 140737490362368,
+      "duration_sec": 289.49
+    },
+    {
+      "trip_id": "Nara1_ParkTown_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Nara1_ParkTown",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Nara1_ParkTown_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/vhttovpV",
+      "pos": 140737490362368,
+      "duration_sec": 405.39
+    },
+    {
       "trip_id": "Tossa_de_Mar_A12_ES",
       "lane": "6",
       "level": "ES-A12",
@@ -2791,6 +3871,51 @@
       "card_url": "https://trello.com/c/cAiS9OWE",
       "pos": 140737490370560,
       "duration_sec": 410.49
+    },
+    {
+      "trip_id": "Nara2_TodaijiAndClose_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "Nara2_TodaijiAndClose",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Nara2_TodaijiAndClose_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/qIpQN8sA",
+      "pos": 140737490378752,
+      "duration_sec": 326.79
+    },
+    {
+      "trip_id": "Nara2_TodaijiAndClose_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "Nara2_TodaijiAndClose",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Nara2_TodaijiAndClose_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/qIpQN8sA",
+      "pos": 140737490378752,
+      "duration_sec": 749.84
+    },
+    {
+      "trip_id": "Nara2_TodaijiAndClose_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Nara2_TodaijiAndClose",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Nara2_TodaijiAndClose_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/qIpQN8sA",
+      "pos": 140737490378752,
+      "duration_sec": 1107.85
     },
     {
       "trip_id": "Valencia1_A12_ES",
@@ -2868,6 +3993,51 @@
       "duration_sec": 209.53
     },
     {
+      "trip_id": "OsakaAncient1_Temples_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "OsakaAncient1_Temples",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "OsakaAncient1_Temples_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/ZMTowwa5",
+      "pos": 140737490411520,
+      "duration_sec": 155.9
+    },
+    {
+      "trip_id": "OsakaAncient1_Temples_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "OsakaAncient1_Temples",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "OsakaAncient1_Temples_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/ZMTowwa5",
+      "pos": 140737490411520,
+      "duration_sec": 363.68
+    },
+    {
+      "trip_id": "OsakaAncient1_Temples_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "OsakaAncient1_Temples",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "OsakaAncient1_Temples_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/ZMTowwa5",
+      "pos": 140737490411520,
+      "duration_sec": 511.92
+    },
+    {
       "trip_id": "Girona_A12_ES",
       "lane": "6",
       "level": "ES-A12",
@@ -2881,6 +4051,96 @@
       "card_url": "https://trello.com/c/RFwyl0wy",
       "pos": 140737490419712,
       "duration_sec": 407.33
+    },
+    {
+      "trip_id": "OsakaAncient2_CastleSumiyoshi_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "OsakaAncient2_CastleSumiyoshi",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "OsakaAncient2_CastleSumiyoshi_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/PQzFiGWm",
+      "pos": 140737490423808,
+      "duration_sec": 124.45
+    },
+    {
+      "trip_id": "OsakaAncient2_CastleSumiyoshi_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "OsakaAncient2_CastleSumiyoshi",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "OsakaAncient2_CastleSumiyoshi_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/PQzFiGWm",
+      "pos": 140737490423808,
+      "duration_sec": 336.4
+    },
+    {
+      "trip_id": "OsakaAncient2_CastleSumiyoshi_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "OsakaAncient2_CastleSumiyoshi",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "OsakaAncient2_CastleSumiyoshi_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/PQzFiGWm",
+      "pos": 140737490423808,
+      "duration_sec": 432.95
+    },
+    {
+      "trip_id": "Kagawa_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "Kagawa",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Kagawa_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/u986IA7l",
+      "pos": 140737490427904,
+      "duration_sec": 204.88
+    },
+    {
+      "trip_id": "Kagawa_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "Kagawa",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Kagawa_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/u986IA7l",
+      "pos": 140737490427904,
+      "duration_sec": 572.08
+    },
+    {
+      "trip_id": "Kagawa_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Kagawa",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Kagawa_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/u986IA7l",
+      "pos": 140737490427904,
+      "duration_sec": 824.56
     },
     {
       "trip_id": "Salvador_Dali_A12_ES",
@@ -2898,6 +4158,96 @@
       "duration_sec": 393.33
     },
     {
+      "trip_id": "OsakaModern1_SouthCentral_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "OsakaModern1_SouthCentral",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "OsakaModern1_SouthCentral_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/2g02rwgQ",
+      "pos": 140737490444288,
+      "duration_sec": 191.63
+    },
+    {
+      "trip_id": "OsakaModern1_SouthCentral_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "OsakaModern1_SouthCentral",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "OsakaModern1_SouthCentral_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/2g02rwgQ",
+      "pos": 140737490444288,
+      "duration_sec": 315.01
+    },
+    {
+      "trip_id": "OsakaModern1_SouthCentral_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "OsakaModern1_SouthCentral",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "OsakaModern1_SouthCentral_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/2g02rwgQ",
+      "pos": 140737490444288,
+      "duration_sec": 559.46
+    },
+    {
+      "trip_id": "KagawaToShodoshima_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "KagawaToShodoshima",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "KagawaToShodoshima_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/0WLHrBg6",
+      "pos": 140737490448384,
+      "duration_sec": 212.27
+    },
+    {
+      "trip_id": "KagawaToShodoshima_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "KagawaToShodoshima",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "KagawaToShodoshima_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/0WLHrBg6",
+      "pos": 140737490448384,
+      "duration_sec": 574.04
+    },
+    {
+      "trip_id": "KagawaToShodoshima_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "KagawaToShodoshima",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "KagawaToShodoshima_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/0WLHrBg6",
+      "pos": 140737490448384,
+      "duration_sec": 739.0
+    },
+    {
       "trip_id": "Sant_Felíu_de_Guíxols_A12_ES",
       "lane": "6",
       "level": "ES-A12",
@@ -2913,6 +4263,51 @@
       "duration_sec": 251.53
     },
     {
+      "trip_id": "OsakaModern2_UmedaSky_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "OsakaModern2_UmedaSky",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "OsakaModern2_UmedaSky_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/vi3q0HD6",
+      "pos": 140737490460672,
+      "duration_sec": 150.1
+    },
+    {
+      "trip_id": "OsakaModern2_UmedaSky_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "OsakaModern2_UmedaSky",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "OsakaModern2_UmedaSky_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/vi3q0HD6",
+      "pos": 140737490460672,
+      "duration_sec": 293.88
+    },
+    {
+      "trip_id": "OsakaModern2_UmedaSky_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "OsakaModern2_UmedaSky",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "OsakaModern2_UmedaSky_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/vi3q0HD6",
+      "pos": 140737490460672,
+      "duration_sec": 372.56
+    },
+    {
       "trip_id": "Valencia3_A12_ES",
       "lane": "6",
       "level": "ES-A12",
@@ -2926,6 +4321,51 @@
       "card_url": "https://trello.com/c/MExGiYmY",
       "pos": 140737490468864,
       "duration_sec": 142.13
+    },
+    {
+      "trip_id": "Shodoshima1_Tonosho_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "Shodoshima1_Tonosho",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Shodoshima1_Tonosho_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/WiWcHeYB",
+      "pos": 140737490477056,
+      "duration_sec": 179.1
+    },
+    {
+      "trip_id": "Shodoshima1_Tonosho_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "Shodoshima1_Tonosho",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Shodoshima1_Tonosho_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/WiWcHeYB",
+      "pos": 140737490477056,
+      "duration_sec": 295.5
+    },
+    {
+      "trip_id": "Shodoshima1_Tonosho_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Shodoshima1_Tonosho",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Shodoshima1_Tonosho_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/WiWcHeYB",
+      "pos": 140737490477056,
+      "duration_sec": 465.19
     },
     {
       "trip_id": "Valencia4_A12_ES",
@@ -2958,6 +4398,51 @@
       "duration_sec": 147.54
     },
     {
+      "trip_id": "Naruto_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "Naruto",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Naruto_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/t7DIPSNB",
+      "pos": 140737490509824,
+      "duration_sec": 146.86
+    },
+    {
+      "trip_id": "Naruto_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "Naruto",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Naruto_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/t7DIPSNB",
+      "pos": 140737490509824,
+      "duration_sec": 205.79
+    },
+    {
+      "trip_id": "Naruto_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Naruto",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Naruto_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/t7DIPSNB",
+      "pos": 140737490509824,
+      "duration_sec": 322.66
+    },
+    {
       "trip_id": "Zaragoza2_A12_ES",
       "lane": "6",
       "level": "ES-A12",
@@ -2971,6 +4456,51 @@
       "card_url": "https://trello.com/c/fHvCv0Rw",
       "pos": 140737490518016,
       "duration_sec": 104.7
+    },
+    {
+      "trip_id": "Awaji_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "Awaji",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Awaji_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/JoQYUZvg",
+      "pos": 140737490526208,
+      "duration_sec": 158.82
+    },
+    {
+      "trip_id": "Awaji_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "Awaji",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Awaji_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/JoQYUZvg",
+      "pos": 140737490526208,
+      "duration_sec": 267.81
+    },
+    {
+      "trip_id": "Awaji_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Awaji",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Awaji_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/JoQYUZvg",
+      "pos": 140737490526208,
+      "duration_sec": 491.21
     },
     {
       "trip_id": "Zaragoza3_A12_ES",
@@ -2988,6 +4518,51 @@
       "duration_sec": 114.63
     },
     {
+      "trip_id": "DogoOnsenMatsuyama_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "DogoOnsenMatsuyama",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "DogoOnsenMatsuyama_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/oVqrXp59",
+      "pos": 140737490542592,
+      "duration_sec": 205.3
+    },
+    {
+      "trip_id": "DogoOnsenMatsuyama_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "DogoOnsenMatsuyama",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "DogoOnsenMatsuyama_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/oVqrXp59",
+      "pos": 140737490542592,
+      "duration_sec": 342.41
+    },
+    {
+      "trip_id": "DogoOnsenMatsuyama_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "DogoOnsenMatsuyama",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "DogoOnsenMatsuyama_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/oVqrXp59",
+      "pos": 140737490542592,
+      "duration_sec": 749.01
+    },
+    {
       "trip_id": "Sevilla4_B1_ES",
       "lane": "6",
       "level": "ES-B1",
@@ -3001,6 +4576,231 @@
       "card_url": "https://trello.com/c/IcNlW2yo",
       "pos": 140737490550784,
       "duration_sec": 307.88
+    },
+    {
+      "trip_id": "MatsuyamaCastle_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "MatsuyamaCastle",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "MatsuyamaCastle_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/hoRsmTBi",
+      "pos": 140737490552832,
+      "duration_sec": 152.22
+    },
+    {
+      "trip_id": "MatsuyamaCastle_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "MatsuyamaCastle",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "MatsuyamaCastle_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/hoRsmTBi",
+      "pos": 140737490552832,
+      "duration_sec": 423.68
+    },
+    {
+      "trip_id": "MatsuyamaCastle_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "MatsuyamaCastle",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "MatsuyamaCastle_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/hoRsmTBi",
+      "pos": 140737490552832,
+      "duration_sec": 586.55
+    },
+    {
+      "trip_id": "YokohamaCity_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "YokohamaCity",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "YokohamaCity_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/fm0smOn8",
+      "pos": 140737490554880,
+      "duration_sec": 200.78
+    },
+    {
+      "trip_id": "YokohamaCity_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "YokohamaCity",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "YokohamaCity_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/fm0smOn8",
+      "pos": 140737490554880,
+      "duration_sec": 409.29
+    },
+    {
+      "trip_id": "YokohamaCity_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "YokohamaCity",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "YokohamaCity_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/fm0smOn8",
+      "pos": 140737490554880,
+      "duration_sec": 563.83
+    },
+    {
+      "trip_id": "YokohamaForeign_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "YokohamaForeign",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "YokohamaForeign_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/r3DC01q7",
+      "pos": 140737490556928,
+      "duration_sec": 232.44
+    },
+    {
+      "trip_id": "YokohamaForeign_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "YokohamaForeign",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "YokohamaForeign_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/r3DC01q7",
+      "pos": 140737490556928,
+      "duration_sec": 377.26
+    },
+    {
+      "trip_id": "YokohamaForeign_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "YokohamaForeign",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "YokohamaForeign_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/r3DC01q7",
+      "pos": 140737490556928,
+      "duration_sec": 610.43
+    },
+    {
+      "trip_id": "TsukijiOdaiba_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "TsukijiOdaiba",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "TsukijiOdaiba_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/DMnUx2bs",
+      "pos": 140737490557952,
+      "duration_sec": 175.1
+    },
+    {
+      "trip_id": "TsukijiOdaiba_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "TsukijiOdaiba",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "TsukijiOdaiba_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/DMnUx2bs",
+      "pos": 140737490557952,
+      "duration_sec": 382.2
+    },
+    {
+      "trip_id": "TsukijiOdaiba_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "TsukijiOdaiba",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "TsukijiOdaiba_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/DMnUx2bs",
+      "pos": 140737490557952,
+      "duration_sec": 536.92
+    },
+    {
+      "trip_id": "Shinjuku_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "Shinjuku",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Shinjuku_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/SsQzgd0f",
+      "pos": 140737490558976,
+      "duration_sec": 204.9
+    },
+    {
+      "trip_id": "Shinjuku_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "Shinjuku",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Shinjuku_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/SsQzgd0f",
+      "pos": 140737490558976,
+      "duration_sec": 488.65
+    },
+    {
+      "trip_id": "Shinjuku_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Shinjuku",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Shinjuku_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/SsQzgd0f",
+      "pos": 140737490558976,
+      "duration_sec": 644.96
     },
     {
       "trip_id": "Sevilla5_B1_ES",
@@ -3018,6 +4818,51 @@
       "duration_sec": 253.88
     },
     {
+      "trip_id": "ShinjukuNightShibuya_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "ShinjukuNightShibuya",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "ShinjukuNightShibuya_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/arsAWi0q",
+      "pos": 140737490575360,
+      "duration_sec": 119.01
+    },
+    {
+      "trip_id": "ShinjukuNightShibuya_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "ShinjukuNightShibuya",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "ShinjukuNightShibuya_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/arsAWi0q",
+      "pos": 140737490575360,
+      "duration_sec": 272.77
+    },
+    {
+      "trip_id": "ShinjukuNightShibuya_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "ShinjukuNightShibuya",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "ShinjukuNightShibuya_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/arsAWi0q",
+      "pos": 140737490575360,
+      "duration_sec": 385.02
+    },
+    {
       "trip_id": "Cassis_Calanques_A12_FR",
       "lane": "6",
       "level": "FR-A12",
@@ -3031,6 +4876,51 @@
       "card_url": "https://trello.com/c/rWz0Bbsw",
       "pos": 140737490583552,
       "duration_sec": 1142.8
+    },
+    {
+      "trip_id": "UenoAkihabara_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "UenoAkihabara",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "UenoAkihabara_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/2IomEWXB",
+      "pos": 140737490591744,
+      "duration_sec": 215.33
+    },
+    {
+      "trip_id": "UenoAkihabara_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "UenoAkihabara",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "UenoAkihabara_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/2IomEWXB",
+      "pos": 140737490591744,
+      "duration_sec": 685.53
+    },
+    {
+      "trip_id": "UenoAkihabara_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "UenoAkihabara",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "UenoAkihabara_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/2IomEWXB",
+      "pos": 140737490591744,
+      "duration_sec": 872.62
     },
     {
       "trip_id": "Andorra_Pirineos_A12_ES",
@@ -3048,6 +4938,51 @@
       "duration_sec": 23.12
     },
     {
+      "trip_id": "ShinjukuGyoen_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "ShinjukuGyoen",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "ShinjukuGyoen_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/dlGvmh40",
+      "pos": 140737490608128,
+      "duration_sec": 155.3
+    },
+    {
+      "trip_id": "ShinjukuGyoen_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "ShinjukuGyoen",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "ShinjukuGyoen_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/dlGvmh40",
+      "pos": 140737490608128,
+      "duration_sec": 253.52
+    },
+    {
+      "trip_id": "ShinjukuGyoen_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "ShinjukuGyoen",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "ShinjukuGyoen_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/dlGvmh40",
+      "pos": 140737490608128,
+      "duration_sec": 482.9
+    },
+    {
       "trip_id": "Bilbao2_Guggenheim_A12_ES",
       "lane": "6",
       "level": "ES-A12",
@@ -3061,6 +4996,51 @@
       "card_url": "https://trello.com/c/olMXADc8",
       "pos": 140737490616320,
       "duration_sec": 12.98
+    },
+    {
+      "trip_id": "KamakuraHakoneWaterfall_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "KamakuraHakoneWaterfall",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KamakuraHakoneWaterfall_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/QVAOKlet",
+      "pos": 140737490624512,
+      "duration_sec": 289.91
+    },
+    {
+      "trip_id": "KamakuraHakoneWaterfall_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "KamakuraHakoneWaterfall",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KamakuraHakoneWaterfall_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/QVAOKlet",
+      "pos": 140737490624512,
+      "duration_sec": 590.94
+    },
+    {
+      "trip_id": "KamakuraHakoneWaterfall_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "KamakuraHakoneWaterfall",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "KamakuraHakoneWaterfall_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/QVAOKlet",
+      "pos": 140737490624512,
+      "duration_sec": 866.82
     },
     {
       "trip_id": "Bilbao1_LaRia_A12_ES",
@@ -3093,6 +5073,51 @@
       "duration_sec": 263.84
     },
     {
+      "trip_id": "Hakone_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "Hakone",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Hakone_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/o72vcAWc",
+      "pos": 140737490640896,
+      "duration_sec": 197.69
+    },
+    {
+      "trip_id": "Hakone_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "Hakone",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Hakone_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/o72vcAWc",
+      "pos": 140737490640896,
+      "duration_sec": 447.45
+    },
+    {
+      "trip_id": "Hakone_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Hakone",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "Hakone_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/o72vcAWc",
+      "pos": 140737490640896,
+      "duration_sec": 628.95
+    },
+    {
       "trip_id": "Cordoba_CascoHistorico_A12_ES",
       "lane": "6",
       "level": "ES-A12",
@@ -3108,6 +5133,51 @@
       "duration_sec": 49.16
     },
     {
+      "trip_id": "YamanakakoOshino_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "YamanakakoOshino",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "YamanakakoOshino_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/DkHhWhyv",
+      "pos": 140737490657280,
+      "duration_sec": 279.61
+    },
+    {
+      "trip_id": "YamanakakoOshino_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "YamanakakoOshino",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "YamanakakoOshino_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/DkHhWhyv",
+      "pos": 140737490657280,
+      "duration_sec": 552.78
+    },
+    {
+      "trip_id": "YamanakakoOshino_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "YamanakakoOshino",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "YamanakakoOshino_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/DkHhWhyv",
+      "pos": 140737490657280,
+      "duration_sec": 715.76
+    },
+    {
       "trip_id": "Cuevas_Altamira_A12_ES",
       "lane": "6",
       "level": "ES-A12",
@@ -3121,6 +5191,51 @@
       "card_url": "https://trello.com/c/qrZLzgEe",
       "pos": 140737490665472,
       "duration_sec": 40.05
+    },
+    {
+      "trip_id": "NaritaSan_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "NaritaSan",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "NaritaSan_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/Df1vj1PT",
+      "pos": 140737490673664,
+      "duration_sec": 168.96
+    },
+    {
+      "trip_id": "NaritaSan_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "NaritaSan",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "NaritaSan_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/Df1vj1PT",
+      "pos": 140737490673664,
+      "duration_sec": 433.87
+    },
+    {
+      "trip_id": "NaritaSan_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "NaritaSan",
+      "voice": "fumi",
+      "gender": "female",
+      "title": "NaritaSan_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/Df1vj1PT",
+      "pos": 140737490673664,
+      "duration_sec": 639.14
     },
     {
       "trip_id": "Jerez_CascoAntiguo_A12_ES",
@@ -3153,6 +5268,51 @@
       "duration_sec": 72.46
     },
     {
+      "trip_id": "KagawaShiudeBeach_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "KagawaShiudeBeach",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "KagawaShiudeBeach_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/d4yphEKp",
+      "pos": 140737490690048,
+      "duration_sec": 106.53
+    },
+    {
+      "trip_id": "KagawaShiudeBeach_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "KagawaShiudeBeach",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "KagawaShiudeBeach_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/d4yphEKp",
+      "pos": 140737490690048,
+      "duration_sec": 247.67
+    },
+    {
+      "trip_id": "KagawaShiudeBeach_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "KagawaShiudeBeach",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "KagawaShiudeBeach_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/d4yphEKp",
+      "pos": 140737490690048,
+      "duration_sec": 350.54
+    },
+    {
       "trip_id": "LasFallas2019_A12_ES",
       "lane": "6",
       "level": "ES-A12",
@@ -3181,6 +5341,51 @@
       "card_url": "https://trello.com/c/nB9QALtD",
       "pos": 140737490714624,
       "duration_sec": 28.94
+    },
+    {
+      "trip_id": "SetoOhashiMarugame_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "SetoOhashiMarugame",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "SetoOhashiMarugame_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/cIBhBgL3",
+      "pos": 140737490722816,
+      "duration_sec": 176.09
+    },
+    {
+      "trip_id": "SetoOhashiMarugame_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "SetoOhashiMarugame",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "SetoOhashiMarugame_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/cIBhBgL3",
+      "pos": 140737490722816,
+      "duration_sec": 510.15
+    },
+    {
+      "trip_id": "SetoOhashiMarugame_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "SetoOhashiMarugame",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "SetoOhashiMarugame_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/cIBhBgL3",
+      "pos": 140737490722816,
+      "duration_sec": 649.51
     },
     {
       "trip_id": "Merida3_Anfiteatro_A12_ES",
@@ -3213,6 +5418,51 @@
       "duration_sec": 134.5
     },
     {
+      "trip_id": "Shodoshima2a_SouthArt_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "Shodoshima2a_SouthArt",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Shodoshima2a_SouthArt_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/nlKimpRi",
+      "pos": 140737490739200,
+      "duration_sec": 131.0
+    },
+    {
+      "trip_id": "Shodoshima2a_SouthArt_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "Shodoshima2a_SouthArt",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Shodoshima2a_SouthArt_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/nlKimpRi",
+      "pos": 140737490739200,
+      "duration_sec": 347.45
+    },
+    {
+      "trip_id": "Shodoshima2a_SouthArt_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Shodoshima2a_SouthArt",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Shodoshima2a_SouthArt_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/nlKimpRi",
+      "pos": 140737490739200,
+      "duration_sec": 409.26
+    },
+    {
       "trip_id": "Merida2_Acueducto_A12_ES",
       "lane": "6",
       "level": "ES-A12",
@@ -3241,6 +5491,51 @@
       "card_url": "https://trello.com/c/C1mkUNFl",
       "pos": 140737490747392,
       "duration_sec": 180.66
+    },
+    {
+      "trip_id": "Shodoshima2b_OlivePark_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "Shodoshima2b_OlivePark",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Shodoshima2b_OlivePark_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/WPgOfPee",
+      "pos": 140737490755584,
+      "duration_sec": 131.08
+    },
+    {
+      "trip_id": "Shodoshima2b_OlivePark_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "Shodoshima2b_OlivePark",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Shodoshima2b_OlivePark_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/WPgOfPee",
+      "pos": 140737490755584,
+      "duration_sec": 250.75
+    },
+    {
+      "trip_id": "Shodoshima2b_OlivePark_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Shodoshima2b_OlivePark",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Shodoshima2b_OlivePark_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/WPgOfPee",
+      "pos": 140737490755584,
+      "duration_sec": 345.91
     },
     {
       "trip_id": "Merida1_PuenteYAlcazaba_A12_ES",
@@ -3273,6 +5568,51 @@
       "duration_sec": 145.08
     },
     {
+      "trip_id": "Shodoshima3a_MovieSoyQuarry_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "Shodoshima3a_MovieSoyQuarry",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Shodoshima3a_MovieSoyQuarry_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/LpzkTA5H",
+      "pos": 140737490771968,
+      "duration_sec": 162.35
+    },
+    {
+      "trip_id": "Shodoshima3a_MovieSoyQuarry_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "Shodoshima3a_MovieSoyQuarry",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Shodoshima3a_MovieSoyQuarry_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/LpzkTA5H",
+      "pos": 140737490771968,
+      "duration_sec": 174.34
+    },
+    {
+      "trip_id": "Shodoshima3a_MovieSoyQuarry_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Shodoshima3a_MovieSoyQuarry",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Shodoshima3a_MovieSoyQuarry_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/LpzkTA5H",
+      "pos": 140737490771968,
+      "duration_sec": 528.51
+    },
+    {
       "trip_id": "Salamanca2_Catedrales_A12_ES",
       "lane": "6",
       "level": "ES-A12",
@@ -3301,6 +5641,51 @@
       "card_url": "https://trello.com/c/Yr0KX0jh",
       "pos": 140737490780160,
       "duration_sec": 228.47
+    },
+    {
+      "trip_id": "Shodoshima3b_KankakeiHighlands_Beg_JP",
+      "lane": "6",
+      "level": "N5",
+      "family": "Shodoshima3b_KankakeiHighlands",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Shodoshima3b_KankakeiHighlands_Beg_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/I17hsZ2a",
+      "pos": 140737490788352,
+      "duration_sec": 161.99
+    },
+    {
+      "trip_id": "Shodoshima3b_KankakeiHighlands_Beg_N4_JP",
+      "lane": "6",
+      "level": "N4",
+      "family": "Shodoshima3b_KankakeiHighlands",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Shodoshima3b_KankakeiHighlands_Beg_N4_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/I17hsZ2a",
+      "pos": 140737490788352,
+      "duration_sec": 387.32
+    },
+    {
+      "trip_id": "Shodoshima3b_KankakeiHighlands_N3_JP",
+      "lane": "6",
+      "level": "N3",
+      "family": "Shodoshima3b_KankakeiHighlands",
+      "voice": "daisuke",
+      "gender": "male",
+      "title": "Shodoshima3b_KankakeiHighlands_N3_JP",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/I17hsZ2a",
+      "pos": 140737490788352,
+      "duration_sec": 463.18
     },
     {
       "trip_id": "Salamanca1_Universidad_A12_ES",
@@ -3708,6 +6093,51 @@
       "duration_sec": 438.02
     },
     {
+      "trip_id": "Fuji_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Fuji",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "Fuji_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/rGfozZj2",
+      "pos": 140737488388096,
+      "duration_sec": 310.2
+    },
+    {
+      "trip_id": "Kobe_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Kobe",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "Kobe_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/vYmFZ5Kq",
+      "pos": 140737488388864,
+      "duration_sec": 553.77
+    },
+    {
+      "trip_id": "KobeForeignSettlements_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "KobeForeignSettlements",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "KobeForeignSettlements_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/gSYZzEOM",
+      "pos": 140737488412672,
+      "duration_sec": 343.95
+    },
+    {
       "trip_id": "LunarNewYear_EN",
       "lane": "7",
       "level": "EN",
@@ -3826,21 +6256,6 @@
       "card_url": "https://trello.com/c/Jw0RVsPV",
       "pos": 140737488715776,
       "duration_sec": 286.48
-    },
-    {
-      "trip_id": "Camden_A12_EN",
-      "lane": "7",
-      "level": "A12",
-      "family": "Camden",
-      "voice": "harry",
-      "gender": "male",
-      "title": "Camden_A12_EN",
-      "labels": [
-        "UK"
-      ],
-      "card_url": "https://trello.com/c/h9VZFEO5",
-      "pos": 140737488732160,
-      "duration_sec": 260.05
     },
     {
       "trip_id": "Tokyo_08_ImperialPalace_EN",
@@ -4683,6 +7098,51 @@
       "duration_sec": 174.52
     },
     {
+      "trip_id": "Kofu_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Kofu",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "Kofu_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/QTqUvJr5",
+      "pos": 140737489739776,
+      "duration_sec": 322.82
+    },
+    {
+      "trip_id": "Matsumoto_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Matsumoto",
+      "voice": "harry",
+      "gender": "male",
+      "title": "Matsumoto_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/cAaAP5rd",
+      "pos": 140737489772544,
+      "duration_sec": 683.1
+    },
+    {
+      "trip_id": "HidaMountains_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "HidaMountains",
+      "voice": "harry",
+      "gender": "male",
+      "title": "HidaMountains_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/8Q1Z63qO",
+      "pos": 140737489788928,
+      "duration_sec": 459.52
+    },
+    {
       "trip_id": "ElCamino_EN",
       "lane": "7",
       "level": "EN",
@@ -4696,6 +7156,21 @@
       "card_url": "https://trello.com/c/iOSXBIX6",
       "pos": 140737489879040,
       "duration_sec": 954.07
+    },
+    {
+      "trip_id": "GujoHachiman_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "GujoHachiman",
+      "voice": "harry",
+      "gender": "male",
+      "title": "GujoHachiman_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/f0At9zyF",
+      "pos": 140737489887232,
+      "duration_sec": 706.51
     },
     {
       "trip_id": "El_Planeta_EN",
@@ -4713,6 +7188,21 @@
       "duration_sec": 602.33
     },
     {
+      "trip_id": "PlasticFoodMuseum_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "PlasticFoodMuseum",
+      "voice": "harry",
+      "gender": "male",
+      "title": "PlasticFoodMuseum_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/TKlGsC6E",
+      "pos": 140737489903616,
+      "duration_sec": 367.99
+    },
+    {
       "trip_id": "Ingenio_Humano1_EN",
       "lane": "7",
       "level": "EN",
@@ -4726,6 +7216,21 @@
       "card_url": "https://trello.com/c/FP84NjLh",
       "pos": 140737489911808,
       "duration_sec": 503.25
+    },
+    {
+      "trip_id": "TsukechiGorge_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "TsukechiGorge",
+      "voice": "harry",
+      "gender": "male",
+      "title": "TsukechiGorge_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/LCGdJJut",
+      "pos": 140737489920000,
+      "duration_sec": 63.35
     },
     {
       "trip_id": "Ingenio_Humano2_EN",
@@ -4743,6 +7248,21 @@
       "duration_sec": 621.66
     },
     {
+      "trip_id": "NakasendoMagome_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "NakasendoMagome",
+      "voice": "harry",
+      "gender": "male",
+      "title": "NakasendoMagome_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/8NATNhjk",
+      "pos": 140737489936384,
+      "duration_sec": 733.07
+    },
+    {
       "trip_id": "Mercados_EN",
       "lane": "7",
       "level": "EN",
@@ -4756,6 +7276,21 @@
       "card_url": "https://trello.com/c/DT97MUXc",
       "pos": 140737489944576,
       "duration_sec": 837.3
+    },
+    {
+      "trip_id": "NaegiCastle_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "NaegiCastle",
+      "voice": "harry",
+      "gender": "male",
+      "title": "NaegiCastle_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/O7Zdmo05",
+      "pos": 140737489952768,
+      "duration_sec": 288.99
     },
     {
       "trip_id": "Moros_y_Cristianos_EN",
@@ -4773,6 +7308,21 @@
       "duration_sec": 943.2
     },
     {
+      "trip_id": "MinoFestival_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "MinoFestival",
+      "voice": "harry",
+      "gender": "male",
+      "title": "MinoFestival_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/6GPCf38k",
+      "pos": 140737489969152,
+      "duration_sec": 202.87
+    },
+    {
       "trip_id": "Org_Social1_EN",
       "lane": "7",
       "level": "EN",
@@ -4788,6 +7338,21 @@
       "duration_sec": 578.04
     },
     {
+      "trip_id": "TejikaraFireFestival_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "TejikaraFireFestival",
+      "voice": "harry",
+      "gender": "male",
+      "title": "TejikaraFireFestival_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/fs6jIylv",
+      "pos": 140737489985536,
+      "duration_sec": 175.15
+    },
+    {
       "trip_id": "Org_Social2_EN",
       "lane": "7",
       "level": "EN",
@@ -4801,6 +7366,21 @@
       "card_url": "https://trello.com/c/oKvEKhlA",
       "pos": 140737489993728,
       "duration_sec": 432.82
+    },
+    {
+      "trip_id": "LakeBiwa_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "LakeBiwa",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "LakeBiwa_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/jkKohARu",
+      "pos": 140737490001920,
+      "duration_sec": 411.45
     },
     {
       "trip_id": "Sanguesa_EN",
@@ -4848,6 +7428,36 @@
       "duration_sec": 821.21
     },
     {
+      "trip_id": "UjiByodoin_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "UjiByodoin",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "UjiByodoin_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/aiPwu8Bc",
+      "pos": 140737490100224,
+      "duration_sec": 568.97
+    },
+    {
+      "trip_id": "Sakai_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Sakai",
+      "voice": "harry",
+      "gender": "male",
+      "title": "Sakai_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/rPfp1ive",
+      "pos": 140737490132992,
+      "duration_sec": 356.1
+    },
+    {
       "trip_id": "Vic_EN",
       "lane": "7",
       "level": "EN",
@@ -4893,6 +7503,21 @@
       "duration_sec": 599.82
     },
     {
+      "trip_id": "Azumino1_DaioWasabi_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Azumino1_DaioWasabi",
+      "voice": "harry",
+      "gender": "male",
+      "title": "Azumino1_DaioWasabi_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/F32Bwxdo",
+      "pos": 140737490182144,
+      "duration_sec": 443.64
+    },
+    {
       "trip_id": "Cordoba1_EN",
       "lane": "7",
       "level": "EN",
@@ -4906,6 +7531,21 @@
       "card_url": "https://trello.com/c/wJWUxjIr",
       "pos": 140737490190336,
       "duration_sec": 484.52
+    },
+    {
+      "trip_id": "Azumino2_NationalPark_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Azumino2_NationalPark",
+      "voice": "harry",
+      "gender": "male",
+      "title": "Azumino2_NationalPark_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/387kYlLs",
+      "pos": 140737490198528,
+      "duration_sec": 396.38
     },
     {
       "trip_id": "Cordoba2_EN",
@@ -4923,6 +7563,21 @@
       "duration_sec": 549.9
     },
     {
+      "trip_id": "Hikone1_Castle_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Hikone1_Castle",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "Hikone1_Castle_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/DPwILHGU",
+      "pos": 140737490214912,
+      "duration_sec": 308.69
+    },
+    {
       "trip_id": "Cordoba4_EN",
       "lane": "7",
       "level": "EN",
@@ -4936,6 +7591,21 @@
       "card_url": "https://trello.com/c/NFbeBPVW",
       "pos": 140737490223104,
       "duration_sec": 453.93
+    },
+    {
+      "trip_id": "Hikone2_OmiHachiman_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Hikone2_OmiHachiman",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "Hikone2_OmiHachiman_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/HprNAbdJ",
+      "pos": 140737490231296,
+      "duration_sec": 335.73
     },
     {
       "trip_id": "Los_Escobazos_EN",
@@ -4981,6 +7651,21 @@
       "card_url": "https://trello.com/c/Apbt2Amx",
       "pos": 140737490255872,
       "duration_sec": 510.85
+    },
+    {
+      "trip_id": "KyotoImperialPalace_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "KyotoImperialPalace",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "KyotoImperialPalace_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/TPxLcZ5P",
+      "pos": 140737490264064,
+      "duration_sec": 263.78
     },
     {
       "trip_id": "Madrid2_EN",
@@ -5058,6 +7743,21 @@
       "duration_sec": 548.65
     },
     {
+      "trip_id": "KyotoTemples1b_GinkakuNanzen_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "KyotoTemples1b_GinkakuNanzen",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "KyotoTemples1b_GinkakuNanzen_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/Ge0oAkp7",
+      "pos": 140737490313216,
+      "duration_sec": 302.68
+    },
+    {
       "trip_id": "Sevilla1_EN",
       "lane": "7",
       "level": "EN",
@@ -5103,6 +7803,21 @@
       "duration_sec": 589.84
     },
     {
+      "trip_id": "KyotoTemples2b_TojiHeianOkazaki_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "KyotoTemples2b_TojiHeianOkazaki",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "KyotoTemples2b_TojiHeianOkazaki_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/hFRiYKWG",
+      "pos": 140737490345984,
+      "duration_sec": 318.41
+    },
+    {
       "trip_id": "Sevilla3_EN",
       "lane": "7",
       "level": "EN",
@@ -5116,6 +7831,36 @@
       "card_url": "https://trello.com/c/1tdcBE37",
       "pos": 140737490354176,
       "duration_sec": 559.39
+    },
+    {
+      "trip_id": "Nara1_ParkTown_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Nara1_ParkTown",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "Nara1_ParkTown_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/vhttovpV",
+      "pos": 140737490362368,
+      "duration_sec": 241.42
+    },
+    {
+      "trip_id": "Nara2_TodaijiAndClose_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Nara2_TodaijiAndClose",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "Nara2_TodaijiAndClose_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/qIpQN8sA",
+      "pos": 140737490378752,
+      "duration_sec": 576.05
     },
     {
       "trip_id": "Valencia1_EN",
@@ -5163,6 +7908,96 @@
       "duration_sec": 757.52
     },
     {
+      "trip_id": "OsakaAncient1_Temples_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "OsakaAncient1_Temples",
+      "voice": "harry",
+      "gender": "male",
+      "title": "OsakaAncient1_Temples_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/ZMTowwa5",
+      "pos": 140737490411520,
+      "duration_sec": 409.81
+    },
+    {
+      "trip_id": "OsakaAncient2_CastleSumiyoshi_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "OsakaAncient2_CastleSumiyoshi",
+      "voice": "harry",
+      "gender": "male",
+      "title": "OsakaAncient2_CastleSumiyoshi_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/PQzFiGWm",
+      "pos": 140737490423808,
+      "duration_sec": 345.91
+    },
+    {
+      "trip_id": "Kagawa_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Kagawa",
+      "voice": "harry",
+      "gender": "male",
+      "title": "Kagawa_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/u986IA7l",
+      "pos": 140737490427904,
+      "duration_sec": 659.67
+    },
+    {
+      "trip_id": "OsakaModern1_SouthCentral_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "OsakaModern1_SouthCentral",
+      "voice": "harry",
+      "gender": "male",
+      "title": "OsakaModern1_SouthCentral_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/2g02rwgQ",
+      "pos": 140737490444288,
+      "duration_sec": 616.18
+    },
+    {
+      "trip_id": "KagawaToShodoshima_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "KagawaToShodoshima",
+      "voice": "harry",
+      "gender": "male",
+      "title": "KagawaToShodoshima_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/0WLHrBg6",
+      "pos": 140737490448384,
+      "duration_sec": 565.55
+    },
+    {
+      "trip_id": "OsakaModern2_UmedaSky_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "OsakaModern2_UmedaSky",
+      "voice": "harry",
+      "gender": "male",
+      "title": "OsakaModern2_UmedaSky_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/vi3q0HD6",
+      "pos": 140737490460672,
+      "duration_sec": 366.79
+    },
+    {
       "trip_id": "Valencia3_EN",
       "lane": "7",
       "level": "EN",
@@ -5176,6 +8011,21 @@
       "card_url": "https://trello.com/c/MExGiYmY",
       "pos": 140737490468864,
       "duration_sec": 494.37
+    },
+    {
+      "trip_id": "Shodoshima1_Tonosho_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Shodoshima1_Tonosho",
+      "voice": "harry",
+      "gender": "male",
+      "title": "Shodoshima1_Tonosho_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/WiWcHeYB",
+      "pos": 140737490477056,
+      "duration_sec": 386.98
     },
     {
       "trip_id": "Valencia4_EN",
@@ -5208,6 +8058,21 @@
       "duration_sec": 556.17
     },
     {
+      "trip_id": "Naruto_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Naruto",
+      "voice": "harry",
+      "gender": "male",
+      "title": "Naruto_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/t7DIPSNB",
+      "pos": 140737490509824,
+      "duration_sec": 438.36
+    },
+    {
       "trip_id": "Zaragoza2_EN",
       "lane": "7",
       "level": "EN",
@@ -5221,6 +8086,21 @@
       "card_url": "https://trello.com/c/fHvCv0Rw",
       "pos": 140737490518016,
       "duration_sec": 356.05
+    },
+    {
+      "trip_id": "Awaji_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Awaji",
+      "voice": "harry",
+      "gender": "male",
+      "title": "Awaji_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/JoQYUZvg",
+      "pos": 140737490526208,
+      "duration_sec": 505.84
     },
     {
       "trip_id": "Zaragoza3_EN",
@@ -5238,6 +8118,21 @@
       "duration_sec": 434.57
     },
     {
+      "trip_id": "DogoOnsenMatsuyama_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "DogoOnsenMatsuyama",
+      "voice": "harry",
+      "gender": "male",
+      "title": "DogoOnsenMatsuyama_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/oVqrXp59",
+      "pos": 140737490542592,
+      "duration_sec": 600.24
+    },
+    {
       "trip_id": "Sevilla4_EN",
       "lane": "7",
       "level": "EN",
@@ -5253,6 +8148,81 @@
       "duration_sec": 479.56
     },
     {
+      "trip_id": "MatsuyamaCastle_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "MatsuyamaCastle",
+      "voice": "harry",
+      "gender": "male",
+      "title": "MatsuyamaCastle_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/hoRsmTBi",
+      "pos": 140737490552832,
+      "duration_sec": 466.96
+    },
+    {
+      "trip_id": "YokohamaCity_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "YokohamaCity",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "YokohamaCity_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/fm0smOn8",
+      "pos": 140737490554880,
+      "duration_sec": 290.17
+    },
+    {
+      "trip_id": "YokohamaForeign_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "YokohamaForeign",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "YokohamaForeign_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/r3DC01q7",
+      "pos": 140737490556928,
+      "duration_sec": 301.43
+    },
+    {
+      "trip_id": "TsukijiOdaiba_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "TsukijiOdaiba",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "TsukijiOdaiba_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/DMnUx2bs",
+      "pos": 140737490557952,
+      "duration_sec": 275.51
+    },
+    {
+      "trip_id": "Shinjuku_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Shinjuku",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "Shinjuku_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/SsQzgd0f",
+      "pos": 140737490558976,
+      "duration_sec": 343.82
+    },
+    {
       "trip_id": "Sevilla5_EN",
       "lane": "7",
       "level": "EN",
@@ -5266,6 +8236,201 @@
       "card_url": "https://trello.com/c/9qOT6oHK",
       "pos": 140737490567168,
       "duration_sec": 296.2
+    },
+    {
+      "trip_id": "ShinjukuNightShibuya_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "ShinjukuNightShibuya",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "ShinjukuNightShibuya_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/arsAWi0q",
+      "pos": 140737490575360,
+      "duration_sec": 204.85
+    },
+    {
+      "trip_id": "UenoAkihabara_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "UenoAkihabara",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "UenoAkihabara_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/2IomEWXB",
+      "pos": 140737490591744,
+      "duration_sec": 492.2
+    },
+    {
+      "trip_id": "ShinjukuGyoen_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "ShinjukuGyoen",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "ShinjukuGyoen_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/dlGvmh40",
+      "pos": 140737490608128,
+      "duration_sec": 284.71
+    },
+    {
+      "trip_id": "KamakuraHakoneWaterfall_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "KamakuraHakoneWaterfall",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "KamakuraHakoneWaterfall_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/QVAOKlet",
+      "pos": 140737490624512,
+      "duration_sec": 490.81
+    },
+    {
+      "trip_id": "Hakone_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Hakone",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "Hakone_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/o72vcAWc",
+      "pos": 140737490640896,
+      "duration_sec": 448.16
+    },
+    {
+      "trip_id": "YamanakakoOshino_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "YamanakakoOshino",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "YamanakakoOshino_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/DkHhWhyv",
+      "pos": 140737490657280,
+      "duration_sec": 386.14
+    },
+    {
+      "trip_id": "NaritaSan_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "NaritaSan",
+      "voice": "andrea",
+      "gender": "female",
+      "title": "NaritaSan_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/Df1vj1PT",
+      "pos": 140737490673664,
+      "duration_sec": 391.16
+    },
+    {
+      "trip_id": "KagawaShiudeBeach_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "KagawaShiudeBeach",
+      "voice": "harry",
+      "gender": "male",
+      "title": "KagawaShiudeBeach_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/d4yphEKp",
+      "pos": 140737490690048,
+      "duration_sec": 298.42
+    },
+    {
+      "trip_id": "SetoOhashiMarugame_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "SetoOhashiMarugame",
+      "voice": "harry",
+      "gender": "male",
+      "title": "SetoOhashiMarugame_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/cIBhBgL3",
+      "pos": 140737490722816,
+      "duration_sec": 497.87
+    },
+    {
+      "trip_id": "Shodoshima2a_SouthArt_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Shodoshima2a_SouthArt",
+      "voice": "harry",
+      "gender": "male",
+      "title": "Shodoshima2a_SouthArt_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/nlKimpRi",
+      "pos": 140737490739200,
+      "duration_sec": 300.88
+    },
+    {
+      "trip_id": "Shodoshima2b_OlivePark_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Shodoshima2b_OlivePark",
+      "voice": "harry",
+      "gender": "male",
+      "title": "Shodoshima2b_OlivePark_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/WPgOfPee",
+      "pos": 140737490755584,
+      "duration_sec": 351.63
+    },
+    {
+      "trip_id": "Shodoshima3a_MovieSoyQuarry_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Shodoshima3a_MovieSoyQuarry",
+      "voice": "harry",
+      "gender": "male",
+      "title": "Shodoshima3a_MovieSoyQuarry_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/LpzkTA5H",
+      "pos": 140737490771968,
+      "duration_sec": 405.66
+    },
+    {
+      "trip_id": "Shodoshima3b_KankakeiHighlands_EN",
+      "lane": "7",
+      "level": "EN",
+      "family": "Shodoshima3b_KankakeiHighlands",
+      "voice": "harry",
+      "gender": "male",
+      "title": "Shodoshima3b_KankakeiHighlands_EN",
+      "labels": [
+        "Japan"
+      ],
+      "card_url": "https://trello.com/c/I17hsZ2a",
+      "pos": 140737490788352,
+      "duration_sec": 441.84
     }
   ]
 }
