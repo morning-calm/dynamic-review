@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { api, ApiError, type TripDescItem } from '../api';
+import { api, ApiError, type CategoryCheck, type TripDescItem } from '../api';
 import { useAuth } from '../authContext';
 import NavBar from '../components/NavBar';
 
@@ -27,6 +27,8 @@ const TripDescPage = () => {
   const [categories, setCategories] = useState<string[]>([]);
   const [newCat, setNewCat] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [usedCats, setUsedCats] = useState<{ name: string; count: number }[]>([]);
+  const [check, setCheck] = useState<CategoryCheck | null>(null);
   const [busy, setBusy] = useState(false);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -58,6 +60,15 @@ const TripDescPage = () => {
       .then((r) => setSuggestions([...r.applicable, ...r.suggestions]))
       .catch(() => {});
   }, [isAdmin, itemStatus, repTripId]);
+
+  // The live category vocabulary (every category any staging TripGroup carries).
+  useEffect(() => {
+    if (!isAdmin || itemStatus !== 'pending_en') return;
+    api
+      .tripDescCategories()
+      .then((r) => setUsedCats(r.categories))
+      .catch(() => {});
+  }, [isAdmin, itemStatus]);
 
   // While the machine translation runs, poll for its arrival.
   useEffect(() => {
@@ -99,6 +110,20 @@ const TripDescPage = () => {
   const setCats = (next: string[]) => {
     setCategories(next);
     scheduleSave({ categories: next });
+    // Drop the sibling-fit panel once its category is no longer applied.
+    if (check && !next.some((c) => c.toLowerCase() === check.category.toLowerCase())) setCheck(null);
+  };
+
+  /** Add a category and run the sibling-fit check (other trips in the same
+   * country/playlist whose description mentions it but lack the tag). */
+  const addCat = (raw: string) => {
+    const v = raw.trim();
+    if (!v || categories.some((c) => c.toLowerCase() === v.toLowerCase())) return;
+    setCats([...categories, v]);
+    api
+      .tripDescCategoryCheck(tgId, v)
+      .then(setCheck)
+      .catch(() => setCheck(null));
   };
 
   const action = (fn: () => Promise<TripDescItem>, done?: string): Promise<TripDescItem | null> => {
@@ -245,51 +270,127 @@ const TripDescPage = () => {
               ))}
               {categories.length === 0 && <span className="text-xs text-gray-500">none</span>}
             </div>
-            {item.status === 'pending_en' && (
-              <>
-                <div className="flex gap-2">
-                  <input
-                    value={newCat}
-                    onChange={(e) => setNewCat(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && newCat.trim()) {
-                        if (!categories.includes(newCat.trim())) setCats([...categories, newCat.trim()]);
+            {item.status === 'pending_en' && (() => {
+              const appliedLower = new Set(categories.map((c) => c.toLowerCase()));
+              const usedLower = new Set(usedCats.map((c) => c.name.toLowerCase()));
+              const usedAvailable = usedCats.filter((c) => !appliedLower.has(c.name.toLowerCase()));
+              // Enrichment proposals outside the live vocabulary = never used before.
+              const neverUsed = suggestions.filter(
+                (s, i, a) =>
+                  !appliedLower.has(s.toLowerCase()) &&
+                  !usedLower.has(s.toLowerCase()) &&
+                  a.findIndex((x) => x.toLowerCase() === s.toLowerCase()) === i,
+              );
+              const fits = check?.siblings.filter((s) => s.mentions && !s.has_category) ?? [];
+              return (
+                <>
+                  <div className="flex gap-2">
+                    <input
+                      value={newCat}
+                      onChange={(e) => setNewCat(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addCat(newCat);
+                          setNewCat('');
+                        }
+                      }}
+                      placeholder="Add a category…"
+                      className="rounded border border-gray-600 bg-gray-900 px-2 py-1 text-xs text-gray-100"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        addCat(newCat);
                         setNewCat('');
-                      }
-                    }}
-                    placeholder="Add a category…"
-                    className="rounded border border-gray-600 bg-gray-900 px-2 py-1 text-xs text-gray-100"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (newCat.trim() && !categories.includes(newCat.trim())) setCats([...categories, newCat.trim()]);
-                      setNewCat('');
-                    }}
-                    className="rounded border border-gray-600 px-2 py-1 text-xs text-gray-200 hover:bg-gray-700"
-                  >
-                    Add
-                  </button>
-                </div>
-                {suggestions.filter((s) => !categories.includes(s)).length > 0 && (
-                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                    <span className="text-xs text-gray-500">Suggestions:</span>
-                    {suggestions
-                      .filter((s) => !categories.includes(s))
-                      .map((s) => (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => setCats([...categories, s])}
-                          className="rounded border border-gray-600 px-2 py-0.5 text-xs text-gray-300 hover:bg-gray-700"
-                        >
-                          + {s}
-                        </button>
-                      ))}
+                      }}
+                      className="rounded border border-gray-600 px-2 py-1 text-xs text-gray-200 hover:bg-gray-700"
+                    >
+                      Add
+                    </button>
                   </div>
-                )}
-              </>
-            )}
+                  {usedAvailable.length > 0 && (
+                    <div className="mt-3">
+                      <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">
+                        In use on other trips — tap to add
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {usedAvailable.map((c) => (
+                          <button
+                            key={c.name}
+                            type="button"
+                            onClick={() => addCat(c.name)}
+                            title={`Used by ${c.count} trip group${c.count === 1 ? '' : 's'}`}
+                            className="rounded border border-gray-600 px-2 py-0.5 text-xs text-gray-300 hover:bg-gray-700"
+                          >
+                            + {c.name} <span className="text-gray-500">({c.count})</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {neverUsed.length > 0 && (
+                    <div className="mt-3 rounded border border-sky-800 bg-sky-900/20 p-2">
+                      <p className="mb-1 text-[11px] uppercase tracking-wide text-sky-400">
+                        Never used before — new to the category vocabulary
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {neverUsed.map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => addCat(s)}
+                            title="Enrichment proposal — no existing trip carries this category yet"
+                            className="rounded border border-sky-700 px-2 py-0.5 text-xs text-sky-300 hover:bg-sky-900/40"
+                          >
+                            + {s} <span className="text-[9px] uppercase text-sky-500">new</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {check && (
+                    <div className="mt-3 rounded border border-amber-800 bg-amber-900/20 p-3 text-xs text-amber-100">
+                      <div className="mb-1 flex items-start justify-between gap-2">
+                        <p className="font-semibold">
+                          “{check.category}”
+                          {check.is_new && <span className="ml-1 rounded bg-sky-800 px-1 text-[10px] uppercase">new category</span>}
+                          {' — '}
+                          {fits.length > 0
+                            ? `${fits.length} other trip${fits.length === 1 ? '' : 's'} in ${
+                                check.locations.map((l) => l.name).join(', ') || 'this playlist'
+                              } may also fit it:`
+                            : 'no other trip in this country/playlist looks like it fits it.'}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setCheck(null)}
+                          aria-label="Dismiss"
+                          className="text-amber-400 hover:text-amber-200"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      {fits.length > 0 && (
+                        <ul className="space-y-1">
+                          {fits.map((s) => (
+                            <li key={s.tg_id}>
+                              <span className="font-medium text-amber-200">{s.tg_id}</span>
+                              {s.snippet && <span className="text-amber-100/70"> — “{s.snippet}”</span>}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {check.siblings.some((s) => s.has_category) && (
+                        <p className="mt-1 text-amber-100/60">
+                          Already tagged: {check.siblings.filter((s) => s.has_category).map((s) => s.tg_id).join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </section>
         )}
 

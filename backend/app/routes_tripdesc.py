@@ -34,6 +34,21 @@ def list_tripdesc(request: Request):
     return tripdesc.list_items(user)
 
 
+@router.get("/categories")
+def tripdesc_categories(request: Request):
+    """Every category currently in use across staging TripGroups (admin)."""
+    auth.require_admin(request)
+    return tripdesc.used_categories()
+
+
+@router.get("/{tg_id}/category-check")
+def tripdesc_category_check(tg_id: str, category: str, request: Request):
+    """Is `category` new to the vocabulary, and which sibling TripGroups in the
+    same country/playlist look like they should carry it too? Read-only."""
+    auth.require_admin(request)
+    return tripdesc.category_check(tg_id, category)
+
+
 @router.get("/{tg_id}")
 def get_tripdesc(tg_id: str, request: Request):
     return tripdesc.get_item(tg_id, auth.require_user(request))

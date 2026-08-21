@@ -105,6 +105,116 @@ def _tripgroup_index(force: bool = False) -> tuple[dict, dict]:
 
 
 # --------------------------------------------------------------------------- #
+# Category vocabulary + sibling check (country/playlist = TripLocations)
+# --------------------------------------------------------------------------- #
+_loc_lock = threading.Lock()
+_loc_index: dict = {"at": 0.0, "by_tg": {}}
+
+
+def _triplocations_index(force: bool = False) -> dict[str, list[tuple[str, str]]]:
+    """tg_id → [(locationName, locationCountry), …] from staging TripLocations,
+    TTL-cached like the TripGroup index. Best-effort: a failed stream returns the
+    stale map (or empty) rather than raising — this only powers suggestions."""
+    with _loc_lock:
+        if (not force and _loc_index["by_tg"]
+                and time.time() - _loc_index["at"] < _TG_TTL_S):
+            return _loc_index["by_tg"]
+        try:
+            from .staging import db as fb_db
+            fs = fb_db()
+            by_tg: dict[str, list[tuple[str, str]]] = {}
+            for snap in fs.collection("TripLocations").stream():
+                d = snap.to_dict() or {}
+                loc = (d.get("locationName") or snap.id,
+                       d.get("locationCountry") or "")
+                for tg_id in (d.get("trips") or []):
+                    if isinstance(tg_id, str) and tg_id:
+                        pairs = by_tg.setdefault(tg_id, [])
+                        if loc not in pairs:
+                            pairs.append(loc)
+            _loc_index["by_tg"] = by_tg
+            _loc_index["at"] = time.time()
+        except Exception as e:  # noqa: BLE001 - suggestions only
+            log.warning("tripdesc: TripLocations index failed: %s", e)
+        return _loc_index["by_tg"]
+
+
+def used_categories() -> dict:
+    """Every category currently applied to ANY staging TripGroup, with how many
+    groups carry it. This is the app's live vocabulary — anything outside it is
+    'never used before'."""
+    _by_trip, docs = _tripgroup_index()
+    counts: dict[str, int] = {}
+    canon: dict[str, str] = {}   # lower → first-seen spelling
+    for d in docs.values():
+        for c in d.get("tripCategories") or []:
+            if not isinstance(c, str) or not c.strip():
+                continue
+            k = c.strip().lower()
+            canon.setdefault(k, c.strip())
+            counts[k] = counts.get(k, 0) + 1
+    items = [{"name": canon[k], "count": n} for k, n in counts.items()]
+    items.sort(key=lambda i: (-i["count"], i["name"].lower()))
+    return {"categories": items}
+
+
+def _mention_snippet(text: str, needle: str) -> str | None:
+    """The sentence (well, ±80 chars trimmed to word bounds) around the first
+    case-insensitive mention of `needle` (or its naive singular) in `text`."""
+    low = (text or "").lower()
+    for probe in (needle.lower(), needle.lower().rstrip("s")):
+        if len(probe) < 3:
+            continue
+        pos = low.find(probe)
+        if pos < 0:
+            continue
+        start, end = max(0, pos - 80), min(len(text), pos + len(probe) + 80)
+        snippet = text[start:end].strip()
+        return ("…" if start > 0 else "") + snippet + ("…" if end < len(text) else "")
+    return None
+
+
+def category_check(tg_id: str, category: str) -> dict:
+    """When the admin picks a category for `tg_id`: is it new to the vocabulary,
+    and do any OTHER TripGroups in the same TripLocations (country/playlist)
+    look like they should carry it too? A sibling 'fits' when its live EN/TL
+    description mentions the category word but the category isn't applied.
+    Read-only and informational — nothing is written anywhere."""
+    cat = (category or "").strip()
+    if not cat:
+        raise HTTPException(422, detail={"error": "empty_category"})
+    _by_trip, docs = _tripgroup_index()
+    used = {i["name"].lower() for i in used_categories()["categories"]}
+    by_tg = _triplocations_index()
+    my_locs = by_tg.get(tg_id, [])
+    sibling_ids = sorted({sid for sid, locs in by_tg.items()
+                          if sid != tg_id and any(loc in my_locs for loc in locs)})
+    siblings: list[dict] = []
+    for sid in sibling_ids:
+        d = docs.get(sid)
+        if d is None:
+            continue
+        has = any(isinstance(c, str) and c.strip().lower() == cat.lower()
+                  for c in d.get("tripCategories") or [])
+        snippet = _mention_snippet(
+            (d.get("descriptionHome") or "") + "\n" + (d.get("descriptionTarget") or ""),
+            cat)
+        if snippet is None:
+            continue   # description never mentions it — nothing to flag
+        siblings.append({"tg_id": sid, "has_category": has,
+                         "mentions": snippet is not None, "snippet": snippet})
+    # Likely fits first: mentions the word but doesn't carry the category.
+    siblings.sort(key=lambda s: (not (s["mentions"] and not s["has_category"]),
+                                 s["tg_id"].lower()))
+    return {
+        "category": cat,
+        "is_new": cat.lower() not in used,
+        "locations": [{"name": n, "country": c} for n, c in my_locs],
+        "siblings": siblings,
+    }
+
+
+# --------------------------------------------------------------------------- #
 # Seeding — every family in the current review manifest (NO historical backfill)
 #
 # Since 2026-08-21 a family whose TripGroup is already on PRODUCTION Firebase is

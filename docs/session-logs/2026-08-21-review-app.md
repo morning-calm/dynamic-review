@@ -82,3 +82,52 @@ Not yet verified on the laptop (needs deploy + restart).
 restart uvicorn, confirm cloudflared still up), then time `GET /api/trips` warm —
 expect sub-second. First listing after deploy pays the one-time sweep unless the warm
 thread finishes first.
+
+## Later session — Trip descriptions categories + mobile AI-review dropdown
+
+**Goals:** (1) Trip descriptions page: offer ALL in-use categories as one-tap adds,
+clearly separate never-used ones, and on adding a category scan same-country/playlist
+siblings for older trips that may fit it (Edinburgh/Castle, Monastery examples).
+(2) Mobile ⋮ menu: AI-review rows were drowning every other link (dave's screenshot).
+
+**What I did:**
+- `tripdesc.used_categories()` — union of `tripCategories` across all staging
+  TripGroups (reuses `_tripgroup_index`), with per-category counts.
+- `tripdesc.category_check(tg_id, category)` — new `_triplocations_index` (TTL-cached
+  TripLocations stream) finds siblings sharing a location; reports which mention the
+  category word in their live descriptions but lack the tag (snippet included), plus
+  which already carry it, and whether the category is new to the vocabulary. Read-only.
+- Routes `GET /api/tripdesc/categories` + `GET /api/tripdesc/{tg}/category-check`
+  (admin; registered before the `/{tg_id}` catch-all), api.ts clients + `CategoryCheck` type.
+- `TripDescPage`: "In use on other trips — tap to add" chip list (with counts);
+  enrichment proposals outside the vocabulary in their own sky-boxed "Never used
+  before" section; every add (chip or typed) triggers the sibling-fit check and shows
+  a dismissible amber panel listing likely-fitting siblings / already-tagged ones.
+  Panel auto-clears if the category is removed.
+- `UserMenu` MobileMenu: >1 waiting AI-review trips now fold into a single
+  "AI review · N trips ▸" expandable row (scrollable sub-list); 1 trip still links direct.
+
+**Verified:** `pytest tests/test_tripdesc.py` — 19 passed (3 new tests for
+used_categories + category_check); frontend `tsc -b` clean.
+
+**Next:** deploy = pull on the laptop, `npm run build` (REVIEW_APP_SERVE_FRONTEND=1
+serves dist), restart uvicorn (tunnel stays). Not done this session.
+
+## Later still — post-approval admin workflow spec
+
+**Goal:** spec + plan for dave's next arc: admin "Final VR Check" UI (7 human checks)
+on the laptop app + a workstation Publisher app wrapping the Scripts repo's lane
+9/10/11 tooling, with production publish.
+
+**What I did:** three parallel surveys (Scripts repo publish pipeline + Trello lanes;
+library-app keyword/Azure design; Unity checkout for the CustomizableMenus pin system)
+→ wrote `docs/post-approval-admin-spec.md`. Key findings baked in: publisher skeleton
+already exists (REVIEW_APP_PUBLISHER + R2 _bus + publish_trip_text runner); pins are
+flat-rect top-left-origin 18-unit coords (web placer is faithful; maps in the Unity
+checkout); PublishTrips-Select is stdin-interactive → needs an argv shim;
+ContentEnrichment has no country field → derive from folderName/TripLocations, don't
+denormalise; no Credits doc exists anywhere (greenfield, shape needs dave's sign-off);
+library-app speechCheck.ts + mic stack are the reusable keyword pieces (no authoring
+UI exists to copy). 5 decisions listed for dave at the end of the spec.
+
+**Next:** await dave's approval + answers to the 5 decision points; then Phase 1.

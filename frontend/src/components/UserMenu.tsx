@@ -301,7 +301,13 @@ const MobileMenu = ({
   aiSessions: FindingsInbox['sessions'];
 }) => {
   const [open, setOpen] = useState(false);
-  const close = () => setOpen(false);
+  // The AI-review trips fold into their own sub-list — with many trips waiting they
+  // used to flood the whole ⋮ menu and drown the other links (dave, 2026-08-21).
+  const [aiListOpen, setAiListOpen] = useState(false);
+  const close = () => {
+    setOpen(false);
+    setAiListOpen(false);
+  };
   // Unseen-activity dot on the closed ⋮ (the recall badge only counts for admins).
   const totalBadge = bugBadge + aiBadge + descBadge + (user.role === 'admin' ? recallBadge : 0);
   const item = 'flex items-center justify-between gap-3 rounded px-3 py-2 text-left text-sm text-gray-200 hover:bg-gray-700';
@@ -330,14 +336,42 @@ const MobileMenu = ({
             <div className="border-b border-gray-800 px-3 py-2 text-xs text-gray-400">
               {user.username} <span className="text-gray-600">·</span> {user.role}
             </div>
-            {/* One row per waiting trip — a single collapsed "AI review" row used to
-                link to '/' when several trips waited, which navigated nowhere. */}
-            {aiSessions.map((s) => (
-              <Link key={s.session_id} to={`/review/${s.session_id}`} className={item} onClick={close}>
-                <span className="truncate">AI review · {s.trip_id}</span>
-                {badge(s.open, 'bg-purple-600 text-white')}
+            {/* One waiting trip links straight in; several fold into an expandable
+                sub-list (a flat row per trip used to drown the rest of this menu). */}
+            {aiSessions.length === 1 && (
+              <Link to={`/review/${aiSessions[0].session_id}`} className={item} onClick={close}>
+                <span className="truncate">AI review · {aiSessions[0].trip_id}</span>
+                {badge(aiSessions[0].open, 'bg-purple-600 text-white')}
               </Link>
-            ))}
+            )}
+            {aiSessions.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setAiListOpen((o) => !o)}
+                  aria-expanded={aiListOpen}
+                  className={`${item} w-full`}
+                >
+                  <span>
+                    <span aria-hidden="true" className="mr-1 inline-block text-gray-500">
+                      {aiListOpen ? '▾' : '▸'}
+                    </span>
+                    AI review · {aiSessions.length} trips
+                  </span>
+                  {badge(aiBadge, 'bg-purple-600 text-white')}
+                </button>
+                {aiListOpen && (
+                  <div className="max-h-64 overflow-y-auto border-l border-gray-800 pl-2">
+                    {aiSessions.map((s) => (
+                      <Link key={s.session_id} to={`/review/${s.session_id}`} className={item} onClick={close}>
+                        <span className="truncate">{s.trip_id}</span>
+                        {badge(s.open, 'bg-purple-600 text-white')}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
             <Link to="/bugs" className={item} onClick={close}>
               <span>Bug reports</span>
               {badge(bugBadge, 'bg-rose-600 text-white')}

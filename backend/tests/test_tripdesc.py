@@ -231,3 +231,51 @@ def test_reopen_returns_to_pending_en(staged):
     _to_pending_tl(tg)
     out = tripdesc.reopen(tg, ADMIN)
     assert out["status"] == "pending_en"
+
+
+# ------------------------------------------- category vocabulary + sibling check
+@pytest.fixture
+def cat_indexes(monkeypatch):
+    """Fake the TripGroup + TripLocations indexes (no Firestore)."""
+    docs = {
+        "Edinburgh1": {"descriptionHome": "A grand castle on the hill. Trip Type: History",
+                       "descriptionTarget": "", "tripCategories": ["History", "Castle"]},
+        "Edinburgh2": {"descriptionHome": "Walk past the castle esplanade.",
+                       "descriptionTarget": "", "tripCategories": ["History"]},
+        "Edinburgh3": {"descriptionHome": "A whisky distillery tour.",
+                       "descriptionTarget": "", "tripCategories": ["Food & Drink"]},
+        "Monaco2_Beg_FR": {"descriptionHome": "Old town lanes.", "descriptionTarget": "",
+                           "tripCategories": ["History"]},
+    }
+    monkeypatch.setattr(tripdesc, "_tripgroup_index", lambda force=False: ({}, docs))
+    by_tg = {
+        "Edinburgh1": [("Edinburgh", "Scotland")],
+        "Edinburgh2": [("Edinburgh", "Scotland")],
+        "Edinburgh3": [("Edinburgh", "Scotland")],
+        "Monaco2_Beg_FR": [("Monaco", "France")],
+    }
+    monkeypatch.setattr(tripdesc, "_triplocations_index", lambda force=False: by_tg)
+
+
+def test_used_categories_counts_across_groups(cat_indexes):
+    out = tripdesc.used_categories()
+    assert out["categories"][0] == {"name": "History", "count": 3}
+    names = {c["name"] for c in out["categories"]}
+    assert names == {"History", "Castle", "Food & Drink"}
+
+
+def test_category_check_flags_sibling_that_mentions_but_lacks_it(cat_indexes):
+    out = tripdesc.category_check("Edinburgh1", "Castle")
+    assert out["is_new"] is False
+    assert out["locations"] == [{"name": "Edinburgh", "country": "Scotland"}]
+    # Edinburgh2 mentions "castle" but isn't tagged; Edinburgh3 never mentions it.
+    ids = [s["tg_id"] for s in out["siblings"]]
+    assert ids == ["Edinburgh2"]
+    s = out["siblings"][0]
+    assert s["mentions"] and not s["has_category"] and "castle" in s["snippet"].lower()
+
+
+def test_category_check_new_category_and_no_siblings(cat_indexes):
+    out = tripdesc.category_check("Monaco2_Beg_FR", "Monastery")
+    assert out["is_new"] is True
+    assert out["siblings"] == []
