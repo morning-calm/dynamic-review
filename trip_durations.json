@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-08-21T15:43:11+01:00",
-  "total_hms": "53h 18m",
-  "total_sec": 191892.9,
+  "generated_at": "2026-08-22T08:58:29+01:00",
+  "total_hms": "49h 29m",
+  "total_sec": 178183.8,
   "unmeasured": [
     "Taichung_HSK3_ZH",
     "Tokyo_08_ImperialPalace_EN"
@@ -278,18 +278,6 @@
       "duration_hms": "12:45"
     },
     {
-      "trip_id": "Tokyo_03_Beg_N4_JP",
-      "lane": "6",
-      "duration_sec": 292.34,
-      "duration_hms": "4:52"
-    },
-    {
-      "trip_id": "Tokyo_03_N3_JP",
-      "lane": "6",
-      "duration_sec": 384.81,
-      "duration_hms": "6:25"
-    },
-    {
       "trip_id": "Tokyo_04_Beg_N4_JP",
       "lane": "6",
       "duration_sec": 634.28,
@@ -434,24 +422,6 @@
       "duration_hms": "8:32"
     },
     {
-      "trip_id": "Tokyo_06_HieShrine_Beg_JP",
-      "lane": "6",
-      "duration_sec": 115.83,
-      "duration_hms": "1:56"
-    },
-    {
-      "trip_id": "Tokyo_06_HieShrine_Beg_N4_JP",
-      "lane": "6",
-      "duration_sec": 247.82,
-      "duration_hms": "4:08"
-    },
-    {
-      "trip_id": "Tokyo_06_HieShrine_N3_JP",
-      "lane": "6",
-      "duration_sec": 387.11,
-      "duration_hms": "6:27"
-    },
-    {
       "trip_id": "Tokyo_08_ImperialPalace_Beg_JP",
       "lane": "6",
       "duration_sec": 182.75,
@@ -470,24 +440,6 @@
       "duration_hms": "11:54"
     },
     {
-      "trip_id": "Hida_Festival_Beg_JP",
-      "lane": "6",
-      "duration_sec": 93.23,
-      "duration_hms": "1:33"
-    },
-    {
-      "trip_id": "Hida_Festival_Beg_N4_JP",
-      "lane": "6",
-      "duration_sec": 264.65,
-      "duration_hms": "4:25"
-    },
-    {
-      "trip_id": "Hida_Festival_N3_JP",
-      "lane": "6",
-      "duration_sec": 497.58,
-      "duration_hms": "8:18"
-    },
-    {
       "trip_id": "Tokyo_10_Zojoji_Beg_JP",
       "lane": "6",
       "duration_sec": 115.12,
@@ -504,78 +456,6 @@
       "lane": "6",
       "duration_sec": 397.19,
       "duration_hms": "6:37"
-    },
-    {
-      "trip_id": "Tokyo_09_Yasukuni_Beg_JP",
-      "lane": "6",
-      "duration_sec": 189.31,
-      "duration_hms": "3:09"
-    },
-    {
-      "trip_id": "Tokyo_09_Yasukuni_Beg_N4_JP",
-      "lane": "6",
-      "duration_sec": 412.6,
-      "duration_hms": "6:53"
-    },
-    {
-      "trip_id": "Tokyo_09_Yasukuni_N3_JP",
-      "lane": "6",
-      "duration_sec": 642.8,
-      "duration_hms": "10:43"
-    },
-    {
-      "trip_id": "Tokyo_07_Olympic_Beg_JP",
-      "lane": "6",
-      "duration_sec": 118.49,
-      "duration_hms": "1:58"
-    },
-    {
-      "trip_id": "Tokyo_07_Olympic_Beg_N4_JP",
-      "lane": "6",
-      "duration_sec": 285.6,
-      "duration_hms": "4:46"
-    },
-    {
-      "trip_id": "Tokyo_07_Olympic_N3_JP",
-      "lane": "6",
-      "duration_sec": 474.17,
-      "duration_hms": "7:54"
-    },
-    {
-      "trip_id": "Hida_Beg_JP",
-      "lane": "6",
-      "duration_sec": 142.6,
-      "duration_hms": "2:23"
-    },
-    {
-      "trip_id": "Hida_Beg_N4_JP",
-      "lane": "6",
-      "duration_sec": 375.14,
-      "duration_hms": "6:15"
-    },
-    {
-      "trip_id": "Hida_N3_JP",
-      "lane": "6",
-      "duration_sec": 588.38,
-      "duration_hms": "9:48"
-    },
-    {
-      "trip_id": "Takayama_Beg_JP",
-      "lane": "6",
-      "duration_sec": 230.69,
-      "duration_hms": "3:51"
-    },
-    {
-      "trip_id": "Takayama_Beg_N4_JP",
-      "lane": "6",
-      "duration_sec": 575.19,
-      "duration_hms": "9:35"
-    },
-    {
-      "trip_id": "Takayama_N3_JP",
-      "lane": "6",
-      "duration_sec": 1187.55,
-      "duration_hms": "19:48"
     },
     {
       "trip_id": "HidaNoSato_Beg_JP",
@@ -1406,24 +1286,6 @@
       "duration_hms": "2:17"
     },
     {
-      "trip_id": "KyotoNishikiGion_Beg_JP",
-      "lane": "6",
-      "duration_sec": 162.01,
-      "duration_hms": "2:42"
-    },
-    {
-      "trip_id": "KyotoNishikiGion_Beg_N4_JP",
-      "lane": "6",
-      "duration_sec": 270.18,
-      "duration_hms": "4:30"
-    },
-    {
-      "trip_id": "KyotoNishikiGion_N3_JP",
-      "lane": "6",
-      "duration_sec": 519.86,
-      "duration_hms": "8:40"
-    },
-    {
       "trip_id": "Madrid3_A12_ES",
       "lane": "6",
       "duration_sec": 148.66,
@@ -1476,24 +1338,6 @@
       "lane": "6",
       "duration_sec": 152.32,
       "duration_hms": "2:32"
-    },
-    {
-      "trip_id": "KyotoTemples2a_Fushimi_Beg_JP",
-      "lane": "6",
-      "duration_sec": 156.97,
-      "duration_hms": "2:37"
-    },
-    {
-      "trip_id": "KyotoTemples2a_Fushimi_Beg_N4_JP",
-      "lane": "6",
-      "duration_sec": 382.28,
-      "duration_hms": "6:22"
-    },
-    {
-      "trip_id": "KyotoTemples2a_Fushimi_N3_JP",
-      "lane": "6",
-      "duration_sec": 472.48,
-      "duration_hms": "7:52"
     },
     {
       "trip_id": "Sevilla2_A12_ES",
@@ -1572,24 +1416,6 @@
       "lane": "6",
       "duration_sec": 165.72,
       "duration_hms": "2:46"
-    },
-    {
-      "trip_id": "NijoCastle_Beg_JP",
-      "lane": "6",
-      "duration_sec": 151.04,
-      "duration_hms": "2:31"
-    },
-    {
-      "trip_id": "NijoCastle_Beg_N4_JP",
-      "lane": "6",
-      "duration_sec": 364.75,
-      "duration_hms": "6:05"
-    },
-    {
-      "trip_id": "NijoCastle_N3_JP",
-      "lane": "6",
-      "duration_sec": 554.16,
-      "duration_hms": "9:14"
     },
     {
       "trip_id": "Valencia2_A12_ES",
@@ -2498,22 +2324,10 @@
       "duration_hms": "8:28"
     },
     {
-      "trip_id": "Tokyo_06_HieShrine_EN",
-      "lane": "7",
-      "duration_sec": 286.48,
-      "duration_hms": "4:46"
-    },
-    {
       "trip_id": "Canary_Wharf_A12_EN",
       "lane": "7",
       "duration_sec": 142.0,
       "duration_hms": "2:22"
-    },
-    {
-      "trip_id": "Hida_Festival_EN",
-      "lane": "7",
-      "duration_sec": 276.64,
-      "duration_hms": "4:37"
     },
     {
       "trip_id": "Canterbury_A12_EN",
@@ -2534,40 +2348,16 @@
       "duration_hms": "2:52"
     },
     {
-      "trip_id": "Tokyo_09_Yasukuni_EN",
-      "lane": "7",
-      "duration_sec": 472.61,
-      "duration_hms": "7:53"
-    },
-    {
       "trip_id": "Cardiff_I_A12_EN",
       "lane": "7",
       "duration_sec": 250.72,
       "duration_hms": "4:11"
     },
     {
-      "trip_id": "Tokyo_07_Olympic_EN",
-      "lane": "7",
-      "duration_sec": 347.25,
-      "duration_hms": "5:47"
-    },
-    {
-      "trip_id": "Hida_EN",
-      "lane": "7",
-      "duration_sec": 324.08,
-      "duration_hms": "5:24"
-    },
-    {
       "trip_id": "Dartmoor_A12_EN",
       "lane": "7",
       "duration_sec": 226.09,
       "duration_hms": "3:46"
-    },
-    {
-      "trip_id": "Takayama_EN",
-      "lane": "7",
-      "duration_sec": 662.52,
-      "duration_hms": "11:03"
     },
     {
       "trip_id": "Dartmouth_A12_EN",
@@ -3068,12 +2858,6 @@
       "duration_hms": "8:59"
     },
     {
-      "trip_id": "KyotoNishikiGion_EN",
-      "lane": "7",
-      "duration_sec": 250.93,
-      "duration_hms": "4:11"
-    },
-    {
       "trip_id": "Madrid3_EN",
       "lane": "7",
       "duration_sec": 520.7,
@@ -3102,12 +2886,6 @@
       "lane": "7",
       "duration_sec": 594.49,
       "duration_hms": "9:54"
-    },
-    {
-      "trip_id": "KyotoTemples2a_Fushimi_EN",
-      "lane": "7",
-      "duration_sec": 246.65,
-      "duration_hms": "4:07"
     },
     {
       "trip_id": "Sevilla2_EN",
@@ -3144,12 +2922,6 @@
       "lane": "7",
       "duration_sec": 585.53,
       "duration_hms": "9:46"
-    },
-    {
-      "trip_id": "NijoCastle_EN",
-      "lane": "7",
-      "duration_sec": 302.34,
-      "duration_hms": "5:02"
     },
     {
       "trip_id": "Valencia2_EN",
