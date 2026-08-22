@@ -569,3 +569,25 @@ Deferred judgment calls (not changed): wizard awaitJob 80s vs long tool runs
 (misleading "failed" on slow steps); multi-family wizard remedies target groups[0];
 batch rename onto an existing name → 500 not 422; partial-delete re-run needs
 --force-redownload (friction only).
+
+### Wrap-up (~19:35)
+
+- Recall-request badge restored to the nav (dave: "could be important") — the Review
+  queue tab now carries BOTH counts: submitted-awaiting-approval (amber, new endpoint)
+  and open recall requests (rose, /api/recall-requests/count); mobile ⋮ dot includes both.
+- Laptop review.db backed up to R2 `_db-backups/` (14.0 MB, review-20260822-182804.db
+  + review-latest.db) BEFORE deploy. Note: the backup script needs
+  REVIEW_APP_SCRIPTS_ROOT set when run over ssh (systemd env doesn't apply there).
+- **Committed & pushed `4fe3967`** (59 files — the whole 08-21 final-check/publisher
+  build + today's round). **Deployed to the laptop**: git pull → npm install + build →
+  `sudo -n /usr/bin/systemctl restart review-app.service` → review-app + review-tunnel
+  both active, /api/health 200, startup clean (new tables auto-created).
+- Workstation dev backend left running on :8000 WITH REVIEW_APP_PUBLISHER=1 (the
+  Publisher tab needs it; a plain restart hides the tab — bit dave once today).
+- Scripts repo (dynamic-content): social/README.md + STAGE_10B.md edits + the moved
+  social drafts are UNCOMMITTED — dave commits via GitHub Desktop.
+- Dave testing on mobile next; session ending, fresh session expected after.
+
+**Carried forward:** Trello published= backfill not yet run (`scripts/
+backfill_published_trips.py --apply`, dev + laptop DBs); wizard awaitJob 80s polish;
+multi-family wizard remedies target first family; batch rename → 500 not 422.
