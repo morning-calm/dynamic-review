@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-22T08:58:33+01:00",
-  "source": "production Firebase TripGroups (ids only)",
+  "generated_at": "2026-08-22T11:11:07+01:00",
+  "source": "production Firebase TripGroups (ids + rung ids)",
   "count": 320,
   "tripgroup_ids": [
     "A._A. Milne and Rudyard Kipling_Trip",
@@ -323,5 +323,1275 @@
     "Zaragoza2",
     "Zaragoza3",
     "Zaragoza_Trip"
-  ]
+  ],
+  "trips_by_group": {
+    "A._A. Milne and Rudyard Kipling_Trip": [
+      "A._A. Milne and Rudyard Kipling_Beg",
+      "A._A. Milne and Rudyard Kipling_Trip"
+    ],
+    "Abergavenny_Trip": [
+      "Abergavenny_Beg",
+      "Abergavenny_Trip"
+    ],
+    "Ainsa": [
+      "Ainsa_Beg",
+      "Ainsa_Int"
+    ],
+    "Alexandra_Palace_Trip": [
+      "Alexandra_Palace_Beg",
+      "Alexandra_Palace_Trip"
+    ],
+    "Allerheiligen": [
+      "Allerheiligen_EN",
+      "Allerheiligen_Beg_DE",
+      "Allerheiligen_DE"
+    ],
+    "Alps1DE": [
+      "Alps1_EN_DE",
+      "Alps1_Beg_DE",
+      "Alps1_DE"
+    ],
+    "Alps1FR": [
+      "Alps1_EN_FR",
+      "Alps1_Beg_FR",
+      "Alps1_FR"
+    ],
+    "Alps1IT": [
+      "Alps1_EN_IT",
+      "Alps1_Beg_IT",
+      "Alps1_IT"
+    ],
+    "Alps2DE": [
+      "Alps2_EN_DE",
+      "Alps2_Beg_DE",
+      "Alps2_DE"
+    ],
+    "Alps2FR": [
+      "Alps2_EN_FR",
+      "Alps2_Beg_FR",
+      "Alps2_FR"
+    ],
+    "Alps2IT": [
+      "Alps2_EN_IT",
+      "Alps2_Beg_IT",
+      "Alps2_IT"
+    ],
+    "AmagoiWaterfalls": [
+      "AmagoiWaterfalls_EN",
+      "AmagoiWaterfalls_Beg_JP"
+    ],
+    "Andorra_Trip": [
+      "Andorra_Trip"
+    ],
+    "Artes_y_Ciencias_Trip": [
+      "Artes_y_Ciencias_Trip"
+    ],
+    "ArtsAndSciences_Trip": [
+      "ArtsAndSciences_Trip"
+    ],
+    "ArtsSci": [
+      "ArtsSci_EN",
+      "ArtsSci_Beg_ES",
+      "ArtsSci_ES"
+    ],
+    "AviemoreInverness": [
+      "AviemoreInverness_A12_EN",
+      "AviemoreInverness_B1_EN",
+      "AviemoreInverness_EN"
+    ],
+    "BadenBaden1": [
+      "Baden-Baden_EN",
+      "Baden-Baden_Beg_DE",
+      "Baden-Baden_DE"
+    ],
+    "BadenBaden2": [
+      "Baden-Baden_II_EN",
+      "Baden-Baden_II_Beg_DE",
+      "Baden-Baden_II_DE"
+    ],
+    "BadenBaden3": [
+      "Baden-Baden_III_EN",
+      "Baden-Baden_III_Beg_DE",
+      "Baden-Baden_III_DE"
+    ],
+    "Bandol_Toulon": [
+      "Bandol_Toulon_EN",
+      "Bandol_Toulon_Beg_FR",
+      "Bandol_Toulon_FR"
+    ],
+    "BarcelonaIII_Trip": [
+      "BarcelonaIII_Trip"
+    ],
+    "BarcelonaII_Trip": [
+      "BarcelonaII_Trip"
+    ],
+    "BarcelonaIV_Trip": [
+      "BarcelonaIV_Trip"
+    ],
+    "BarcelonaI_Trip": [
+      "BarcelonaI_Trip"
+    ],
+    "Bath1": [
+      "Bath1_Beg",
+      "Bath1_Int"
+    ],
+    "Bath2": [
+      "Bath2_Beg",
+      "Bath2_Int"
+    ],
+    "Battle_Trip": [
+      "Battle_Beg",
+      "Battle_Trip"
+    ],
+    "Besalu": [
+      "Besalu_Beg",
+      "Besalu_Int"
+    ],
+    "Besalu6K": [
+      "Besalu_EN",
+      "Besalu_Beg_ES",
+      "Besalu_ES"
+    ],
+    "BilbaoGuggenheim_Trip": [
+      "BilbaoGuggenheim_Trip"
+    ],
+    "Bilbao_Trip": [
+      "Bilbao_Trip"
+    ],
+    "Black_Forest_High_Road": [
+      "Black_Forest_High_Road_EN",
+      "Black_Forest_High_Road_Beg_DE",
+      "Black_Forest_High_Road_DE"
+    ],
+    "Blaenavon_Trip": [
+      "Blaenavon_Beg",
+      "Blaenavon_Trip"
+    ],
+    "Blesle": [
+      "Blesle_EN",
+      "Blesle_Beg_FR",
+      "Blesle_FR"
+    ],
+    "Bude": [
+      "Bude_Beg",
+      "Bude_Int"
+    ],
+    "Cadaques": [
+      "Cadaques_Beg",
+      "Cadaques_Int"
+    ],
+    "Cadaques6K": [
+      "Cadaques_EN",
+      "Cadaques_Beg_ES",
+      "Cadaques_ES"
+    ],
+    "Cadiz": [
+      "Cadiz_Beg",
+      "Cadiz_Int"
+    ],
+    "CadizParade": [
+      "Cadiz_Parade"
+    ],
+    "Caerphilly_Castle_Trip": [
+      "Caerphilly_Castle_Beg",
+      "Caerphilly_Castle_Trip"
+    ],
+    "Camden_Trip": [
+      "Camden_Beg",
+      "Camden_Trip"
+    ],
+    "Canary_Wharf_Trip": [
+      "Canary_Wharf_Beg",
+      "Canary_Wharf_Trip"
+    ],
+    "Canterbury_Trip": [
+      "Canterbury_Beg",
+      "Canterbury_Trip"
+    ],
+    "Cardiff_II_Trip": [
+      "Cardiff2_Beg",
+      "Cardiff_II_Trip"
+    ],
+    "Cardiff_I_Trip": [
+      "Cardiff1_Beg",
+      "Cardiff_I_Trip"
+    ],
+    "Carnaval_de_Cadiz": [
+      "Carnaval_de_Cadiz_Beg",
+      "Carnaval_de_Cadiz_Int"
+    ],
+    "Cassis": [
+      "Cassis_EN",
+      "Cassis_Beg_FR",
+      "Cassis_FR"
+    ],
+    "CassisCalanques": [
+      "Cassis_Calanques_EN",
+      "Cassis_Calanques_FR"
+    ],
+    "CastelodiBrolio": [
+      "CastellodiBrolio_EN",
+      "CastellodiBrolio_Beg_IT",
+      "CastellodiBrolio_IT"
+    ],
+    "Causses3": [
+      "Causses3_EN",
+      "Causses3_Beg_FR",
+      "Causses3_FR"
+    ],
+    "Christmas_Lights in London_Trip": [
+      "Christmas_Lights in London_Beg",
+      "Christmas_Lights in London_Trip"
+    ],
+    "Colmar1": [
+      "Colmar1_EN",
+      "Colmar1_Beg_FR",
+      "Colmar1_FR"
+    ],
+    "Colmar2": [
+      "Colmar2_EN",
+      "Colmar2_Beg_FR",
+      "Colmar2_FR"
+    ],
+    "Cordoba1": [
+      "Cordoba1_Beg",
+      "Cordoba1_Int"
+    ],
+    "Cordoba2": [
+      "Cordoba2_Beg",
+      "Cordoba2_Int"
+    ],
+    "Cordoba3": [
+      "Cordoba3_Beg",
+      "Cordoba3_Int"
+    ],
+    "Cordoba4": [
+      "Cordoba4_Beg",
+      "Cordoba4_Int"
+    ],
+    "Cordoba_Trip": [
+      "Cordoba_Trip"
+    ],
+    "Cuckoo_Clocks": [
+      "Cuckoo_Clocks_EN",
+      "Cuckoo_Clocks_Beg_DE",
+      "Cuckoo_Clocks_DE"
+    ],
+    "Cuevas_Trip": [
+      "Cuevas_Trip"
+    ],
+    "Dartmoor": [
+      "Dartmoor_Beg",
+      "Dartmoor_National_Park_Int"
+    ],
+    "Dartmouth": [
+      "Dartmouth_Beg",
+      "Dartmouth_Int"
+    ],
+    "Don_Quijote_La_Mancha": [
+      "Don_Quijote_La_Mancha_EN",
+      "Don_Quijote_La_Mancha_Beg_ES",
+      "Don_Quijote_La_Mancha_ES"
+    ],
+    "Dover_Trip": [
+      "Dover_Beg",
+      "Dover_Trip"
+    ],
+    "EN_Fave_Amy": [
+      "EN_Fave_Amy"
+    ],
+    "EN_Fave_Dan": [
+      "EN_Fave_Dan"
+    ],
+    "EN_Fave_Faye": [
+      "EN_Fave_Faye"
+    ],
+    "EN_Fave_Josh": [
+      "EN_Fave_Josh"
+    ],
+    "EN_Fave_Kelly": [
+      "EN_Fave_Kelly"
+    ],
+    "EN_Fave_ShaffiEmily": [
+      "EN_Fave_ShaffiEmily"
+    ],
+    "EN_Fave_Tom": [
+      "EN_Fave_Tom"
+    ],
+    "EN_Hazel_Dates": [
+      "EN_Hazel_Dates"
+    ],
+    "EN_Hazel_Hobbies": [
+      "EN_Hazel_Hobbies"
+    ],
+    "EN_Hazel_Introduction": [
+      "EN_Hazel_Introduction"
+    ],
+    "EN_Hazel_Likes": [
+      "EN_Hazel_Likes"
+    ],
+    "EN_Hazel_Schedule": [
+      "EN_Hazel_Schedule"
+    ],
+    "EN_Hazel_Time": [
+      "EN_Hazel_Time"
+    ],
+    "EN_Pub": [
+      "EN_Pub"
+    ],
+    "EN_Taxi_BigBen": [
+      "EN_Taxi_BigBen"
+    ],
+    "EN_Taxi_ChurchillArms": [
+      "EN_Taxi_ChurchillArms"
+    ],
+    "EN_Taxi_Harrods": [
+      "EN_Taxi_Harrods"
+    ],
+    "EN_Taxi_TowerLondon": [
+      "EN_Taxi_TowerLondon"
+    ],
+    "ES Convos Animales": [
+      "ES Convos Animales"
+    ],
+    "ES Convos Cocktails": [
+      "ES Convos Cocktails"
+    ],
+    "ES Convos Concert": [
+      "ES Convos Concert"
+    ],
+    "ES Convos Fiesta I": [
+      "ES Convos Fiesta I"
+    ],
+    "ES Convos Fiesta II": [
+      "ES Convos Fiesta II"
+    ],
+    "ES Convos Gifts": [
+      "ES Convos Gifts"
+    ],
+    "ES Convos Introductions": [
+      "ES Convos Introductions"
+    ],
+    "ES Convos Meet I": [
+      "ES Convos Meet I"
+    ],
+    "ES Convos Meet II": [
+      "ES Convos Meet II"
+    ],
+    "ES Convos Meet III": [
+      "ES Convos Meet III"
+    ],
+    "ES Convos Paella": [
+      "ES Convos Paella"
+    ],
+    "ES Convos Postcards": [
+      "ES Convos Postcards"
+    ],
+    "ES Convos Survey": [
+      "ES Convos Survey"
+    ],
+    "ES Convos Tapas": [
+      "ES Convos Tapas"
+    ],
+    "Edinburgh1_OldTownGreyfriars": [
+      "Edinburgh1_OldTownGreyfriars_A12_EN",
+      "Edinburgh1_OldTownGreyfriars_B1_EN",
+      "Edinburgh1_OldTownGreyfriars_EN"
+    ],
+    "Edinburgh2_GrassmarketVennel": [
+      "Edinburgh2_GrassmarketVennel_A12_EN",
+      "Edinburgh2_GrassmarketVennel_B1_EN",
+      "Edinburgh2_GrassmarketVennel_EN"
+    ],
+    "Edinburgh3_Castle": [
+      "Edinburgh3_Castle_A12_EN",
+      "Edinburgh3_Castle_B1_EN",
+      "Edinburgh3_Castle_EN"
+    ],
+    "Edinburgh4_Fringe": [
+      "Edinburgh4_Fringe_A12_EN",
+      "Edinburgh4_Fringe_B1_EN",
+      "Edinburgh4_Fringe_EN"
+    ],
+    "Edinburgh5_CaltonHillHolyrood": [
+      "Edinburgh5_CaltonHillHolyrood_A12_EN",
+      "Edinburgh5_CaltonHillHolyrood_B1_EN",
+      "Edinburgh5_CaltonHillHolyrood_EN"
+    ],
+    "Edinburgh6_WaterLeith": [
+      "Edinburgh6_WaterLeith_A12_EN",
+      "Edinburgh6_WaterLeith_B1_EN",
+      "Edinburgh6_WaterLeith_EN"
+    ],
+    "Edinburgh7_GilesCathedral": [
+      "Edinburgh7_GilesCathedral_A12_EN",
+      "Edinburgh7_GilesCathedral_B1_EN",
+      "Edinburgh7_GilesCathedral_EN"
+    ],
+    "ElCamino": [
+      "ElCamino_Beg",
+      "ElCamino_Int"
+    ],
+    "ElPlaneta": [
+      "El_Planeta_Beg",
+      "El_Planeta_Int"
+    ],
+    "Ely_Trip": [
+      "Ely_Beg",
+      "Ely_Trip"
+    ],
+    "FR_Lara_Intro": [
+      "FR_Lara_Intro"
+    ],
+    "Falmouth": [
+      "Falmouth_Beg",
+      "Falmouth_Int"
+    ],
+    "FeriaDeAbril_Trip": [
+      "FeriaDeAbril_Trip"
+    ],
+    "Fiesole": [
+      "Fiesole_EN",
+      "Fiesole_Beg_IT",
+      "Fiesole_IT"
+    ],
+    "Florence1": [
+      "Florence1_EN",
+      "Florence1_Beg_IT",
+      "Florence1_IT"
+    ],
+    "Florence2": [
+      "Florence2_EN",
+      "Florence2_Beg_IT",
+      "Florence2_IT"
+    ],
+    "Florence3": [
+      "Florence3_EN",
+      "Florence3_Beg_IT",
+      "Florence3_IT"
+    ],
+    "Florence_Duomo": [
+      "Florence_Duomo_EN",
+      "Florence_Duomo_Beg_IT",
+      "Florence_Duomo_IT"
+    ],
+    "FortAugustusInvermoriston": [
+      "FortAugustusInvermoriston_A12_EN",
+      "FortAugustusInvermoriston_B1_EN",
+      "FortAugustusInvermoriston_EN"
+    ],
+    "ForthBridge": [
+      "ForthBridge_A12_EN",
+      "ForthBridge_B1_EN",
+      "ForthBridge_EN"
+    ],
+    "Fowey": [
+      "Fowey_Beg",
+      "Fowey_Int"
+    ],
+    "Freiburg_im_Breisgau_I": [
+      "Freiburg_im_Breisgau_I_EN",
+      "Freiburg_im_Breisgau_I_Beg_DE",
+      "Freiburg_im_Breisgau_I_DE"
+    ],
+    "Freiburg_im_Breisgau_II": [
+      "Freiburg_im_Breisgau_II_EN",
+      "Freiburg_im_Breisgau_II_Beg_DE",
+      "Freiburg_im_Breisgau_II_DE"
+    ],
+    "Gassin": [
+      "Gassin_EN",
+      "Gassin_Beg_FR",
+      "Gassin_FR"
+    ],
+    "Gerona": [
+      "Gerona_Beg",
+      "Gerona_Int"
+    ],
+    "Girona6K": [
+      "Girona_EN",
+      "Girona_Beg_ES",
+      "Girona_ES"
+    ],
+    "Gorges_du_Tarn": [
+      "Gorges_du_Tarn_EN",
+      "Gorges_du_Tarn_Beg_FR",
+      "Gorges_du_Tarn_FR"
+    ],
+    "Greenwich_Trip": [
+      "Greenwich_Beg",
+      "Greenwich_Trip"
+    ],
+    "Hampstead_Trip": [
+      "Hampstead_Beg",
+      "Hampstead_Trip"
+    ],
+    "Hautvillers_Epernay": [
+      "Hautvillers_Epernay_EN",
+      "Hautvillers_Epernay_Beg_FR",
+      "Hautvillers_Epernay_FR"
+    ],
+    "Hay-on-Wye_Trip": [
+      "Hay-on-Wye_Beg",
+      "Hay-on-Wye_Trip"
+    ],
+    "Hirsau_Abbey": [
+      "Hirsau_Abbey_EN",
+      "Hirsau_Abbey_Beg_DE",
+      "Hirsau_Abbey_DE"
+    ],
+    "Hyde_Park, Holland Park Richmond Park_Trip": [
+      "Hyde_Park, Holland Park Richmond Park_Beg",
+      "Hyde_Park, Holland Park Richmond Park_Trip"
+    ],
+    "Hyeres": [
+      "Hyeres_EN",
+      "Hyeres_Beg_FR",
+      "Hyeres_FR"
+    ],
+    "Ingenio_Humano1": [
+      "Ingenio_Humano1_Beg",
+      "Ingenio_Humano1_Int"
+    ],
+    "Ingenio_Humano2": [
+      "Ingenio_Humano2_Beg",
+      "Ingenio_Humano2_Int"
+    ],
+    "IronBridge_Trip": [
+      "IronBridge_Beg",
+      "IronBridge_Trip"
+    ],
+    "IyaValley1": [
+      "IyaValley1_EN",
+      "IyaValley1_Beg_JP"
+    ],
+    "IyaValley2": [
+      "IyaValley2_EN",
+      "IyaValley2_Beg_JP"
+    ],
+    "JP_Aesthetics": [
+      "JP_Aesthetics_EN",
+      "JP_Aesthetics_JP"
+    ],
+    "JP_Agriculture1": [
+      "JP_Agriculture1_EN",
+      "JP_Agriculture1_JP"
+    ],
+    "JP_Agriculture2": [
+      "JP_Agriculture2_EN",
+      "JP_Agriculture2_JP"
+    ],
+    "JP_CherryBlossom": [
+      "JP_CherryBlossom_EN",
+      "JP_CherryBlossom_JP"
+    ],
+    "JP_ForestBathing": [
+      "JP_ForestBathing_EN",
+      "JP_ForestBathing_JP"
+    ],
+    "JP_GoldenWeek": [
+      "JP_GoldenWeek_EN",
+      "JP_GoldenWeek_JP"
+    ],
+    "JP_Kawaii": [
+      "JP_Kawaii_EN",
+      "JP_Kawaii_JP"
+    ],
+    "JP_NewYearMochi": [
+      "JP_NewYearMochi_EN",
+      "JP_NewYearMochi_JP"
+    ],
+    "JP_Onsen": [
+      "JP_Onsen_EN",
+      "JP_Onsen_JP"
+    ],
+    "JP_ParksAndGardens": [
+      "JP_ParksAndGardens_EN",
+      "JP_ParksAndGardens_JP"
+    ],
+    "JP_Past_10_N3JP": [
+      "JP_Past_10",
+      "JP_Past_10_N3JP"
+    ],
+    "JP_Past_11_N3JP": [
+      "JP_Past_11",
+      "JP_Past_11_N3JP"
+    ],
+    "JP_Past_12_N3JP": [
+      "JP_Past_12",
+      "JP_Past_12_N3JP"
+    ],
+    "JP_Past_13_N3JP": [
+      "JP_Past_13",
+      "JP_Past_13_N3JP"
+    ],
+    "JP_Past_14_N3JP": [
+      "JP_Past_14",
+      "JP_Past_14_N3JP"
+    ],
+    "JP_Past_15_N3JP": [
+      "JP_Past_15",
+      "JP_Past_15_N3JP"
+    ],
+    "JP_Past_1_N3JP": [
+      "JP_Past_1",
+      "JP_Past_1_N3JP"
+    ],
+    "JP_Past_2_N3JP": [
+      "JP_Past_2",
+      "JP_Past_2_N3JP"
+    ],
+    "JP_Past_3_N3JP": [
+      "JP_Past_3",
+      "JP_Past_3_N3JP"
+    ],
+    "JP_Past_4_N3JP": [
+      "JP_Past_4",
+      "JP_Past_4_N3JP"
+    ],
+    "JP_Past_5_N3JP": [
+      "JP_Past_5",
+      "JP_Past_5_N3JP"
+    ],
+    "JP_Past_6_N3JP": [
+      "JP_Past_6",
+      "JP_Past_6_N3JP"
+    ],
+    "JP_Past_7_N3JP": [
+      "JP_Past_7",
+      "JP_Past_7_N3JP"
+    ],
+    "JP_Past_8_N3JP": [
+      "JP_Past_8",
+      "JP_Past_8_N3JP"
+    ],
+    "JP_Past_9_N3JP": [
+      "JP_Past_9",
+      "JP_Past_9_N3JP"
+    ],
+    "JP_RewardTrip1": [
+      "JP_RewardTrip1"
+    ],
+    "JP_RewardTrip2": [
+      "JP_RewardTrip2"
+    ],
+    "JP_RewardTrip3": [
+      "JP_RewardTrip3"
+    ],
+    "JP_RewardTrip4": [
+      "JP_RewardTrip4"
+    ],
+    "JP_RewardTrip5": [
+      "JP_RewardTrip5"
+    ],
+    "JP_RewardTrip6": [
+      "JP_RewardTrip6"
+    ],
+    "JemimaPuddleDuck": [
+      "JemimaPuddleDuck_Int"
+    ],
+    "Jerez_Trip": [
+      "Jerez_Trip"
+    ],
+    "Kensington_Trip": [
+      "Kensington_Beg",
+      "Kensington_Trip"
+    ],
+    "Kent_Coastline II_Trip": [
+      "Kent_Coastline II_Beg",
+      "Kent_Coastline II_Trip"
+    ],
+    "Kent_Coastline I_Trip": [
+      "Kent_Coastline I_Beg",
+      "Kent_Coastline I_Trip"
+    ],
+    "KochiCity": [
+      "KochiCity_EN",
+      "KochiCity_Beg_JP"
+    ],
+    "KochiOutskirts": [
+      "KochiOutskirts_EN",
+      "KochiOutskirts_Beg_JP"
+    ],
+    "LaAlhambraII_Trip": [
+      "LaAlhambraII_Trip"
+    ],
+    "LaAlhambraI_Trip": [
+      "LaAlhambraI_Trip"
+    ],
+    "Lake_District1": [
+      "Lake_District1_Beg",
+      "Lake_District1_Int"
+    ],
+    "Lake_District2": [
+      "Lake_District2_Beg",
+      "Lake_District2_Int"
+    ],
+    "Lake_District3": [
+      "Lake_District3_Beg",
+      "Lake_District3_Int"
+    ],
+    "Lake_District4": [
+      "Lake_District4_Beg",
+      "Lake_District4_Int"
+    ],
+    "Lake_District_Boat": [
+      "Lake_District_Boat"
+    ],
+    "Lands End": [
+      "LandsEnd_Beg",
+      "LandsEnd_Int"
+    ],
+    "LasFallas2025_1": [
+      "LasFallas2025_1"
+    ],
+    "LasFallas2025_2": [
+      "LasFallas2025_2"
+    ],
+    "LasFallas2025_3": [
+      "LasFallas2025_3"
+    ],
+    "LasFallas2025_4": [
+      "LasFallas2025_4"
+    ],
+    "LasFallas2025_5": [
+      "LasFallas2025_5"
+    ],
+    "LasFallas2025_6": [
+      "LasFallas2025_6"
+    ],
+    "LasFallas2025_7": [
+      "LasFallas2025_7"
+    ],
+    "LasFallasExtra": [
+      "Las_Fallas_ES",
+      "Las_Fallas_EN",
+      "Las_Fallas_VC"
+    ],
+    "LasFallas_Trip": [
+      "LasFallas_Trip"
+    ],
+    "Le_Malzieu-Ville": [
+      "Le_Malzieu-Ville_EN",
+      "Le_Malzieu-Ville_Beg_FR",
+      "Le_Malzieu-Ville_FR"
+    ],
+    "Liechtenstein": [
+      "Liechtenstein_EN",
+      "Liechtenstein_Beg_DE",
+      "Liechtenstein_DE"
+    ],
+    "Lincoln_Trip": [
+      "Lincoln_Beg",
+      "Lincoln_Trip"
+    ],
+    "Little_Venice Notting Hill_Trip": [
+      "Little Venice Notting Hill_Beg",
+      "Little_Venice Notting Hill_Trip"
+    ],
+    "Liverpool_III_Trip": [
+      "Liverpool3_Beg",
+      "Liverpool_III_Trip"
+    ],
+    "Liverpool_II_Trip": [
+      "Liverpool2_Beg",
+      "Liverpool_II_Trip"
+    ],
+    "Liverpool_I_Trip": [
+      "Liverpool1_Beg",
+      "Liverpool_I_Trip"
+    ],
+    "Llandaff_Cathedral and Castell Coch_Trip": [
+      "Cardiff3_Beg",
+      "Llandaff_Cathedral and Castell Coch_Trip"
+    ],
+    "LochNessNessie": [
+      "LochNessNessie_A12_EN",
+      "LochNessNessie_B1_EN",
+      "LochNessNessie_EN"
+    ],
+    "Looe": [
+      "Looe_Beg",
+      "Looe_Int"
+    ],
+    "LosPicosDeEuropa_Trip": [
+      "LosPicosDeEuropa_Trip"
+    ],
+    "LosPirineos_Trip": [
+      "LosPirineos_Trip"
+    ],
+    "Los_Escobazos": [
+      "Los_Escobazos_Beg",
+      "Los_Escobazos_Int"
+    ],
+    "Lugo_Trip": [
+      "Lugo_Trip"
+    ],
+    "Madrid1": [
+      "Madrid1_Beg",
+      "Madrid1_Int"
+    ],
+    "Madrid2": [
+      "Madrid2_Beg",
+      "Madrid2_Int"
+    ],
+    "Madrid3": [
+      "Madrid3_Beg",
+      "Madrid3_Int"
+    ],
+    "Madrid_Trip": [
+      "Madrid_Trip"
+    ],
+    "Manchester_II Industrial Revolution_Trip": [
+      "Manchester_II Industrial Revolution_Beg",
+      "Manchester_II Industrial Revolution_Trip"
+    ],
+    "Manchester_III_Trip": [
+      "Manchester_III_Beg",
+      "Manchester_III_Trip"
+    ],
+    "Manchester_I_Trip": [
+      "Manchester_I_Beg",
+      "Manchester_I_Trip"
+    ],
+    "Memmingen": [
+      "Memmingen_EN",
+      "Memmingen_Beg_DE",
+      "Memmingen_DE"
+    ],
+    "Mercados": [
+      "Mercados_Beg",
+      "Mercados_Int"
+    ],
+    "MeridaIII_Anfiteatro_Trip": [
+      "MeridaIII_Anfiteatro_Trip"
+    ],
+    "MeridaII_Trip": [
+      "MeridaII_Trip"
+    ],
+    "MeridaI_Trip": [
+      "MeridaI_Trip"
+    ],
+    "Montserrat": [
+      "Montserrat_Beg",
+      "Montserrat_Int"
+    ],
+    "Moros_y_Cristianos": [
+      "Moros_y_Cristianos_Beg",
+      "Moros_y_Cristianos_Int"
+    ],
+    "Mummelsee_Titisee": [
+      "Mummelsee_Titisee_EN",
+      "Mummelsee_Titisee_Beg_DE",
+      "Mummelsee_Titisee_DE"
+    ],
+    "Nagold": [
+      "Nagold_EN",
+      "Nagold_Beg_DE",
+      "Nagold_DE"
+    ],
+    "Newquay": [
+      "Newquay_Beg",
+      "Newquay_Int"
+    ],
+    "Notting_Hill Carnival_Trip": [
+      "Notting_Hill Carnival_Beg",
+      "Notting_Hill Carnival_Trip"
+    ],
+    "Oboke": [
+      "Oboke_EN",
+      "Oboke_Beg_JP"
+    ],
+    "ObokeBoat": [
+      "ObokeBoat"
+    ],
+    "Org_Social1": [
+      "Org_Social1_Beg",
+      "Org_Social1_Int"
+    ],
+    "Org_Social2": [
+      "Org_Social2_Beg",
+      "Org_Social2_Int"
+    ],
+    "Peniscola_Trip": [
+      "Peniscola_Trip"
+    ],
+    "Pisa": [
+      "Pisa_EN",
+      "Pisa_Beg_IT",
+      "Pisa_IT"
+    ],
+    "Plymouth": [
+      "Plymouth_Beg",
+      "Plymouth_Int"
+    ],
+    "Polperro": [
+      "Polperro_Beg",
+      "Polperro_Int"
+    ],
+    "Port Isaac": [
+      "PortIsaac_Beg",
+      "PortIsaac_Int"
+    ],
+    "Queen_Elizabeth II_Trip": [
+      "Queen_Elizabeth II_Beg",
+      "Queen_Elizabeth II_Trip"
+    ],
+    "Radda_SanGusme": [
+      "Radda_SanGusme_EN",
+      "Radda_SanGusme_Beg_IT",
+      "Radda_SanGusme_IT"
+    ],
+    "Ravenna_Gorge": [
+      "Ravenna_Gorge_EN",
+      "Ravenna_Gorge_Beg_DE",
+      "Ravenna_Gorge_DE"
+    ],
+    "Regent’s_Park_Trip": [
+      "Regent’s_Park_Beg",
+      "Regent’s_Park_Trip"
+    ],
+    "Reims1": [
+      "Reims1_EN",
+      "Reims1_Beg_FR",
+      "Reims1_FR"
+    ],
+    "Reims2": [
+      "Reims2_EN",
+      "Reims2_Beg_FR",
+      "Reims2_FR"
+    ],
+    "Reims3": [
+      "Reims3_EN",
+      "Reims3_Beg_FR",
+      "Reims3_FR"
+    ],
+    "Rye_Trip": [
+      "Rye_Beg",
+      "Rye_Trip"
+    ],
+    "Saint-Tropez": [
+      "Saint_Tropez_EN",
+      "Saint_Tropez_Beg_FR",
+      "Saint_Tropez_FR"
+    ],
+    "Sainte_Enimie": [
+      "Sainte_Enimie_EN",
+      "Sainte_Enimie_Beg_FR",
+      "Sainte_Enimie_FR"
+    ],
+    "SalamancaII_Trip": [
+      "SalamancaII_Trip"
+    ],
+    "SalamancaI_Trip": [
+      "SalamancaI_Trip"
+    ],
+    "Salcombe": [
+      "Salcombe_Beg",
+      "Salcombe_Int"
+    ],
+    "Salvador_Dali": [
+      "Salvador_Dali_EN",
+      "Salvador_Dali_Beg_ES",
+      "Salvador_Dali_ES"
+    ],
+    "SanSebastianII_Trip": [
+      "SanSebastianII_Trip"
+    ],
+    "SanSebastianI_Trip": [
+      "SanSebastianI_Trip"
+    ],
+    "Sanguesa": [
+      "Sanguesa_Beg",
+      "Sanguesa_Int"
+    ],
+    "Sant_Feliu_de_Guixols": [
+      "Sant_Feliu_de_Guixols_Beg",
+      "Sant_Feliu_de_Guixols_Int"
+    ],
+    "Sant_Feliu_de_Guixols6K": [
+      "Sant_Felíu_de_Guíxols_EN",
+      "Sant_Felíu_de_Guíxols_Beg_ES",
+      "Sant_Felíu_de_Guíxols_ES"
+    ],
+    "SantiagoIII_Catedral_Trip": [
+      "SantiagoIII_Catedral_Trip"
+    ],
+    "SantiagoII_Trip": [
+      "SantiagoII_Trip"
+    ],
+    "SantiagoI_Trip": [
+      "SantiagoI_Trip"
+    ],
+    "Schiltach": [
+      "Schiltach_EN",
+      "Schiltach_Beg_DE",
+      "Schiltach_DE"
+    ],
+    "Segovia": [
+      "Segovia_Beg",
+      "Segovia_Int"
+    ],
+    "Sevilla1": [
+      "Sevilla1_Beg",
+      "Sevilla1_Int"
+    ],
+    "Sevilla2": [
+      "Sevilla2_Beg",
+      "Sevilla2_Int"
+    ],
+    "Sevilla3": [
+      "Sevilla3_Beg",
+      "Sevilla3_Int"
+    ],
+    "Sevilla4": [
+      "Sevilla4_Beg",
+      "Sevilla4_Int"
+    ],
+    "Sevilla5": [
+      "Sevilla5_Beg",
+      "Sevilla5_Int"
+    ],
+    "Sevilla_Trip": [
+      "Sevilla_Trip"
+    ],
+    "Shikoku_Karst": [
+      "Shikoku_Karst_EN",
+      "Shikoku_Karst_Beg_JP"
+    ],
+    "Siena1": [
+      "Siena1_EN",
+      "Siena1_Beg_IT",
+      "Siena1_IT"
+    ],
+    "Siena2": [
+      "Siena2_EN",
+      "Siena2_Beg_IT",
+      "Siena2_IT"
+    ],
+    "St Ives": [
+      "StIves_Beg",
+      "StIves_Int"
+    ],
+    "St Michaels Mount": [
+      "StMichaelsMount_Beg",
+      "StMichaelsMount_Int"
+    ],
+    "St_Albans_Trip": [
+      "St_Albans_Beg",
+      "St_Albans_Trip"
+    ],
+    "St_Pauls and the City of London_Trip": [
+      "St_Pauls and the City of London_Beg",
+      "St_Pauls and the City of London_Trip"
+    ],
+    "Stonehenge": [
+      "Stonehenge_Beg",
+      "Stonehenge_Int"
+    ],
+    "Strasbourg1": [
+      "Strasbourg1_EN",
+      "Strasbourg1_Beg_FR",
+      "Strasbourg1_FR"
+    ],
+    "Strasbourg2": [
+      "Strasbourg2_EN",
+      "Strasbourg2_Beg_FR",
+      "Strasbourg2_FR"
+    ],
+    "Strasbourg3": [
+      "Strasbourg3_EN",
+      "Strasbourg3_Beg_FR",
+      "Strasbourg3_FR"
+    ],
+    "Strasbourg4": [
+      "Strasbourg4_EN",
+      "Strasbourg4_Beg_FR",
+      "Strasbourg4_FR"
+    ],
+    "Strasbourg5": [
+      "Strasbourg5_EN",
+      "Strasbourg5_Beg_FR",
+      "Strasbourg5_FR"
+    ],
+    "StrasbourgBoat": [
+      "StrasbourgBoat"
+    ],
+    "Stratford": [
+      "Stratford_Beg",
+      "Stratford_Int"
+    ],
+    "Takao": [
+      "Takao_EN",
+      "Takao_Beg_JP"
+    ],
+    "Takao_Fire": [
+      "Takao_Fire_EN",
+      "Takao_Fire_Beg_JP"
+    ],
+    "TenerifeIII_Trip": [
+      "TenerifeIII_Trip"
+    ],
+    "TenerifeII_Trip": [
+      "TenerifeII_Trip"
+    ],
+    "TenerifeIV_Trip": [
+      "TenerifeIV_Trip"
+    ],
+    "TenerifeI_Trip": [
+      "TenerifeI_Trip"
+    ],
+    "TenerifeV_Trip": [
+      "TenerifeV_Trip"
+    ],
+    "The_South Bank to Southwark_Trip": [
+      "The_South Bank to Southwark_Beg",
+      "The_South Bank to Southwark_Trip"
+    ],
+    "The_West End_Trip": [
+      "The_West End_Beg",
+      "The_West End_Trip"
+    ],
+    "Tintagel_Castle_Trip": [
+      "Tintagel_Castle_Beg",
+      "Tintagel_Castle_Trip"
+    ],
+    "Tokyo_01": [
+      "Tokyo_01_EN",
+      "Tokyo_01_Beg_JP"
+    ],
+    "Tokyo_02": [
+      "Tokyo_02_EN",
+      "Tokyo_02_Beg_JP"
+    ],
+    "Tokyo_03": [
+      "Tokyo_03_EN",
+      "Tokyo_03_Beg_JP"
+    ],
+    "Tokyo_04": [
+      "Tokyo_04_EN",
+      "Tokyo_04_Beg_JP"
+    ],
+    "Tokyo_05": [
+      "Tokyo_05_EN",
+      "Tokyo_05_Beg_JP"
+    ],
+    "Toledo1": [
+      "Toledo1_EN",
+      "Toledo1_Beg_ES",
+      "Toledo1_ES"
+    ],
+    "Toledo2": [
+      "Toledo2_EN",
+      "Toledo2_Beg_ES",
+      "Toledo2_ES"
+    ],
+    "Toledo3": [
+      "Toledo3_EN",
+      "Toledo3_Beg_ES",
+      "Toledo3_ES"
+    ],
+    "Torquay": [
+      "Torquay_Beg",
+      "Torquay_Int"
+    ],
+    "Tossa_de_Mar": [
+      "Tossa_de_Mar_Beg",
+      "Tossa_de_Mar_Int"
+    ],
+    "Tossa_de_Mar6K": [
+      "Tossa_de_Mar_EN",
+      "Tossa_de_Mar_Beg_ES",
+      "Tossa_de_Mar_ES"
+    ],
+    "Tower_Bridge_Trip": [
+      "Tower_Bridge_Beg",
+      "Tower_Bridge_Trip"
+    ],
+    "Triberg_im_Schwarzwald": [
+      "Triberg_im_Schwarzwald_EN",
+      "Triberg_im_Schwarzwald_Beg_DE",
+      "Triberg_im_Schwarzwald_DE"
+    ],
+    "UrbanoRural": [
+      "UrbanoRural_Beg",
+      "UrbanoRural_Int"
+    ],
+    "UrquhartCastle": [
+      "UrquhartCastle_A12_EN",
+      "UrquhartCastle_B1_EN",
+      "UrquhartCastle_EN"
+    ],
+    "Valencia1": [
+      "Valencia1_Beg",
+      "Valencia1_Int"
+    ],
+    "Valencia2": [
+      "Valencia2_Beg",
+      "Valencia2_Int"
+    ],
+    "Valencia3": [
+      "Valencia3_Beg",
+      "Valencia3_Int"
+    ],
+    "Valencia4": [
+      "Valencia4_Beg",
+      "Valencia4_Int"
+    ],
+    "Vic": [
+      "Vic_Beg",
+      "Vic_Int"
+    ],
+    "Vichy": [
+      "Vichy_EN",
+      "Vichy_Beg_FR",
+      "Vichy_FR"
+    ],
+    "VitoriaGasteiz_Trip": [
+      "VitoriaGasteiz_Trip"
+    ],
+    "West Cornwall": [
+      "WestCornwall_Beg",
+      "WestCornwall_Int"
+    ],
+    "Westminster_II Buckingham Palace_Trip": [
+      "Westminster_II Buckingham Palace_Beg",
+      "Westminster_II Buckingham Palace_Trip"
+    ],
+    "Westminster_Trip": [
+      "Westminster_Beg",
+      "Westminster_Trip"
+    ],
+    "York_II Minster_Trip": [
+      "York_II Minster_Beg",
+      "York_II Minster_Trip"
+    ],
+    "York_III_Trip": [
+      "York_III_Beg",
+      "York_III_Trip"
+    ],
+    "York_I_Trip": [
+      "York_I_Beg",
+      "York_I_Trip"
+    ],
+    "Yusuhara": [
+      "Yusuhara_EN",
+      "Yusuhara_Beg_JP"
+    ],
+    "Zaragoza1": [
+      "Zaragoza1_Beg",
+      "Zaragoza1_Int"
+    ],
+    "Zaragoza2": [
+      "Zaragoza2_Beg",
+      "Zaragoza2_Int"
+    ],
+    "Zaragoza3": [
+      "Zaragoza3_Beg",
+      "Zaragoza3_Int"
+    ],
+    "Zaragoza_Trip": [
+      "Zaragoza_Trip"
+    ]
+  }
 }

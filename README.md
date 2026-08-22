@@ -14,6 +14,11 @@ review-app/
   docs/       supplementary notes
 ```
 
+## Publish (workstation console)
+
+Double-click **`scripts\publisher.cmd`** → `http://127.0.0.1:8010`. Full guide
+(the two-instance model, setup, troubleshooting): **`docs/PUBLISHER.md`**.
+
 ## Run (dev)
 ```bash
 # backend  (uses global py -3.12, which already has faster-whisper + firebase-admin)

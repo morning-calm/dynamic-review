@@ -25,7 +25,8 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from . import (audio_core, auth, db, review_audio, routes_admin, routes_audio,
-               routes_bugs, routes_help, routes_sessions, routes_tripdesc)
+               routes_bugs, routes_final, routes_help, routes_sessions,
+               routes_tripdesc)
 from .config import CORS_ORIGINS, FRONTEND_DIST, HOST, PORT, SERVE_FRONTEND
 
 app = FastAPI(title="review-app backend", version="1.0",
@@ -96,6 +97,18 @@ def _startup():
     from . import sessions
     threading.Thread(target=sessions.warm_trip_cache,
                      name="trip-cache-warm", daemon=True).start()
+
+    # Same treatment for the Publisher's Releases board: one warm releases() run
+    # fills the probe cache / sweeps / bus snapshots off-thread, so the first admin
+    # on the board after a restart serves warm instead of paying the network cost.
+    def _warm_releases() -> None:
+        try:
+            from . import final_checks
+            final_checks.releases()
+        except Exception as e:  # noqa: BLE001 — warm-up only, never blocks startup
+            print(f"[startup] releases warm failed: {e}", flush=True)
+    threading.Thread(target=_warm_releases,
+                     name="releases-warm", daemon=True).start()
     # The number cleaner is imported from the Scripts repo, so it is exactly the class of
     # dependency that has failed SILENTLY on the live laptop before (jieba 2026-07-08,
     # opencc 2026-07-29 — checks that had never once run in production). Say on every boot
@@ -135,6 +148,7 @@ app.include_router(routes_audio.router)
 app.include_router(routes_bugs.router)
 app.include_router(routes_help.router)
 app.include_router(routes_tripdesc.router)
+app.include_router(routes_final.router)
 
 
 # --- Single-origin deploy: serve the built frontend (frontend/dist) so one hostname

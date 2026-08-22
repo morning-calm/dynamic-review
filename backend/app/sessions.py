@@ -5108,6 +5108,10 @@ def export_completed_trips() -> None:
     except Exception as e:  # noqa: BLE001
         print(f"[completed-export] local file skipped: {e}")
     review_bus.put_completed_snapshot(payload)     # loud on failure, never raises
+    # Completion events change what the finalised badges MEAN (shipped/restale is a
+    # cross-reference against completed_at) — drop the short-TTL snapshot cache so
+    # the Completed page / Releases board reflect this action immediately.
+    review_bus.invalidate_snapshots()
 
 
 def _parse_bus_ts(s) -> float | None:
@@ -5150,19 +5154,27 @@ def completed(user) -> list[dict]:
     filtered to their languages (admins see all). Newest first, except SHIPPED trips
     (Stage-9-finalised, per the read-only finalised bus) sink to the bottom — they need
     no further attention. View-only — an admin un-completes to return a trip to the
-    active list. The bus is re-fetched on every load (no caching) so a just-shipped
-    trip flips to Published without a hard reload."""
+    active list. The bus read is short-TTL-cached in review_bus (completion events
+    invalidate), so a just-shipped trip still flips to Published within seconds
+    without paying an R2 round trip on every load.
+
+    Titles come from trip_list_cache (already materialised for the trip list) —
+    the per-trip _trip_meta Firestore get is only the fallback for rows the cache
+    has never seen (e.g. trips that left the manifest before the cache existed);
+    it used to run serially for EVERY row on the first load after a restart."""
     from . import auth   # lazy (auth imports sessions) — no module-load cycle
     rows = db.query(
         "SELECT trip_id, completed_by, completed_at, method, session_id "
         "FROM completed_trips ORDER BY completed_at DESC")
     fin_map = review_bus.get_finalised_snapshot()   # best-effort; {} = none finalised
+    titles = {r["trip_id"]: r["title"]
+              for r in db.query("SELECT trip_id, title FROM trip_list_cache")}
     out: list[dict] = []
     for r in rows:
         tid = r["trip_id"]
         if not auth.language_allowed(user, tid):
             continue
-        meta = _trip_meta(tid)
+        meta = ({"title": titles[tid]} if titles.get(tid) else _trip_meta(tid))
         fin_state, fin_at = _finalised_state(fin_map.get(tid), r["completed_at"])
         out.append({
             "trip_id": tid,

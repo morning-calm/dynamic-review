@@ -6,7 +6,7 @@ loop, and Whisper is additionally serialised behind WHISPER_LOCK inside sessions
 
 from __future__ import annotations
 
-from fastapi import APIRouter, UploadFile, File, Form, Depends
+from fastapi import APIRouter, UploadFile, File, Form, Depends, Request
 from fastapi.concurrency import run_in_threadpool
 
 import json
@@ -400,6 +400,17 @@ def post_request_changes(sid: str, body: RequestChanges,
 @router.get("/review-queue")
 def get_review_queue(admin=Depends(auth.require_admin)):
     return sessions.review_queue()
+
+
+@router.get("/review-queue/count")
+def get_review_queue_count(request: Request):
+    """Nav-badge count of submitted sessions awaiting the admin. {open:0} for
+    reviewers (like /api/final/count) so the poll never 403-noises their console."""
+    user = auth.require_user(request)
+    if not user.is_admin:
+        return {"open": 0}
+    row = db.query_one("SELECT COUNT(*) AS n FROM sessions WHERE status='submitted'")
+    return {"open": row["n"] if row else 0}
 
 
 # --- Completed queue ---

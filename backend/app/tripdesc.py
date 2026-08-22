@@ -88,16 +88,19 @@ def _tripgroup_index(force: bool = False) -> tuple[dict, dict]:
                 ["trips", "descriptionHome", "descriptionTarget",
                  "tripCategories"]).stream():
             d = snap.to_dict() or {}
-            docs[snap.id] = {
-                "descriptionHome": d.get("descriptionHome") or "",
-                "descriptionTarget": d.get("descriptionTarget") or "",
-                "tripCategories": d.get("tripCategories") or [],
-            }
+            ordered: list[str] = []
             for entry in (d.get("trips") or []):
                 tid = entry.get("tripId") if isinstance(entry, dict) else (
                     entry if isinstance(entry, str) else None)
                 if tid:
+                    ordered.append(tid)
                     by_trip.setdefault(tid, snap.id)
+            docs[snap.id] = {
+                "descriptionHome": d.get("descriptionHome") or "",
+                "descriptionTarget": d.get("descriptionTarget") or "",
+                "tripCategories": d.get("tripCategories") or [],
+                "trips": ordered,   # staging rung order (Publisher Releases view)
+            }
         _tg_index["by_trip"] = by_trip
         _tg_index["docs"] = docs
         _tg_index["at"] = time.time()
@@ -123,7 +126,8 @@ def _triplocations_index(force: bool = False) -> dict[str, list[tuple[str, str]]
             from .staging import db as fb_db
             fs = fb_db()
             by_tg: dict[str, list[tuple[str, str]]] = {}
-            for snap in fs.collection("TripLocations").stream():
+            for snap in fs.collection("TripLocations").select(
+                    ["locationName", "locationCountry", "trips"]).stream():
                 d = snap.to_dict() or {}
                 loc = (d.get("locationName") or snap.id,
                        d.get("locationCountry") or "")

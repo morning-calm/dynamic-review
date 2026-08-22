@@ -233,6 +233,13 @@ const AudioRow = ({ label, src }: { label: string; src: string | null }) =>
 const AudioReview = ({ field, sid, onFieldUpdate }: AudioReviewProps) => {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
+  // Latest rendered field, for the async coverage-POST responses below. They must
+  // NEVER spread the closure `field`: a /played response that lands AFTER a
+  // regenerate resolves would overwrite the parent state with the pre-regen field
+  // and make the fresh candidate VANISH from the UI (the reviewer then regenerates
+  // again — double ElevenLabs spend; seen live on A._A. Milne, 2026-08-22).
+  const latestField = useRef(field);
+  latestField.current = field;
   const workingEl = useRef<HTMLAudioElement | null>(null);
   const coveredRanges = useRef<Range[]>(mergeRanges(field.played_coverage as Range[]));
   const lastTime = useRef(0);
@@ -270,7 +277,7 @@ const AudioReview = ({ field, sid, onFieldUpdate }: AudioReviewProps) => {
           origRetries.current = 0;
           origRanges.current = res.played_coverage as Range[];
           setOrigCoverage(res.played_coverage as Range[]);
-          onFieldUpdate({ ...field, can_mark_done: res.can_mark_done });
+          onFieldUpdate({ ...latestField.current, can_mark_done: res.can_mark_done });
         })
         .catch((e: unknown) => {
           if (e instanceof ApiError && e.status !== 0) console.warn('played(original) failed', e.detail);
@@ -333,8 +340,13 @@ const AudioReview = ({ field, sid, onFieldUpdate }: AudioReviewProps) => {
           workingRetries.current = 0;
           coveredRanges.current = res.played_coverage as Range[];
           setCoverage(res.played_coverage as Range[]);
-          // Reflect server-merged coverage + the authoritative can_mark_done flag.
-          onFieldUpdate({ ...field, played_coverage: res.played_coverage, can_mark_done: res.can_mark_done });
+          // Reflect server-merged coverage + the authoritative can_mark_done flag —
+          // merged into the LATEST field, never the closure snapshot (see latestField).
+          onFieldUpdate({
+            ...latestField.current,
+            played_coverage: res.played_coverage,
+            can_mark_done: res.can_mark_done,
+          });
         })
         .catch((e: unknown) => {
           if (e instanceof ApiError && e.status !== 0) console.warn('played POST failed', e.detail);

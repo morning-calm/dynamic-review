@@ -1,0 +1,1077 @@
+{
+  "generated_at": "2026-08-21T22:31:44+01:00",
+  "source": "s3:360_Skyboxes/ (ok) + D:\\Projects\\dynamic-languages\\Assets\\_Textures\\Skyboxes",
+  "count": 214,
+  "skyboxes": [
+    {
+      "id": "38c boat river Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "40 journey Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "40 journey2 Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "40 journey3 Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "48 Dam Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "50 rice terraces Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "55 kirishima Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "55 kiroshima 2 Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Ainsa_Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Aix en Provence Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Alhambra-I_Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Alhambra-II_Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Alps Scenic Road Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Alps Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Altamira-Cave_Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Anan Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Andorra_Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Augsburg Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Aviemore Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Awaji Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Azumino Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Barcelona-I_Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Barcelona-II_Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Barcelona-III_Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Barcelona-IV_Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Barga Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Bath Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Beppu Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Bergues Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Biarritz Skybox Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Bilbao",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Bilbao Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Blesle Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Bonn Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Bridges & Island Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Briones Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Bunny Island Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Bus Stops Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Bussana Vecchia Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Cadiz_Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Cairngorms Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Cambridgeshire Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Cassis Skybox",
+      "on_s3": true,
+      "folder": "France"
+    },
+    {
+      "id": "Castellina Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Cinque Terre Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Colmar Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Cordoba_Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Cornwall Skybox",
+      "on_s3": true,
+      "folder": "UK"
+    },
+    {
+      "id": "Crete senesi Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Default_Skybox",
+      "on_s3": false,
+      "folder": "Other"
+    },
+    {
+      "id": "Devon Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Dinkelsbühl Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Dolceagua Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Dunkirk Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "E Sussex Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Edinburgh Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Epernay Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Fiesole Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Florence Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Frankfurt Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Freiburg Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Fuji Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Fukuoka Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Gerona Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Gerona_Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Glasto Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Glencoe Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Gollinger waterfall Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Gorges du tarn Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Gravelines Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Gujo Hachiman Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Hadrians Wall Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Hallstatt Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Harham Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Heidelberg Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Hida no Sato Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Hida Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Hida2 Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Himeji Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Hiroshima Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Inverness Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Ironbridge Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "JapanClassRoom",
+      "on_s3": false,
+      "folder": "Japan"
+    },
+    {
+      "id": "JapanTripsSkybox",
+      "on_s3": false,
+      "folder": "Japan"
+    },
+    {
+      "id": "Jarez_Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Jedburgh Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Kagawa Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Kamakura Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Karlsruhe Skybox",
+      "on_s3": true,
+      "folder": "Germany"
+    },
+    {
+      "id": "Kent Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Kintaikyo bridge Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Kitakyushu Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Kobe Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Koblenz Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Kochi Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Kofu Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Kufstein Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Kumamoto Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Kurashiki Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Kyoto Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Köln Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Lake Biwa Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Lake District Skybox",
+      "on_s3": true,
+      "folder": "UK"
+    },
+    {
+      "id": "Lake District2 Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Landsberg am Lech Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Laon Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Lichtenstein Castle Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Liechtenstein Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Lincoln Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Liverpool Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Loch Cluanie Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Loch Duich Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Loch Ness Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "London Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Los-Picos-Europa_Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Los-Pirineos_Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Los_Escobazos_Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Lucca Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Lugo_Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Madrid Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Manchester Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Marseille Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Matsumoto Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Matsuyama Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Matsuyama2 Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Melrose Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Memmingen Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Merida",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Miyajima Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Miyazaki 2 Skybox",
+      "on_s3": true,
+      "folder": "Japan"
+    },
+    {
+      "id": "Miyazaki 3 Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Miyazaki Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Monaco Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Montalcino Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Montserrat Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Mount Aso Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Mount Takao Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Mount Tsugi Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Munich Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Naegi Castle Ruins Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Nagasaki Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Nagoya Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Nakasendo Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Nara Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Narita Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Naruto Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Neuschwanstein Castle Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Nice Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Nördlingen Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Oberammergau Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Okayama Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Onomichi Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Osaka Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Peniscola Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Pisa Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Pitlochry Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Postalm Road Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Rapallo Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Reims Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Rhine valley 1 Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Rhine valley 2 Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Rothenburg ob der Tauber Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Sakurajima Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Salamanca",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Salzburg Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "San pelligrino Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "San Seb Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "San Sebastian",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Sanguesa_Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Sanremo Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Santiago de Compostela",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Scarecrow Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Segovia_Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Sekigahara Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Seto Bridge Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Seville-Feria-Festival_Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Shirakawago Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Shodo Island Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Siena Skybox",
+      "on_s3": true,
+      "folder": "Italy"
+    },
+    {
+      "id": "Skybox Genova",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Skye Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Sound of Music Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Spain_Theme_Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Spanish Lessons Skybox 50",
+      "on_s3": false,
+      "folder": "Spain"
+    },
+    {
+      "id": "Spanish Trips Skybox 50",
+      "on_s3": false,
+      "folder": "Spain"
+    },
+    {
+      "id": "St Albans Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Stone Henge Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Stratford Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Suspension Bridges Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Takachiho Gorge Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Takamatsu Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Takayama Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Takehara Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Tenerife",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "test2",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Tokyo Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Toledo Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Toledo_Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Tsukechi gorge Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Uji Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Ulm Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Valencia Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Valencia-Arts-and-Sciences_Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Var Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Vichy Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Vine Bridge Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Vitoria-Gasteiz_Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Volterra Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Wales Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Würzburg Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Yanagawa Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Yokohama Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "York Skybox",
+      "on_s3": true,
+      "folder": ""
+    },
+    {
+      "id": "Zaragoza Skybox",
+      "on_s3": true,
+      "folder": ""
+    }
+  ]
+}

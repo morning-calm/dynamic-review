@@ -101,6 +101,19 @@ def exists(base: str, filename: str) -> bool:
     return Path(filename).name in _listing(base)
 
 
+def last_modified(base: str, filename: str) -> float | None:
+    """Epoch mtime of the R2 copy (per-file HEAD), or None when absent/unreachable.
+    Used so a freshly REPLACED overlay wins over a stale local tree file."""
+    s3 = _r2()
+    if s3 is None:
+        return None
+    try:
+        head = s3.head_object(Bucket=config.THUMB_BUCKET, Key=_key(base, filename))
+        return head["LastModified"].timestamp()
+    except Exception:  # noqa: BLE001 — 404 or network: caller serves local
+        return None
+
+
 def ensure_uploaded(base: str, filename: str, local_path: "str | Path") -> bool:
     """Upload the local image to R2 once (idempotent). No-op when already present.
     Best-effort — returns False and logs on any error, never raises."""

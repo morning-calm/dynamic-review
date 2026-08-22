@@ -14,6 +14,10 @@ import StagingSearchPage from './pages/StagingSearchPage';
 import StructureEditorPage from './pages/StructureEditorPage';
 import TripDescListPage from './pages/TripDescListPage';
 import TripDescPage from './pages/TripDescPage';
+import FinalCheckListPage from './pages/FinalCheckListPage';
+import FinalCheckPage from './pages/FinalCheckPage';
+import PublisherPage from './pages/PublisherPage';
+import ReleaseWizardPage from './pages/ReleaseWizardPage';
 
 const App = () => (
   <BrowserRouter>
@@ -34,6 +38,13 @@ const App = () => (
               <Route path="/queue" element={<ReviewQueuePage />} />
               <Route path="/staging" element={<StagingSearchPage />} />
               <Route path="/structure/:tripId" element={<StructureEditorPage />} />
+              <Route path="/final-check" element={<FinalCheckListPage />} />
+              <Route path="/final-check/:tripId" element={<FinalCheckPage />} />
+              <Route path="/publisher" element={<PublisherPage />} />
+              <Route path="/publisher/release/:tripId" element={<ReleaseWizardPage />} />
+              <Route path="/publisher/release-family/:tgId" element={<ReleaseWizardPage />} />
+              <Route path="/publisher/release-location/:locName" element={<ReleaseWizardPage />} />
+              <Route path="/publisher/release-batch/:batchId" element={<ReleaseWizardPage />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

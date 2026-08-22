@@ -516,7 +516,9 @@ Scripts note via GitHub Desktop.
 - [x] Block 5 BUILT 2026-07-08 (feature/blocks-3-5 + Scripts publish_inbox.py be823f2) — verified dry-run-only end-to-end; real publishes remain human-gated (--apply --i-am-sure)
 - [ ] request_changes allows status='approving' (pre-existing, flagged by red-team 2026-07-08): same clobber shape as the fixed resolve_recall race — BUT it doubles as the only unstick path if an approve crashes mid-flight (session stranded in 'approving'). Fix needs design, not a blanket 409: e.g. allow from 'approving' only when updated_at is older than ~5 min (a live approve finishes in seconds), else 409 approve_in_progress.
 
-- **2026-08-21 — post-approval admin spec awaiting approval.**
+- **[DONE 2026-08-21] post-approval admin spec awaiting approval.** → approved same
+  day (v2, all 5 decisions resolved); Phase 1 built — see the later 2026-08-21 entry.
+  Original:
   `docs/post-approval-admin-spec.md`: Final-check UI (7 checks) + workstation
   Publisher console. Dave to review in a higher-effort session; 5 decisions open
   (§6: Credits doc shape, capped Azure key, prod pin write, check seeding source,
@@ -526,3 +528,53 @@ Scripts note via GitHub Desktop.
   include-non-mentioning variant); FE `usedCats` doesn't refresh within a session
   after adding a brand-new category; `_mention_snippet` offsets computed on
   lower()ed text (cosmetic off-by-a-char on exotic Unicode). All acceptable as-is.
+
+- **2026-08-21 (later) — post-approval spec APPROVED (v2), Phase 1 BUILT.**
+  All 5 §6 decisions resolved (per-country `Credits_<CountryName>` docs; capped Azure
+  key = dave creates; pin = staging via UI then prod at publish; per-TRIP work list
+  from lane-10/10b/11 cards with shared family/location checks; deterministic
+  category search only). ALL SEVEN CHECKS + the Publisher console BUILT same
+  session (phases 1, 6a, 2, 3, 4, 5): final_checks + /api/final + /final-check
+  pages + export final-lane support + snapshot trip_group; publish_trips_cli.py
+  (incl. --credits) + Publisher console + publisher.cmd; TripLocation editor +
+  skybox manifest + map-pin placer; static-image timing editor + overlay replace
+  (stage10 replace = canonical country-folder distribution) + append-only Credits
+  panel (the app's EXISTING single CustomizableMenus/Credits doc — per-country
+  docs idea superseded); keyword check (library-app speech engine ported, 57
+  parity vectors green, backend Azure tokens); thumbnails (replace-in-place local
+  tree copy). Awaiting dave's LOCAL DEV TEST — runbook
+  `docs/final-check-dev-test.md` (incl. Azure key setup §0b — dave creates F0
+  resource, key into Scripts .env; pin-placer coordinate sanity vs a known pin;
+  Publisher dry-run only). Nothing committed in either repo yet. Remaining:
+  phase 6-rest only (post-publish sequence buttons, ready-to-publish auto-queue +
+  Trello lane moves, remaining local-copy/S3 wrappers).
+- **2026-08-21 — category LLM judgment pass (deferred by decision).** Optional
+  Gate-2-style `claude -p` "does trip X fit category Y?" batch over the
+  enrichment-index candidates (workstation, offline, cached). Dave: deterministic is
+  enough to start.
+
+- **2026-08-21 (third pass) — post-approval workflow FULLY BUILT; awaiting dave's
+  local test round.** Phase 6-rest landed: ready-to-publish (all-green →
+  publish_docs + Trello→11 jobs), trello_move job kind, the Publisher tool rack
+  (post-publish sequence: bump prod version / Trello→12 / Content_DocIDs
+  auto-append / snapshot refresh; wrappers: tripdocs_local, static_pic_4k,
+  upload_thumbnails_r2, stage10b, stage9_finalise re-runs — kind-"tool" bus jobs,
+  background threads). Azure key live (Azure_Key1). Thumbnail local copies land in
+  the relevant country/region folder (folderName-matched). Workstation dev-DB
+  logins ready (admin + dave/dave-final-check). Test runbook:
+  docs/final-check-dev-test.md. After the test round: commit both repos, export
+  with push, laptop deploy (runbook §5). Deferred niceties: laptop-side "publish
+  ready" visibility of job outcomes beyond the pipeline panel; Content_DocIDs
+  append is a minimal auto-line (curated prose stays manual).
+
+- **2026-08-22 — red-fable pass DONE on the post-approval build; ready for dave's
+  test.** 5 correctness fixes verified (publish_credits per-header containment;
+  publish_pin cross-array duplicate guard; pin-marker pivot translates vs Unity
+  prefab pivots; Azure client token TTL 60s vs the 8-min backend cache;
+  adminMicCheck post-await dispose guard) + quality edits; reviewer's NUL-byte
+  slip in LocationEditor repaired. All gates green (backend 217, FE build+tsc,
+  vitest 57, Scripts clean). Test guide = docs/final-check-dev-test.md (login
+  dave/dave-final-check). Deferred (agreed, low): symmetric timing-gap warning;
+  --location publishes the location doc before per-group gating (pre-existing
+  PublishTrips-Select behavior); credits-publish refusal message could name the
+  exact reconcile steps.

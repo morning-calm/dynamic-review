@@ -319,6 +319,77 @@ CREATE TABLE IF NOT EXISTS tripgroup_reviews (
 );
 CREATE INDEX IF NOT EXISTS ix_tgreviews_status ON tripgroup_reviews(status, language);
 
+-- Final-check workflow (docs/post-approval-admin-spec.md §2): per-trip checklist driven
+-- by the manifest's lane-10/10b/11 entries. Each check is stored at the level it is
+-- TRUE at — scope 'group' rows (description/categories/titleKey/thumbnail) are shared
+-- by every sibling trip of the TripGroup, 'location' rows by every group on the
+-- TripLocation, 'trip' rows (static images, keywords) belong to one trip. state is
+-- open|done; note is the admin's free-text remark on the tick.
+CREATE TABLE IF NOT EXISTS final_checks (
+    scope     TEXT NOT NULL,             -- trip | group | location
+    scope_id  TEXT NOT NULL,             -- trip_id | tg_id | location name
+    check_key TEXT NOT NULL,
+    state     TEXT NOT NULL DEFAULT 'open',
+    by        TEXT NOT NULL DEFAULT '',
+    at        REAL,
+    note      TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (scope, scope_id, check_key)
+);
+
+-- Manual additions to the final-check work list (the "start final check" escape hatch
+-- for a completed trip sitting on no lane-10+ card). Trello stays the driver; these
+-- rows only ADD to the manifest-derived list, never remove.
+CREATE TABLE IF NOT EXISTS final_check_extra (
+    trip_id  TEXT PRIMARY KEY,
+    added_by TEXT NOT NULL DEFAULT '',
+    added_at REAL NOT NULL
+);
+
+-- Releases-board probe cache: the per-rung staging-Firestore facts the Publisher's
+-- readiness columns need (final_checks._doc_probe — keyword scenes, static-image count,
+-- per-scene questionKeys). Same contract as trip_list_cache: the board serves from this
+-- table only; missing rungs fetch synchronously once, stale rows serve as-is and are
+-- re-probed by a background single-flight refresher. Rows are upserted, never trusted
+-- to be fresh — fetched_at is the staleness clock (final_checks._PROBE_TTL_S).
+CREATE TABLE IF NOT EXISTS release_probe_cache (
+    trip_id       TEXT PRIMARY KEY,
+    has_keyword   INTEGER NOT NULL DEFAULT 0,
+    static_scenes INTEGER NOT NULL DEFAULT 0,
+    keyword_keys  TEXT NOT NULL DEFAULT '{}',   -- {scene_index: questionKey} JSON
+    fetched_at    REAL NOT NULL
+);
+
+-- Release batches: a named set of trips/groups/locations being released together
+-- (the unit social posts, the wizard scope, and the post-publish steps operate on).
+-- Authored from the Publishing Queue multi-select, or seeded from a card on the
+-- Trello "TG Release Schedule" lane (source='trello') — always editable after import,
+-- the app copy is the contract. members_json: [{"kind":"trip|group|location","id":…}].
+CREATE TABLE IF NOT EXISTS release_batches (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    name         TEXT NOT NULL UNIQUE,
+    status       TEXT NOT NULL DEFAULT 'planned',   -- planned | published | archived
+    members_json TEXT NOT NULL DEFAULT '[]',
+    source       TEXT NOT NULL DEFAULT 'manual',    -- manual | trello
+    trello_card  TEXT NOT NULL DEFAULT '',
+    created_by   TEXT NOT NULL DEFAULT '',
+    created_at   REAL NOT NULL,
+    updated_at   REAL NOT NULL
+);
+
+-- Publish ledger: one row per rung actually pushed to production through the app
+-- (stamped when a publish/publish_docs bus job APPLIES), plus the one-time Trello
+-- `published=` backfill (source='trello_backfill'). Drives "Recently published".
+-- Durable by design — the R2 job inbox is capped and explicitly not an archive.
+CREATE TABLE IF NOT EXISTS published_trips (
+    trip_id      TEXT PRIMARY KEY,
+    published_at REAL NOT NULL,
+    published_by TEXT NOT NULL DEFAULT '',
+    batch_id     INTEGER,                           -- release_batches.id | NULL
+    source       TEXT NOT NULL DEFAULT 'publisher', -- publisher | trello_backfill
+    note         TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS ix_published_at ON published_trips(published_at);
+
 -- NOTE: auto_review_findings lives in auto_review_ingest.FINDINGS_DDL (applied below in
 -- init()) — the cron runner scripts/claude_review.py creates it too, and one copy of the
 -- DDL means the API and the runner can never disagree about the table.

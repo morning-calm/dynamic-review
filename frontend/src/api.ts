@@ -158,6 +158,290 @@ export interface TripDescList {
   counts: Record<TripDescStatus, number>;
 }
 
+// --- Final check (admin; docs/post-approval-admin-spec.md §2) ---
+export type FinalCheckKey =
+  | 'desc_reread'
+  | 'categories'
+  | 'title_key'
+  | 'trip_location'
+  | 'static_images'
+  | 'keywords'
+  | 'thumbnail';
+export type FinalCheckScope = 'trip' | 'group' | 'location';
+export type FinalCheckState = 'open' | 'done';
+
+export interface FinalCheck {
+  key: FinalCheckKey;
+  scope: FinalCheckScope;
+  scope_id: string;
+  label: string;
+  /** false = no in-app tooling yet — tick by hand after doing the work outside. */
+  tooling: boolean;
+  state: FinalCheckState;
+  by: string;
+  at: number | null;
+  note: string;
+}
+
+export interface FinalCheckRow {
+  trip_id: string;
+  /** Changed clips await a delta re-review — final check on hold. */
+  pending_delta: boolean;
+  lane: string; // '10' | '10b' | '11' | 'manual'
+  family: string;
+  language: string;
+  tg_id: string | null;
+  tg_resolved: boolean;
+  card_url: string;
+  added_by: string;
+  done: number;
+  total: number;
+  checks: Record<FinalCheckKey, FinalCheckState>;
+}
+
+export type ReleaseRungStatus =
+  | 'live'
+  | 're_review'
+  | 'ready'
+  | 'final_check'
+  | 'reviewed'
+  | 'in_review'
+  | 'not_started';
+
+export interface ReleaseRung {
+  trip_id: string;
+  status: ReleaseRungStatus;
+  /** Changed clips await a delta re-review (independent of status: a LIVE rung
+   * keeps its LIVE badge but gets a hold marker). */
+  pending_delta: boolean;
+  /** Stage-9 finalise state from the bus ledger (subtitles/ogg/S3/re-encode/
+   * enrich all covered): 'shipped' | 'restale' (re-approved since) | null. */
+  finalised: 'shipped' | 'restale' | null;
+  /** Recall-quiz readiness per the eligibility rule (leveled rung + ≥1 keyword
+   * scene + EN rungs only for UK families). */
+  recall_quiz: 'present' | 'missing' | 'na';
+  /** 4K webapp stills: on the static4k ledger / has static scenes but no
+   * record / no static scenes. */
+  four_k: 'built' | 'missing' | 'na';
+  /** A12→EN keyword-copy state (TL families' native _EN rung only). */
+  keyword_copy: 'copied' | 'missing' | 'na';
+  checks_done: number;
+  checks_total: number;
+  review_lane: string;
+  completed_method: string;
+  card_url: string;
+}
+
+/** A recent bus job targeting a family (its tg_id, any rung cid, or one of its
+ * TripLocation doc ids) — the inline chips on the group card. */
+export interface ReleaseGroupJob {
+  id: string;
+  kind: BusJobKind;
+  trip_id: string;
+  status: 'queued' | 'dry_run' | 'done' | 'failed';
+  note: string;
+  requested_at: number;
+}
+
+export interface ReleaseGroup {
+  tg_id: string;
+  in_prod: boolean;
+  live_count: number;
+  ready_count: number;
+  /** `id` is the TripLocation DOC ID (the publish_pin job target — it diverges
+   * from the display name on ~1 in 6 docs, e.g. Ainsa → "Aragon"). */
+  locations: { id: string; name: string; country: string }[];
+  jobs: ReleaseGroupJob[];
+  rungs: ReleaseRung[];
+}
+
+/** A release batch — the named set of trips/groups/locations shipping together
+ * (authored in the Publishing Queue, optionally seeded from the Trello
+ * "TG Release Schedule" lane). */
+export type ReleaseBatchStatus = 'planned' | 'published' | 'archived';
+
+export interface ReleaseBatchMember {
+  kind: 'trip' | 'group' | 'location';
+  id: string;
+}
+
+export interface ReleaseBatch {
+  id: number;
+  name: string;
+  status: ReleaseBatchStatus;
+  source: 'manual' | 'trello';
+  trello_card: string;
+  members: ReleaseBatchMember[];
+  created_by: string;
+  created_at: number;
+  updated_at: number;
+  /** Members expanded to concrete ids (the FE groups the board by these). */
+  resolved: { trip_ids: string[]; group_ids: string[]; location_ids: string[] };
+  /** Launch-post readiness probed from the Comms tree; 'unknown' off the
+   * workstation (never a false 'missing'). */
+  social: {
+    state: 'ready' | 'partial' | 'missing' | 'unknown';
+    meta: string | null;
+    linkedin: string | null;
+    news: boolean | null;
+  };
+}
+
+export interface ReleaseBatchList {
+  batches: ReleaseBatch[];
+  social_probe: 'local' | 'unavailable';
+}
+
+export interface TrelloBatchImport {
+  imported: string[];
+  updated: string[];
+  unmatched: { card: string; token: string }[];
+}
+
+export interface PublishedTrip {
+  trip_id: string;
+  title: string;
+  published_at: number;
+  published_by: string;
+  batch_id: number | null;
+  source: string;
+  note: string;
+}
+
+export interface PublishedList {
+  months: number;
+  trips: PublishedTrip[];
+}
+
+export interface ReleaseBoard {
+  groups: ReleaseGroup[];
+  prod_snapshot_at: string;
+  prod_snapshot_has_rungs: boolean;
+}
+
+export interface CreditProposal {
+  filename: string;
+  status: 'proposed' | 'already_added' | 'needs_hand_edit' | 'no_attribution';
+  entry: string;
+  detail: string;
+}
+
+export interface CreditProposals {
+  trip_id: string;
+  header: string;
+  proposals: CreditProposal[];
+}
+
+export interface ReleaseGroupDiff {
+  tg_id: string;
+  snapshot_trip: string | null;
+  snapshot_at: number | null;
+  prod_missing: boolean | null;
+  changed: { field: string; staging: string; prod: string }[];
+  hint: string;
+}
+
+export interface FinalCheckList {
+  items: FinalCheckRow[];
+  /** Completed trips on NO lane-10+ card — candidates for a manual start. */
+  audit: { trip_id: string; method: string; completed_at: number; card_lane: string }[];
+  /** false until the Trello export has run with final-lane support. */
+  manifest_has_final: boolean;
+}
+
+export interface FinalCheckDetail {
+  trip_id: string;
+  tg_id: string | null;
+  tg_resolved: boolean;
+  tg_exists: boolean;
+  pending_delta: boolean;
+  language: string;
+  locations: { name: string; country: string }[];
+  checks: FinalCheck[];
+  description: { home: string; target: string; tripdesc_status: TripDescStatus | null };
+  categories: string[];
+  title_key: {
+    staging: string;
+    prod_group: string | null;
+    prod_trip: string | null;
+    snapshot_at: number | null;
+  };
+}
+
+/** A staging map-pin / extra-button entry (CustomizableMenus arrays). */
+export interface MenuPin {
+  LocationId: string;
+  xPos: number;
+  yPos: number;
+  [k: string]: unknown;
+}
+
+export interface FinalLocation {
+  id: string;
+  contentId: string;
+  locationName: string;
+  locationTitleKey: string;
+  locationCountry: string;
+  skyboxTextureId: string;
+  trips: string[]; // TripGroup ids, tile order
+  groups: { tg_id: string; exists: boolean; is_this_family: boolean }[];
+  pin: { menu_id: string; field: 'Pins' | 'ExtraMapButtons'; x: number; y: number } | null;
+}
+
+export interface FinalLocationModel {
+  trip_id: string;
+  tg_id: string;
+  locations: FinalLocation[];
+  menus: { id: string; map_name: string; pins: MenuPin[]; extra_buttons: MenuPin[] }[];
+  skyboxes: {
+    used: { id: string; count: number }[];
+    manifest: string[];
+    manifest_generated_at: string | null;
+  };
+}
+
+export interface FinalStaticImages {
+  trip_id: string;
+  scenes: {
+    scene_index: number;
+    narration: string;
+    audio_url: string;
+    overlays: { filename: string; appear: number | null; disappear: number | null; url: string }[];
+  }[];
+  rules: { min_appear: number; min_display: number; max_display: number; gap: number };
+}
+
+export interface FinalKeywords {
+  trip_id: string;
+  language: string;
+  scenes: {
+    scene_index: number;
+    question: string;
+    question_en: string;
+    options: string[];
+    correct: string;
+    additional: string[];
+    is_keyword: boolean;
+    question_audio: string;
+    answer_audio: string;
+  }[];
+}
+
+export interface CreditsDoc {
+  exists: boolean;
+  credits: { header: string; entries: string[] }[];
+}
+
+/** CategoryCheck + the ContentEnrichment country-mates arm. */
+export interface FinalCategoryCheck extends CategoryCheck {
+  enrichment_matches: {
+    doc_id: string;
+    tg_id: string | null;
+    countries: string[];
+    hits: { field: string; value: string }[];
+  }[];
+}
+
 /** `approved` = completed via the normal submit→approve flow (has a session);
  * `manual` = admin bypass for work already done in the old system (no session). */
 export type CompletionMethod = 'approved' | 'manual';
@@ -353,9 +637,22 @@ export interface StructureOpResult {
 
 /** A job on the R2 review bus. Queued by any admin; executed only on the workstation
  * (publisher mode / publish_inbox.py) where the production key lives. */
+export type BusJobKind =
+  | 'publish'
+  | 'publish_docs'
+  | 'publish_pin'
+  | 'add_to_location'
+  | 'thumbnail_local_copy'
+  | 'replace_overlay'
+  | 'publish_credits'
+  | 'trello_move'
+  | 'tool';
+
 export interface BusJob {
   id: string;
-  kind: 'publish';
+  /** trip_id carries the kind's TARGET id: trip cid (publish/publish_docs),
+   * TripGroup id (add_to_location), TripLocation id (publish_pin). */
+  kind: BusJobKind;
   trip_id: string;
   note: string;
   requested_by: string;
@@ -1089,6 +1386,9 @@ export const api = {
   /** Admin only: sessions currently awaiting approval. */
   reviewQueue: (): Promise<ReviewQueueItem[]> => getJson('/api/review-queue'),
 
+  /** Nav-badge count of submitted sessions awaiting the admin ({open:0} for reviewers). */
+  reviewQueueCount: (): Promise<{ open: number }> => getJson('/api/review-queue/count'),
+
   /** Both roles: trips that are done (approved or manually completed). Reviewers
    * are filtered to their languages server-side; sorted newest first. */
   completed: (): Promise<CompletedItem[]> => getJson('/api/completed'),
@@ -1207,6 +1507,18 @@ export const api = {
   runPipelineJob: (jobId: string, apply = false, iAmSure = false): Promise<BusJob> =>
     postJson('/api/admin/pipeline/run', { job_id: jobId, apply, i_am_sure: iAmSure }),
 
+  /** Admin only: queue any bus job kind (the trip_id field carries the kind's target id). */
+  queueBusJob: (kind: BusJobKind, targetId: string, note = ''): Promise<BusJob> =>
+    postJson('/api/admin/pipeline/queue', { trip_id: targetId, kind, note }),
+
+  /** Admin only: is THIS instance the workstation publisher (nav gating). */
+  publisherMode: (): Promise<{ publisher_mode: boolean }> =>
+    getJson('/api/admin/publisher-mode'),
+
+  /** Publisher mode only: run the read-only audio-gate sweep (long — S3 per rung). */
+  gateReport: (): Promise<{ ok: boolean; log: string }> =>
+    postJson('/api/admin/pipeline/gate-report'),
+
   /** Admin only: staging vs live drift for a trip (vs the bus prod snapshot). */
   drift: (tripId: string): Promise<DriftResponse> =>
     getJson(`/api/admin/drift/${encodeURIComponent(tripId)}`),
@@ -1285,6 +1597,194 @@ export const api = {
     getJson(
       `/api/tripdesc/${encodeURIComponent(tgId)}/category-check?category=${encodeURIComponent(category)}`,
     ),
+
+  // --- Final check (admin only; docs/post-approval-admin-spec.md §2) ---
+  finalCount: (): Promise<{ open: number }> => getJson('/api/final/count'),
+  listFinalChecks: (): Promise<FinalCheckList> => getJson('/api/final'),
+  listReleases: (): Promise<ReleaseBoard> => getJson('/api/final/releases'),
+  releaseGroupDiff: (tgId: string): Promise<ReleaseGroupDiff> =>
+    getJson(`/api/final/releases/${encodeURIComponent(tgId)}/diff`),
+
+  /** Release batches + their resolved membership and social-post readiness. */
+  listReleaseBatches: (): Promise<ReleaseBatchList> => getJson('/api/final/batches'),
+
+  /** Create (omit `id`) or update a release batch. A blank `id` with an existing
+   * name updates that batch server-side. */
+  saveReleaseBatch: (body: {
+    name: string;
+    members: ReleaseBatchMember[];
+    id?: number;
+    status?: ReleaseBatchStatus;
+  }): Promise<ReleaseBatch> => postJson('/api/final/batches', body),
+
+  /** Seed/update batches from the Trello "TG Release Schedule" lane. */
+  importReleaseBatches: (): Promise<TrelloBatchImport> =>
+    postJson('/api/final/batches/import-trello'),
+
+  deleteReleaseBatch: (batchId: number): Promise<{ deleted: number }> =>
+    requestJson<{ deleted: number }>(`/api/final/batches/${batchId}`, {
+      method: 'DELETE',
+      headers: jsonHeaders(),
+    }),
+
+  /** The durable published_trips ledger — "Recently published" on the Publisher. */
+  recentlyPublished: (months = 12): Promise<PublishedList> =>
+    getJson(`/api/final/published?months=${months}`),
+  creditProposals: (tripId: string): Promise<CreditProposals> =>
+    getJson(`/api/final/${encodeURIComponent(tripId)}/credit-proposals`),
+  /** Publisher mode only: write a diagnostic bundle for a failed job and open a
+   * new terminal running claude (opus, high effort) pre-briefed on it. */
+  investigateJob: (jobId: string): Promise<{ bundle: string; launched: boolean }> =>
+    postJson('/api/admin/pipeline/investigate', { job_id: jobId }),
+  getFinalCheck: (tripId: string): Promise<FinalCheckDetail> =>
+    getJson(`/api/final/${encodeURIComponent(tripId)}`),
+  /** Manual "start final check" for a completed trip on no lane-10+ card. */
+  startFinalCheck: (tripId: string): Promise<{ trip_id: string; started: boolean }> =>
+    postJson('/api/final/start', { trip_id: tripId }),
+  setFinalCheck: (
+    tripId: string,
+    key: FinalCheckKey,
+    state: FinalCheckState,
+    note = '',
+  ): Promise<FinalCheck> =>
+    postJson(`/api/final/${encodeURIComponent(tripId)}/check/${key}`, { state, note }),
+  /** Targeted staging write: the TripGroup's contentTitleKey. */
+  saveFinalTitleKey: (
+    tripId: string,
+    value: string,
+  ): Promise<{ tg_id: string; contentTitleKey: string }> =>
+    putJson(`/api/final/${encodeURIComponent(tripId)}/title-key`, { value }),
+  /** Targeted staging write: the TripGroup's tripCategories. */
+  saveFinalCategories: (
+    tripId: string,
+    categories: string[],
+  ): Promise<{ tg_id: string; categories: string[] }> =>
+    putJson(`/api/final/${encodeURIComponent(tripId)}/categories`, { categories }),
+  /** Sibling-description check + ContentEnrichment country-mates for a category. */
+  finalCategoryCheck: (tripId: string, category: string): Promise<FinalCategoryCheck> =>
+    getJson(
+      `/api/final/${encodeURIComponent(tripId)}/category-check?category=${encodeURIComponent(category)}`,
+    ),
+  /** Check-1 escape hatch: (re)open the family's tripdesc item; returns its tg_id. */
+  reopenFinalDescription: (tripId: string): Promise<{ tg_id: string }> =>
+    postJson(`/api/final/${encodeURIComponent(tripId)}/reopen-description`),
+  /** Check-4 read model: TripLocation docs, menus/pins, skybox vocabulary. */
+  getFinalLocation: (tripId: string): Promise<FinalLocationModel> =>
+    getJson(`/api/final/${encodeURIComponent(tripId)}/location`),
+  /** Targeted staging TripLocation update (title key / skybox / trips REORDER). */
+  saveFinalLocation: (
+    tripId: string,
+    body: { loc_id: string; locationTitleKey?: string; skyboxTextureId?: string; trips?: string[] },
+  ): Promise<{ loc_id: string; updated: string[] }> =>
+    putJson(`/api/final/${encodeURIComponent(tripId)}/location`, body),
+  /** Check-7: the TripGroup thumbnail (stem + public R2 url + existence check). */
+  getFinalThumbnail: (
+    tripId: string,
+  ): Promise<{ tg_id: string; thumbnailTextureId: string; url: string | null; on_r2: boolean | null }> =>
+    getJson(`/api/final/${encodeURIComponent(tripId)}/thumbnail`),
+  /** Replace the family thumbnail: R2 + staging field + a thumbnail_local_copy bus job. */
+  uploadFinalThumbnail: async (
+    tripId: string,
+    file: File,
+  ): Promise<{
+    tg_id: string;
+    thumbnailTextureId: string;
+    url: string | null;
+    on_r2: boolean | null;
+    local_copy_job: string | null;
+  }> => {
+    const form = new FormData();
+    form.append('file', file);
+    return requestJson(`/api/final/${encodeURIComponent(tripId)}/thumbnail`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: form,
+    });
+  },
+  /** Upsert the STAGING map pin (prod follows at publish via the publish_pin job). */
+  saveFinalPin: (
+    tripId: string,
+    body: { loc_id: string; menu_id: string; x: number; y: number },
+  ): Promise<{ menu_id: string; field: string; loc_id: string; x: number; y: number }> =>
+    putJson(`/api/final/${encodeURIComponent(tripId)}/pin`, body),
+  /** Check-5: scenes with staticImages[] + timing + audio/image urls. */
+  getFinalStaticImages: (tripId: string): Promise<FinalStaticImages> =>
+    getJson(`/api/final/${encodeURIComponent(tripId)}/static-images`),
+  /** Targeted staging write of one overlay's appear/disappear (0.1s floats, stage10 rules as warnings). */
+  setFinalImageTiming: (
+    tripId: string,
+    body: { scene_index: number; filename: string; appear: number; disappear: number },
+  ): Promise<{ scene_index: number; filename: string; appear: number; disappear: number; warnings: string[] }> =>
+    putJson(`/api/final/${encodeURIComponent(tripId)}/static-images/timing`, body),
+  /** Replace an overlay image: R2 review copy now + a replace_overlay bus job for
+   * the canonical distribution (stage10_static_check.py replace on the workstation). */
+  replaceFinalOverlay: async (
+    tripId: string,
+    filename: string,
+    file: File,
+  ): Promise<{ filename: string; r2_key: string; family: string; replace_job: string | null }> => {
+    const form = new FormData();
+    form.append('file', file);
+    return requestJson(
+      `/api/final/${encodeURIComponent(tripId)}/static-images/replace?filename=${encodeURIComponent(filename)}`,
+      { method: 'POST', headers: authHeaders(), body: form },
+    );
+  },
+  /** Undo the last Replace-image of one overlay (one-level revert). */
+  revertFinalOverlay: (
+    tripId: string,
+    filename: string,
+  ): Promise<{ filename: string; mode: string; replace_job: string | null }> =>
+    postJson(
+      `/api/final/${encodeURIComponent(tripId)}/static-images/revert?filename=${encodeURIComponent(filename)}`,
+      {},
+    ),
+  /** The app's single credits button: CustomizableMenus/Credits (format fixed by the VR app). */
+  getFinalCredits: (): Promise<CreditsDoc> => getJson('/api/final/credits'),
+  /** Append one credit entry under a header (add-only; 409 duplicate_credit). */
+  addFinalCredit: (header: string, entry: string): Promise<CreditsDoc> =>
+    postJson('/api/final/credits', { header, entry }),
+  /** Check-6 read model: Q&A/keyword scenes + accepted sets + audio urls. */
+  getFinalKeywords: (tripId: string): Promise<FinalKeywords> =>
+    getJson(`/api/final/${encodeURIComponent(tripId)}/keywords`),
+  /** Add-only additionalAnswerKeys append (collision-checked vs other options). */
+  addFinalAnswerKey: (
+    tripId: string,
+    sceneIndex: number,
+    key: string,
+  ): Promise<{ scene_index: number; additional: string[] }> =>
+    postJson(`/api/final/${encodeURIComponent(tripId)}/answer-keys`, {
+      scene_index: sceneIndex,
+      key,
+    }),
+  /** Remove one additionalAnswerKeys entry (mis-added / test variant). */
+  deleteFinalAnswerKey: (
+    tripId: string,
+    sceneIndex: number,
+    key: string,
+  ): Promise<{ scene_index: number; additional: string[] }> =>
+    postJson(`/api/final/${encodeURIComponent(tripId)}/answer-keys/delete`, {
+      scene_index: sceneIndex,
+      key,
+    }),
+  /** Short-lived Azure Speech token (admin; 503 azure_not_configured until the key lands). */
+  finalSpeechToken: (): Promise<{ token: string; region: string }> =>
+    getJson('/api/final/speech-token'),
+  /** All 7 checks green → queue the release (a publish_docs bus job; the family
+   * Trello card is stamped/moved by the publish apply hook, not queued here). */
+  readyFinalCheck: (
+    tripId: string,
+  ): Promise<{ trip_id: string; publish_job: string; trello_job: string | null }> =>
+    postJson(`/api/final/${encodeURIComponent(tripId)}/ready`),
+  /** Publisher mode only: run a whitelisted Scripts tool; returns the "tool" bus
+   * job it reports into (long tools finish in the background — watch the inbox). */
+  runTool: (body: {
+    tool: string;
+    target?: string;
+    steps?: string;
+    lane?: string;
+    apply?: boolean;
+  }): Promise<BusJob> => postJson('/api/admin/pipeline/tool', body),
 };
 
 /**

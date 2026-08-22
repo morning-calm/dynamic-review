@@ -10,7 +10,10 @@ const UserMenu = () => {
   const { user, logout } = useAuth();
   const [bugBadge, setBugBadge] = useState(0);
   const [descBadge, setDescBadge] = useState(0);
+  const [queueBadge, setQueueBadge] = useState(0);
   const [recallBadge, setRecallBadge] = useState(0);
+  const [finalBadge, setFinalBadge] = useState(0);
+  const [publisherMode, setPublisherMode] = useState(false);
   const [aiBadge, setAiBadge] = useState(0);
   const [aiSessions, setAiSessions] = useState<FindingsInbox['sessions']>([]);
   const [aiOpen, setAiOpen] = useState(false);
@@ -79,17 +82,61 @@ const UserMenu = () => {
     };
   }, [user]);
 
-  // Admin-only: open recall requests → badge on the Review queue link.
+  // Admin-only, once: is this instance the workstation publisher (shows the console link).
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return;
+    let cancelled = false;
+    api
+      .publisherMode()
+      .then((r) => {
+        if (!cancelled) setPublisherMode(r.publisher_mode);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  // Admin-only: trips with open final checks → badge on the Final check link.
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
     let cancelled = false;
     const load = () =>
+      api
+        .finalCount()
+        .then((c) => {
+          if (!cancelled) setFinalBadge(c.open);
+        })
+        .catch(() => {});
+    load();
+    const t = setInterval(load, 60000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [user]);
+
+  // Admin-only: two counts on the Review queue link — submitted sessions awaiting
+  // approval (amber) and open RECALL REQUESTS (rose; a reviewer is blocked waiting
+  // on the admin's grant/decline, so it must be visible from anywhere, dave
+  // 2026-08-22).
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return;
+    let cancelled = false;
+    const load = () => {
+      api
+        .reviewQueueCount()
+        .then((c) => {
+          if (!cancelled) setQueueBadge(c.open);
+        })
+        .catch(() => {});
       api
         .recallCounts()
         .then((c) => {
           if (!cancelled) setRecallBadge(c.open);
         })
         .catch(() => {});
+    };
     load();
     const t = setInterval(load, 60000);
     return () => {
@@ -119,7 +166,10 @@ const UserMenu = () => {
         nativeLabel={nativeLabel}
         bugBadge={bugBadge}
         descBadge={descBadge}
+        queueBadge={queueBadge}
         recallBadge={recallBadge}
+        finalBadge={finalBadge}
+        publisherMode={publisherMode}
         aiBadge={aiBadge}
         aiSessions={aiSessions}
       />
@@ -156,6 +206,54 @@ const UserMenu = () => {
           </>
         )}
       </div>
+      {user.role === 'admin' && (
+        <Link
+          to="/queue"
+          className="relative rounded border border-gray-600 px-2 py-1 text-gray-200 hover:bg-gray-700"
+          title={
+            [
+              queueBadge > 0
+                ? `${queueBadge} submitted trip${queueBadge === 1 ? '' : 's'} awaiting approval`
+                : '',
+              recallBadge > 0
+                ? `${recallBadge} open recall request${recallBadge === 1 ? '' : 's'}`
+                : '',
+            ]
+              .filter(Boolean)
+              .join(' · ') || undefined
+          }
+        >
+          Review queue
+          {queueBadge > 0 && (
+            <span className="ml-1 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-gray-900">
+              {queueBadge}
+            </span>
+          )}
+          {recallBadge > 0 && (
+            <span className="ml-1 rounded-full bg-rose-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+              {recallBadge}
+            </span>
+          )}
+        </Link>
+      )}
+      {(user.role === 'admin' || descBadge > 0) && (
+        <Link
+          to="/descriptions"
+          className="relative rounded border border-gray-600 px-2 py-1 text-gray-200 hover:bg-gray-700"
+          title={
+            user.role === 'admin'
+              ? 'Family trip descriptions — English check & translations'
+              : `${descBadge} trip description${descBadge === 1 ? '' : 's'} waiting for your review`
+          }
+        >
+          Descriptions
+          {descBadge > 0 && (
+            <span className="ml-1 rounded-full bg-teal-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+              {descBadge}
+            </span>
+          )}
+        </Link>
+      )}
       {aiBadge > 0 && aiSessions.length === 1 && (
         <Link
           to={`/review/${aiSessions[0].session_id}`}
@@ -209,34 +307,27 @@ const UserMenu = () => {
           )}
         </div>
       )}
-      <Link
-        to="/bugs"
-        className="relative rounded border border-gray-600 px-2 py-1 text-gray-200 hover:bg-gray-700"
-        title={user.role === 'admin' ? 'Open bug reports' : 'Your bug reports & replies'}
-      >
-        Bug reports
-        {bugBadge > 0 && (
-          <span className="ml-1 rounded-full bg-rose-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-            {bugBadge}
-          </span>
-        )}
-      </Link>
-      {(user.role === 'admin' || descBadge > 0) && (
+      {user.role === 'admin' && (
         <Link
-          to="/descriptions"
+          to="/final-check"
           className="relative rounded border border-gray-600 px-2 py-1 text-gray-200 hover:bg-gray-700"
-          title={
-            user.role === 'admin'
-              ? 'Family trip descriptions — English check & translations'
-              : `${descBadge} trip description${descBadge === 1 ? '' : 's'} waiting for your review`
-          }
+          title="Release preparation checks before publish (lanes 10–11)"
         >
-          Descriptions
-          {descBadge > 0 && (
-            <span className="ml-1 rounded-full bg-teal-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-              {descBadge}
+          Release prep
+          {finalBadge > 0 && (
+            <span className="ml-1 rounded-full bg-indigo-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+              {finalBadge}
             </span>
           )}
+        </Link>
+      )}
+      {user.role === 'admin' && publisherMode && (
+        <Link
+          to="/publisher"
+          className="rounded border border-rose-800 bg-rose-900/20 px-2 py-1 text-rose-200 hover:bg-rose-900/40"
+          title="Workstation publish console — staging → PRODUCTION"
+        >
+          Publisher
         </Link>
       )}
       <Link to="/completed" className="rounded border border-gray-600 px-2 py-1 text-gray-200 hover:bg-gray-700">
@@ -251,20 +342,18 @@ const UserMenu = () => {
           All trips
         </Link>
       )}
-      {user.role === 'admin' && (
-        <Link
-          to="/queue"
-          className="relative rounded border border-gray-600 px-2 py-1 text-gray-200 hover:bg-gray-700"
-          title={recallBadge > 0 ? `${recallBadge} recall request${recallBadge === 1 ? '' : 's'} waiting` : undefined}
-        >
-          Review queue
-          {recallBadge > 0 && (
-            <span className="ml-1 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-gray-900">
-              {recallBadge}
-            </span>
-          )}
-        </Link>
-      )}
+      <Link
+        to="/bugs"
+        className="relative rounded border border-gray-600 px-2 py-1 text-gray-200 hover:bg-gray-700"
+        title={user.role === 'admin' ? 'Open bug reports' : 'Your bug reports & replies'}
+      >
+        Bug reports
+        {bugBadge > 0 && (
+          <span className="ml-1 rounded-full bg-rose-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+            {bugBadge}
+          </span>
+        )}
+      </Link>
       <span
         className="hidden text-gray-400 sm:inline"
         title={user.role === 'admin' ? 'all languages' : user.languages.join(', ')}
@@ -287,7 +376,10 @@ const MobileMenu = ({
   nativeLabel,
   bugBadge,
   descBadge,
+  queueBadge,
   recallBadge,
+  finalBadge,
+  publisherMode,
   aiBadge,
   aiSessions,
 }: {
@@ -296,7 +388,10 @@ const MobileMenu = ({
   nativeLabel: string | null;
   bugBadge: number;
   descBadge: number;
+  queueBadge: number;
   recallBadge: number;
+  finalBadge: number;
+  publisherMode: boolean;
   aiBadge: number;
   aiSessions: FindingsInbox['sessions'];
 }) => {
@@ -308,8 +403,10 @@ const MobileMenu = ({
     setOpen(false);
     setAiListOpen(false);
   };
-  // Unseen-activity dot on the closed ⋮ (the recall badge only counts for admins).
-  const totalBadge = bugBadge + aiBadge + descBadge + (user.role === 'admin' ? recallBadge : 0);
+  // Unseen-activity dot on the closed ⋮ (the admin-only counts only for admins).
+  const totalBadge =
+    bugBadge + aiBadge + descBadge +
+    (user.role === 'admin' ? queueBadge + recallBadge + finalBadge : 0);
   const item = 'flex items-center justify-between gap-3 rounded px-3 py-2 text-left text-sm text-gray-200 hover:bg-gray-700';
   const badge = (n: number, cls: string) =>
     n > 0 ? <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${cls}`}>{n}</span> : null;
@@ -336,6 +433,21 @@ const MobileMenu = ({
             <div className="border-b border-gray-800 px-3 py-2 text-xs text-gray-400">
               {user.username} <span className="text-gray-600">·</span> {user.role}
             </div>
+            {user.role === 'admin' && (
+              <Link to="/queue" className={item} onClick={close}>
+                <span>Review queue</span>
+                <span className="flex items-center gap-1">
+                  {badge(queueBadge, 'bg-amber-500 text-gray-900')}
+                  {badge(recallBadge, 'bg-rose-600 text-white')}
+                </span>
+              </Link>
+            )}
+            {(user.role === 'admin' || descBadge > 0) && (
+              <Link to="/descriptions" className={item} onClick={close}>
+                <span>Descriptions</span>
+                {badge(descBadge, 'bg-teal-600 text-white')}
+              </Link>
+            )}
             {/* One waiting trip links straight in; several fold into an expandable
                 sub-list (a flat row per trip used to drown the rest of this menu). */}
             {aiSessions.length === 1 && (
@@ -372,14 +484,15 @@ const MobileMenu = ({
                 )}
               </>
             )}
-            <Link to="/bugs" className={item} onClick={close}>
-              <span>Bug reports</span>
-              {badge(bugBadge, 'bg-rose-600 text-white')}
-            </Link>
-            {(user.role === 'admin' || descBadge > 0) && (
-              <Link to="/descriptions" className={item} onClick={close}>
-                <span>Descriptions</span>
-                {badge(descBadge, 'bg-teal-600 text-white')}
+            {user.role === 'admin' && (
+              <Link to="/final-check" className={item} onClick={close}>
+                <span>Release prep</span>
+                {badge(finalBadge, 'bg-indigo-500 text-white')}
+              </Link>
+            )}
+            {user.role === 'admin' && publisherMode && (
+              <Link to="/publisher" className={item} onClick={close}>
+                Publisher
               </Link>
             )}
             <Link to="/completed" className={item} onClick={close}>
@@ -390,12 +503,10 @@ const MobileMenu = ({
                 All trips
               </Link>
             )}
-            {user.role === 'admin' && (
-              <Link to="/queue" className={item} onClick={close}>
-                <span>Review queue</span>
-                {badge(recallBadge, 'bg-amber-500 text-gray-900')}
-              </Link>
-            )}
+            <Link to="/bugs" className={item} onClick={close}>
+              <span>Bug reports</span>
+              {badge(bugBadge, 'bg-rose-600 text-white')}
+            </Link>
             <div className="my-1 border-t border-gray-800" />
             <a href="/help/quick" target="_blank" rel="noreferrer" className={item} onClick={close}>
               Quick reference

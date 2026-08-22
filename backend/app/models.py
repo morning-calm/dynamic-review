@@ -77,9 +77,15 @@ class StructureCategories(BaseModel):
 
 
 class QueueJob(BaseModel):
-    """Queue a review-bus job (currently only staging→prod text publish requests)."""
+    """Queue a review-bus job. `trip_id` carries the job's TARGET id — a trip cid for
+    publish/publish_docs, a TripGroup id for add_to_location, a TripLocation id for
+    publish_pin (the field name predates the extra kinds)."""
     trip_id: str
-    kind: Literal["publish"] = "publish"
+    kind: Literal["publish", "publish_docs", "publish_pin", "add_to_location",
+                  "thumbnail_local_copy", "replace_overlay", "publish_credits",
+                  "trello_move"] = "publish"
+    # ("tool" jobs exist on the bus too, but are minted only by the publisher's
+    #  own /pipeline/tool endpoint, never queued from a client.)
     note: str = ""
 
 
